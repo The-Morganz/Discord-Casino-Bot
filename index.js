@@ -1,7 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const wallet = require('./wallet');
-const roll = require('./roll');  // Import the roll module
+const roll = require('./roll');
+const blackjack = require('./blackjack'); 
 
 const client = new Client({
     intents: [
@@ -105,6 +106,13 @@ client.on('messageCreate', async (message) => {
             await message.reply("Please provide a valid bet amount.");
         }
     }
+    if (message.content.toLowerCase().startsWith('$joinbj')){
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        
+        
+    }
+
     
 });
 
