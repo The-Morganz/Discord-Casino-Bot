@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const wallet = require('./wallet');
-const roll = require('./roll');  // Import the roll module
+const roll = require('./roll');
+const blackjack = require('./blackjack'); 
 
 const client = new Client({
     intents: [
@@ -11,7 +12,7 @@ const client = new Client({
     ]
 });
 
-const token = "MTI5MjkzNDc2NzUxMTIxMjA0Mg.GWG6TJ.FtyiBylm6WG_1vXHHOWPAf-ku4n2X5j7eA77U8";
+const token = "MTI5MjkzNDc2NzUxMTIxMjA0Mg.Ges1Zx.NS6e01hltMfbo1mDG8m1mxt7YmbvuKVrkQ0uZQ";
 const ownerId = '237903516234940416';
 const ownerId2 = '294522326182002710';
 
@@ -105,6 +106,13 @@ client.on('messageCreate', async (message) => {
             await message.reply("Please provide a valid bet amount.");
         }
     }
+    if (message.content.toLowerCase().startsWith('$joinbj')){
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        
+        
+    }
+
     
 });
 
