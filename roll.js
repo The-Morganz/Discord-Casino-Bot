@@ -2,10 +2,10 @@ const wallet = require('./wallet');
 
 // Define emoji set with rarity, payout, and multiplier for betting
 const emojiSet = [
-    { emoji: '🍋', rarity: 33, multiplier: 2 },   // Lemon, 50% chance, x2 multiplier
-    { emoji: '🍒', rarity: 25, multiplier: 4 },   // Cherry, 30% chance, x4 multiplier
-    { emoji: '🍉', rarity: 20, multiplier: 8 },   // Watermelon, 15% chance, x8 multiplier
-    { emoji: '7️⃣', rarity: 15, multiplier: 16 },  // Seven, 15% chance, x16 multiplier
+    { emoji: '🍋', rarity: 50, multiplier: 2 },   // Lemon, 50% chance, x2 multiplier
+    { emoji: '🍒', rarity: 20, multiplier: 4 },   // Cherry, 30% chance, x4 multiplier
+    { emoji: '🍉', rarity: 13, multiplier: 8 },   // Watermelon, 15% chance, x8 multiplier
+    { emoji: '7️⃣', rarity: 10, multiplier: 16 },  // Seven, 15% chance, x16 multiplier
     { emoji: '💎', rarity: 7, multiplier: 50 }    // Diamond, 7% chance, x50 multiplier
 ];
 

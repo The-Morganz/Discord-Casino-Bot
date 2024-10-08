@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const wallet = require('./wallet');
 const roll = require('./roll');  // Import the roll module
@@ -11,12 +12,11 @@ const client = new Client({
     ]
 });
 
-const token = "MTI5MjkzNDc2NzUxMTIxMjA0Mg.GWG6TJ.FtyiBylm6WG_1vXHHOWPAf-ku4n2X5j7eA77U8";
 const ownerId = '237903516234940416';
 const ownerId2 = '294522326182002710';
 
-client.on('ready', async () => {
-    console.log(`Client has been initiated! ${client.user.username}`);
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -108,4 +108,4 @@ client.on('messageCreate', async (message) => {
     
 });
 
-client.login(token);
+client.login(process.env.DISCORD_TOKEN);

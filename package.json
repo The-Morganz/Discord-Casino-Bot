@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "DISCORD_TOKEN=MTI5MjkzNDc2NzUxMTIxMjA0Mg.Ges1Zx.NS6e01hltMfbo1mDG8m1mxt7YmbvuKVrkQ0uZQ nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Kali",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "discord.js": "^14.16.3"
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }
