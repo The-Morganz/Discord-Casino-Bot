@@ -1,0 +1,55 @@
+# OS-specific files
+Thumbs.db
+Desktop.ini
+
+# IDE-specific files
+# Visual Studio Code
+.vscode/
+# JetBrains IDEs (e.g., PyCharm, IntelliJ)
+.idea/
+
+# Python-specific
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env  # virtual environment
+# Virtual environments folder (optional, depending on setup)
+venv/
+# Jupyter Notebook checkpoints (if using)
+.ipynb_checkpoints/
+
+# Node.js-specific
+node_modules/
+
+# Java build outputs
+target/
+*.class
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp  # Vim swap files
+
+# Dependency directories (for various languages)
+# Maven (Java)
+.mvn/
+# Gradle (Java)
+.gradle/
+# Python Poetry (dependency manager)
+.poetry/
+
+# Environment files and sensitive data
+.env
+*.pem
+*.key
+
+# Build outputs (common compiled files)
+*.o
+*.out
+
+# Docker
+docker-compose.override.yml
+
+# Machine Learning/AI specific
+checkpoints/
+model_weights/
