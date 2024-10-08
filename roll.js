@@ -2,11 +2,13 @@ const wallet = require('./wallet');
 
 // Define emoji set with rarity, payout, and multiplier for betting
 const emojiSet = [
-    { emoji: '🍋', rarity: 50, multiplier: 2 },   // Lemon, 50% chance, x2 multiplier
-    { emoji: '🍒', rarity: 20, multiplier: 4 },   // Cherry, 30% chance, x4 multiplier
-    { emoji: '🍉', rarity: 13, multiplier: 8 },   // Watermelon, 15% chance, x8 multiplier
-    { emoji: '7️⃣', rarity: 10, multiplier: 16 },  // Seven, 15% chance, x16 multiplier
-    { emoji: '💎', rarity: 7, multiplier: 50 }    // Diamond, 7% chance, x50 multiplier
+    { emoji: '🍋', rarity: 25, multiplier: 0.5 },
+    { emoji: '🍊', rarity: 20, multiplier: 1.2 },
+    { emoji: '🍒', rarity: 17, multiplier: 1.5 },   // Lemon, 50% chance, x5 multiplier
+    { emoji: '🍉', rarity: 15, multiplier: 2 },   // Cherry, 30% chance, x10 multiplier
+    { emoji: '🍀', rarity: 12, multiplier: 10 },   // Watermelon, 15% chance, x8 multiplier
+    { emoji: '7️⃣', rarity: 8, multiplier: 100 },  // Seven, 15% chance, x16 multiplier
+    { emoji: '💎', rarity: 3, multiplier: 500 }    // Diamond, 7% chance, x50 multiplier
 ];
 
 // Function to get a random emoji based on rarity
@@ -25,27 +27,73 @@ function getRandomEmoji() {
     return emojiSet[0];
 }
 
+// Function to check for matches in rows, columns, and diagonals
+function checkForMatch(matrix) {
+    const matchCount = {};
+
+    // Check rows for matches
+    matrix.forEach(row => {
+        const emoji = row[0].emoji;
+        if (row.every(item => item.emoji === emoji)) {
+            matchCount[emoji] = (matchCount[emoji] || 0) + 1;  // Count the matches
+        }
+    });
+
+    // Check columns for matches
+    for (let col = 0; col < 3; col++) {
+        const emoji = matrix[0][col].emoji;
+        if (matrix[0][col].emoji === matrix[1][col].emoji && matrix[1][col].emoji === matrix[2][col].emoji) {
+            matchCount[emoji] = (matchCount[emoji] || 0) + 1;  // Count the matches
+        }
+    }
+
+    // Check diagonals for matches
+    const diag1Emoji = matrix[0][0].emoji;
+    const diag2Emoji = matrix[0][2].emoji;
+    if (matrix[0][0].emoji === matrix[1][1].emoji && matrix[1][1].emoji === matrix[2][2].emoji) {
+        matchCount[diag1Emoji] = (matchCount[diag1Emoji] || 0) + 1;  // Count the matches
+    }
+    if (matrix[0][2].emoji === matrix[1][1].emoji && matrix[1][1].emoji === matrix[2][0].emoji) {
+        matchCount[diag2Emoji] = (matchCount[diag2Emoji] || 0) + 1;  // Count the matches
+    }
+
+    return matchCount; // Return the matches count
+}
+
 // Function to handle a roll with betting
 function roll(userId, betAmount) {
+    // Generate a 3x3 matrix of random emojis
     const rollResult = [
-        getRandomEmoji(),
-        getRandomEmoji(),
-        getRandomEmoji()
+        [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+        [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+        [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()]
     ];
 
-    const allMatch = rollResult.every(item => item.emoji === rollResult[0].emoji);  // Check if all three emojis match
-    let payout = 0;
+    const matches = checkForMatch(rollResult);
+    let totalMultiplier = 0;
 
-    if (allMatch) {
-        const multiplier = rollResult[0].multiplier;  // Get multiplier based on the matching emoji
-        payout = betAmount * multiplier;  // Calculate payout based on bet amount and multiplier
+    // Calculate total multiplier based on matches count
+    for (const emoji in matches) {
+        if (matches.hasOwnProperty(emoji)) {
+            const matchCount = matches[emoji];  // How many times this emoji matched
+            const emojiInfo = emojiSet.find(item => item.emoji === emoji);
+            totalMultiplier += matchCount * (emojiInfo ? emojiInfo.multiplier : 0);  // Total multiplier
+        }
+    }
+
+    let payout = 0;
+    if (totalMultiplier > 0) {
+        payout = Math.round(betAmount * totalMultiplier);  // Calculate payout based on total multiplier
         wallet.addCoins(userId, payout);  // Add payout to user's wallet
     //} else {
     //    wallet.removeCoins(userId, betAmount);  // Deduct the bet if no match
     }
 
+    // Format the output as a 3x3 matrix string
+    const formattedResult = rollResult.map(row => row.map(item => item.emoji).join(' ')).join('\n');
+
     return {
-        result: rollResult.map(item => item.emoji),  // Return only the emojis for display
+        result: formattedResult,  // Return the formatted string for display
         payout
     };
 }

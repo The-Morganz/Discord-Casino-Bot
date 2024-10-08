@@ -1,8 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const wallet = require('./wallet');
-const roll = require('./roll');
-const blackjack = require('./blackjack'); 
+const roll = require('./roll');  // Import the roll module
 
 const client = new Client({
     intents: [
@@ -34,7 +33,6 @@ client.on('messageCreate', async (message) => {
         await message.reply(`You have ${coins} coins in your wallet.`);
     }
 
-
     // Command to add coins (restricted to bot owner)
     if (message.content.toLowerCase().startsWith('$add')) {
         if (message.author.id !== ownerId) {
@@ -65,7 +63,6 @@ client.on('messageCreate', async (message) => {
         await message.reply(`You have added ${amount} coins to ${mentionedUser.username}'s wallet.`);
     }
 
-
     // Command to roll with betting
     if (message.content.toLowerCase().startsWith("$roll")) {
         const args = message.content.split(' ');
@@ -87,33 +84,24 @@ client.on('messageCreate', async (message) => {
                 
                 // Perform the roll
                 const rollResult = roll.roll(userId, betAmount);
-                const resultString = rollResult.result.join(' ');
-
+                
                 // Log the result of the roll
-                console.log(`Roll result: ${resultString}, Payout: ${rollResult.payout}`);
+                console.log(`Roll result: ${rollResult.result}, Payout: ${rollResult.payout}`);
 
                 // Handle payout logic
                 if (rollResult.payout > 0) {
                     // Display payout
-                    await message.reply(`🎰 You rolled: ${resultString}\nYou won ${rollResult.payout} coins!`);
+                    await message.reply(`🎰 You rolled:\n${rollResult.result}\nYou won ${rollResult.payout} coins!`);
                 } else {
-                    await message.reply(`🎰 You rolled: ${resultString}\nBetter luck next time.`);
+                    await message.reply(`🎰 You rolled:\n${rollResult.result}\nBetter luck next time.`);
                 }
             } else {
-                await message.reply("Broke ass nigga");
+                await message.reply("You don't have enough coins to place this bet.");
             }
         } else {
-            await message.reply("Please provide a valid bet amount.");
+            await message.reply("Please provide a valid bet amount.");  
         }
     }
-    if (message.content.toLowerCase().startsWith('$joinbj')){
-        const userId = message.author.id;
-        const channelId = message.channel.id;
-        
-        
-    }
-
-    
 });
 
 client.login(process.env.DISCORD_TOKEN);
