@@ -74,50 +74,60 @@ client.on("messageCreate", async (message) => {
     );
   }
 
- // Command to roll with betting
-    // Command to roll with betting
-    if (message.content.toLowerCase().startsWith("$roll")) {
-        const args = message.content.split(' ');
-        const betAmount = parseInt(args[1]);
+  // Command to roll with betting
+  // Command to roll with betting
+  if (message.content.toLowerCase().startsWith("$roll")) {
+    const args = message.content.split(" ");
+    const betAmount = parseInt(args[1]);
 
-        // Debugging logs
-        console.log(`Received $roll command with bet amount: ${betAmount}`);
+    // Debugging logs
+    console.log(`Received $roll command with bet amount: ${betAmount}`);
 
-        // Check if bet amount is valid
-        if (!isNaN(betAmount) && betAmount > 0) {
-            const coins = wallet.getCoins(userId);
-            console.log(`User's balance before betting: ${coins}`);  // Log the user's balance
+    // Check if bet amount is valid
+    if (!isNaN(betAmount) && betAmount > 0) {
+      const coins = wallet.getCoins(userId);
+      console.log(`User's balance before betting: ${coins}`); // Log the user's balance
 
-            // Check if user has enough coins to bet
-            if (coins >= betAmount) {
-                // User has enough coins
-                console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
-                wallet.removeCoins(userId, betAmount);  // Remove the bet amount from the user's wallet
-                
-                // Perform the roll
-                const rollResult = roll.roll(userId, betAmount);
-                
-                // Log the result of the roll
-                console.log(`Roll result: ${rollResult.result}, Payout: ${rollResult.payout}`);
+      // Check if user has enough coins to bet
+      if (coins >= betAmount) {
+        // User has enough coins
+        console.log(
+          `User has enough coins. Attempting to remove ${betAmount} coins...`
+        );
+        wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
 
-                // Handle payout logic
-                if (rollResult.payout > 0) {
-                    // Display payout
-                    await message.reply(`🎰 You rolled:\n${rollResult.result}\nYou won ${rollResult.payout} coins!`);
-                } else {
-                    await message.reply(`🎰 You rolled:\n${rollResult.result}\nBetter luck next time.`);
-                }
-            } else {
-                await message.reply("You don't have enough coins to place this bet.");
-            }
+        // Perform the roll
+        const rollResult = roll.roll(userId, betAmount);
+
+        // Log the result of the roll
+        console.log(
+          `Roll result: ${rollResult.result}, Payout: ${rollResult.payout}`
+        );
+
+        // Handle payout logic
+        if (rollResult.payout > 0) {
+          // Display payout
+          await message.reply(
+            `🎰 You rolled:\n${rollResult.result}\nYou won ${rollResult.payout} coins!`
+          );
         } else {
-            await message.reply("Please provide a valid bet amount.");  
+          await message.reply(
+            `🎰 You rolled:\n${rollResult.result}\nBetter luck next time.`
+          );
         }
+      } else {
+        await message.reply("You don't have enough coins to place this bet.");
+      }
+    } else {
+      await message.reply("Please provide a valid bet amount.");
     }
-
+  }
 
   if (message.content.toLowerCase().startsWith("$joinbj")) {
-    if (blackjackRooms.areWePlaying(channelId)) {
+    if (
+      blackjackRooms.areWePlaying(channelId) ||
+      blackjackRooms.areWeBetting(channelId)
+    ) {
       message.reply(`A game is currently in session.`);
       return;
     }
@@ -129,7 +139,7 @@ client.on("messageCreate", async (message) => {
     const whatDoItSay = await blackjackRooms.makeRoom(userId, channelId);
     message.reply(whatDoItSay);
   }
-  if (message.content.toLowerCase().startsWith("$deletebj")) {
+  if (message.content.toLowerCase().startsWith("$deleteroombj")) {
     const whatDoItSay = await blackjackRooms.deleteRoom(userId, channelId);
     message.channel.send(whatDoItSay);
   }
@@ -164,8 +174,13 @@ client.on("messageCreate", async (message) => {
       message.reply(`The game has already started.`);
       return;
     }
-    blackjackGame.startGame(
-      `Starting the game. Please place your bets using "$betjs (amount)"`
+    if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
+      message.reply(`You aren't in a room!`);
+      return;
+    }
+    blackjackGame.startGame(channelId);
+    message.channel.send(
+      `Starting the game. Please place your bets using "$betbj (amount)"`
     );
   }
 });

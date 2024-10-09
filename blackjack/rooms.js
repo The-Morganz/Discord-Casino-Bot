@@ -27,6 +27,7 @@ function findRoom(channelId) {
 }
 
 function checkIfAlreadyInRoom(userId) {
+  console.log(rooms);
   try {
     rooms.forEach((e) => {
       e.players.forEach((e) => {
@@ -102,7 +103,12 @@ function setBetAmount(userId, channelId, betAmount) {
     });
     return `Couldn't place bet.`;
   } catch (successMessage) {
-    return successMessage;
+    if (thatRoom.players.every((player) => player.betAmount > 0)) {
+      return "All players have placed their bets!";
+      // Add any additional logic here if all players have a betAmount > 0
+    } else {
+      return successMessage;
+    }
   }
 }
 
