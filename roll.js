@@ -2,13 +2,13 @@ const wallet = require('./wallet');
 
 // Define emoji set with rarity, payout, and multiplier for betting
 const emojiSet = [
-    { emoji: '🍋', rarity: 25, multiplier: 0.5 },
-    { emoji: '🍊', rarity: 20, multiplier: 1.2 },
-    { emoji: '🍒', rarity: 17, multiplier: 1.5 },   // Lemon, 50% chance, x5 multiplier
-    { emoji: '🍉', rarity: 15, multiplier: 2 },   // Cherry, 30% chance, x10 multiplier
-    { emoji: '🍀', rarity: 12, multiplier: 10 },   // Watermelon, 15% chance, x8 multiplier
-    { emoji: '7️⃣', rarity: 8, multiplier: 100 },  // Seven, 15% chance, x16 multiplier
-    { emoji: '💎', rarity: 3, multiplier: 500 }    // Diamond, 7% chance, x50 multiplier
+    { emoji: '🍋', rarity: 25, multiplier: 1 },
+    { emoji: '🍊', rarity: 22, multiplier: 2 },
+    { emoji: '🍒', rarity: 17, multiplier: 4 }, 
+    { emoji: '🍉', rarity: 15, multiplier: 6 },   
+    { emoji: '🍀', rarity: 12, multiplier: 10 },   
+    { emoji: '7️⃣', rarity: 6, multiplier: 50 },  
+    { emoji: '💎', rarity: 3, multiplier: 200 }    
 ];
 
 // Function to get a random emoji based on rarity
