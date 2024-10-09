@@ -4,6 +4,7 @@ const wallet = require("./wallet");
 const roll = require("./roll");
 const blackjackRooms = require("./blackjack/rooms");
 const blackjackBets = require(`./blackjack/bettingBJ`);
+const blackjackGame = require("./blackjack/game");
 
 const client = new Client({
   intents: [
@@ -133,17 +134,18 @@ client.on("messageCreate", async (message) => {
     message.channel.send(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$betbj")) {
-    if (blackjackRooms.areWePlaying(channelId)) {
-      message.reply(`A game is currently in session.`);
+    if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
+      message.reply(`You aren't in a room!`);
+      return;
+    }
+    if (!blackjackRooms.areWeBetting(channelId)) {
+      message.reply(`The game must be started to bet.`);
       return;
     }
     const args = message.content.split(" ");
     const betAmount = parseInt(args[1]);
     // Ne mozes da betujes ako nisi u room
-    if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
-      message.reply(`You aren't in a room!`);
-      return;
-    }
+
     // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
     if (isNaN(betAmount) || betAmount <= 0) {
       message.reply(`Bet amount invalid!`);
@@ -155,14 +157,16 @@ client.on("messageCreate", async (message) => {
       channelId,
       betAmount
     );
-    message.channel.send(`<@${userId}> has confirmed their bet amount.`);
+    message.channel.send(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$startbj")) {
     if (blackjackRooms.areWePlaying(channelId)) {
       message.reply(`The game has already started.`);
       return;
     }
-    blackjackBets.startGame(channelId);
+    blackjackGame.startGame(
+      `Starting the game. Please place your bets using "$betjs (amount)"`
+    );
   }
 });
 
