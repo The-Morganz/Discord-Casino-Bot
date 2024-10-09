@@ -46,9 +46,11 @@ function makeRoom(userId, channelId) {
   rooms.push({
     index: rooms.length,
     id: `${channelId}`,
-    players: [{ userId: userId, betAmount: 0 }],
+    players: [{ userId: userId, betAmount: 0, index: 0 }],
     playing: false,
+    bettingPhase: false,
   });
+  console.log(rooms);
   return `You have made a room, and joined it.`;
 }
 
@@ -57,9 +59,9 @@ function joinRoom(userId, channelId) {
   if (checkIfAlreadyInRoom(userId)) {
     return `You're already in a room.`;
   }
-  rooms.forEach((e) => {
+  rooms.forEach((e, i, arr) => {
     if (e.id === channelId) {
-      e.players.push({ userId: userId, betAmount: 0 });
+      e.players.push({ userId: userId, betAmount: 0, index: e.players.length });
       joined = true;
     }
   });
@@ -91,21 +93,38 @@ function setBetAmount(userId, channelId, betAmount) {
   try {
     thatRoom.players.forEach((e) => {
       if (e.userId === userId) {
+        if (e.betAmount > 0) {
+          return;
+        }
         e.betAmount = betAmount;
-        throw `Bet Confirmed`;
+        throw `<@${userId}> has confirmed their bet amount.`;
       }
     });
+    return `Couldn't place bet.`;
   } catch (successMessage) {
     return successMessage;
   }
 }
+
 function areWePlaying(channelId) {
   const thatRoom = findRoom(channelId);
   return thatRoom.playing;
 }
-function changeGameState(channelId, state) {
+function areWeBetting(channelId) {
+  const thatRoom = findRoom(channelId);
+  return thatRoom.bettingPhase;
+}
+function changeGameState(channelId, phase, state) {
   const theRoom = findRoom(channelId);
-  theRoom.playing = state;
+
+  switch (phase) {
+    case "playing":
+      theRoom.playing = state;
+      break;
+    case "betting":
+      theRoom.bettingPhase = state;
+      break;
+  }
 }
 
 module.exports = {
@@ -116,5 +135,6 @@ module.exports = {
   findRoom,
   setBetAmount,
   areWePlaying,
+  areWeBetting,
   changeGameState,
 };

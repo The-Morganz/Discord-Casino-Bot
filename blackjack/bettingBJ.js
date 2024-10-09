@@ -5,7 +5,4 @@ function addBet(userId, channelId, betAmount) {
   return confirmation;
 }
 
-function startGame(channelId) {
-  rooms.changeGameState(channelId, true);
-}
-module.exports = { addBet, startGame };
+module.exports = { addBet };
