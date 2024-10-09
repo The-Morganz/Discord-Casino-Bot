@@ -5,6 +5,8 @@ const roll = require("./roll");
 const blackjackRooms = require("./blackjack/rooms");
 const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
+const daily = require('./daily');
+
 
 const client = new Client({
   intents: [
@@ -30,6 +32,24 @@ client.on("messageCreate", async (message) => {
 
   // Initialize the user's wallet if it doesn't exist
   wallet.initializeWallet(userId);
+
+  // Track messages for the daily message challenge
+  daily.incrementChallenge(userId, false);
+
+  // Track image posts for the daily image challenge
+  if (message.attachments.size > 0) {
+   message.attachments.forEach((attachment) => {
+     if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+       daily.incrementChallenge(userId, true);
+      }
+    });
+  }
+ 
+   // Command to check daily challenge progress
+   if (message.content.toLowerCase() === "$daily") {
+     const status = daily.getDailyStatus(userId);
+     await message.reply(status);
+   }
 
   // Command to check wallet balance
   if (
@@ -74,7 +94,6 @@ client.on("messageCreate", async (message) => {
     );
   }
 
-  // Command to roll with betting
   // Command to roll with betting
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
