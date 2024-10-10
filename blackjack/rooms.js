@@ -47,13 +47,28 @@ function makeRoom(userId, channelId) {
   rooms.push({
     index: rooms.length,
     id: `${channelId}`,
-    players: [{ userId: userId, betAmount: 0, index: 0 }],
+    players: [
+      {
+        userId: userId,
+        betAmount: 0,
+        index: 0,
+        sum: 0,
+        cards: [],
+        played: false,
+        turn: false,
+      },
+    ],
     playing: false,
+    dealerDealingPhase: false,
     bettingPhase: false,
+
+    dealer: { sum: 0, cards: [] },
   });
   console.log(rooms);
   return `You have made a room, and joined it.`;
 }
+
+function updateRoom(channelId) {}
 
 function joinRoom(userId, channelId) {
   let joined = false;
@@ -62,7 +77,15 @@ function joinRoom(userId, channelId) {
   }
   rooms.forEach((e, i, arr) => {
     if (e.id === channelId) {
-      e.players.push({ userId: userId, betAmount: 0, index: e.players.length });
+      e.players.push({
+        userId: userId,
+        betAmount: 0,
+        index: e.players.length,
+        sum: 0,
+        cards: [],
+        played: false,
+        turn: false,
+      });
       joined = true;
     }
   });
@@ -104,7 +127,9 @@ function setBetAmount(userId, channelId, betAmount) {
     return `Couldn't place bet.`;
   } catch (successMessage) {
     if (thatRoom.players.every((player) => player.betAmount > 0)) {
-      return "All players have placed their bets!";
+      return "true";
+      // return "All players have placed their bets!";
+
       // Add any additional logic here if all players have a betAmount > 0
     } else {
       return successMessage;
@@ -120,6 +145,10 @@ function areWeBetting(channelId) {
   const thatRoom = findRoom(channelId);
   return thatRoom.bettingPhase;
 }
+function areWeLettingTheDealerDealSoWeCantDoCommands(channelId) {
+  const thatRoom = findRoom(channelId);
+  return thatRoom.dealerDealingPhase;
+}
 function changeGameState(channelId, phase, state) {
   const theRoom = findRoom(channelId);
 
@@ -130,7 +159,20 @@ function changeGameState(channelId, phase, state) {
     case "betting":
       theRoom.bettingPhase = state;
       break;
+    case "dealing":
+      theRoom.dealerDealingPhase = state;
+      break;
   }
+}
+function isItYoTurn(userId, channelId) {
+  const thatRoom = findRoom(channelId);
+  let result = false;
+  thatRoom.players.forEach((e) => {
+    if (e.userId === userId && e.turn === true) {
+      result = true;
+    }
+  });
+  return result;
 }
 
 module.exports = {
@@ -142,5 +184,8 @@ module.exports = {
   setBetAmount,
   areWePlaying,
   areWeBetting,
+  areWeLettingTheDealerDealSoWeCantDoCommands,
+  isItYoTurn,
   changeGameState,
+  updateRoom,
 };

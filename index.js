@@ -5,8 +5,9 @@ const roll = require("./roll");
 const blackjackRooms = require("./blackjack/rooms");
 const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
-const daily = require('./daily');
-
+const EventEmitter = require("events");
+const daily = require("./daily");
+const eventEmitter = new EventEmitter();
 
 const client = new Client({
   intents: [
@@ -38,18 +39,21 @@ client.on("messageCreate", async (message) => {
 
   // Track image posts for the daily image challenge
   if (message.attachments.size > 0) {
-   message.attachments.forEach((attachment) => {
-     if (attachment.contentType && attachment.contentType.startsWith('image/')) {
-       daily.incrementChallenge(userId, true);
+    message.attachments.forEach((attachment) => {
+      if (
+        attachment.contentType &&
+        attachment.contentType.startsWith("image/")
+      ) {
+        daily.incrementChallenge(userId, true);
       }
     });
   }
- 
-   // Command to check daily challenge progress
-   if (message.content.toLowerCase() === "$daily") {
-     const status = daily.getDailyStatus(userId);
-     await message.reply(status);
-   }
+
+  // Command to check daily challenge progress
+  if (message.content.toLowerCase() === "$daily") {
+    const status = daily.getDailyStatus(userId);
+    await message.reply(status);
+  }
 
   // Command to check wallet balance
   if (
@@ -94,6 +98,7 @@ client.on("messageCreate", async (message) => {
     );
   }
 
+  // Command to roll with betting
   // Command to roll with betting
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
@@ -145,7 +150,8 @@ client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().startsWith("$joinbj")) {
     if (
       blackjackRooms.areWePlaying(channelId) ||
-      blackjackRooms.areWeBetting(channelId)
+      blackjackRooms.areWeBetting(channelId) ||
+      blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
     ) {
       message.reply(`A game is currently in session.`);
       return;
@@ -167,10 +173,18 @@ client.on("messageCreate", async (message) => {
       message.reply(`You aren't in a room!`);
       return;
     }
+    if (
+      blackjackRooms.areWePlaying(channelId) ||
+      blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
+    ) {
+      message.reply(`You can't bet now!`);
+      return;
+    }
     if (!blackjackRooms.areWeBetting(channelId)) {
       message.reply(`The game must be started to bet.`);
       return;
     }
+
     const args = message.content.split(" ");
     const betAmount = parseInt(args[1]);
     // Ne mozes da betujes ako nisi u room
@@ -186,6 +200,16 @@ client.on("messageCreate", async (message) => {
       channelId,
       betAmount
     );
+    // stard da gamez
+    if (whatDoItSay === "true") {
+      setTimeout(() => {
+        blackjackGame.startDealing(eventEmitter, channelId, message.channel);
+      }, 2000);
+      blackjackRooms.changeGameState(channelId, "betting", false);
+      blackjackRooms.changeGameState(channelId, "dealing", true);
+      message.channel.send(`All bets are placed, the game is starting...`);
+      return;
+    }
     message.channel.send(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$startbj")) {
@@ -197,11 +221,74 @@ client.on("messageCreate", async (message) => {
       message.reply(`You aren't in a room!`);
       return;
     }
-    blackjackGame.startGame(channelId);
+    blackjackGame.startBettingPhase(channelId);
     message.channel.send(
       `Starting the game. Please place your bets using "$betbj (amount)"`
     );
   }
+  if (message.content.toLowerCase().startsWith("$hit")) {
+    if (
+      !blackjackRooms.areWePlaying(channelId) ||
+      !blackjackRooms.checkIfAlreadyInRoom(userId)
+    ) {
+      message.channel.send(`pa gde si krenuo buraz`);
+      return;
+    }
+    if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+      message.reply(`pa gde si krenuo buraz`);
+      return;
+    }
+    const infoAboutPlayer = blackjackGame.hit(
+      userId,
+      channelId,
+      eventEmitter,
+      message.channel
+    );
+    if (infoAboutPlayer.bust) {
+      message.channel.send(
+        `<@${userId}> got a ${infoAboutPlayer.cardTheyGot}, their sum is ${infoAboutPlayer.theirSum}, and so they have **BUST**!`
+      );
+      blackjackGame.stand(userId, channelId, eventEmitter, message.channel);
+    } else {
+      message.channel.send(
+        `<@${userId}> got a ${infoAboutPlayer.cardTheyGot}, their sum is ${infoAboutPlayer.theirSum}`
+      );
+    }
+  }
+  if (message.content.toLowerCase().startsWith("$stand")) {
+    if (
+      !blackjackRooms.areWePlaying(channelId) ||
+      !blackjackRooms.checkIfAlreadyInRoom(userId)
+    ) {
+      message.channel.send(`pa gde si krenuo buraz`);
+      return;
+    }
+    if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+      message.reply(`pa gde si krenuo buraz`);
+      return;
+    }
+    const messageszzz = blackjackGame.stand(
+      userId,
+      channelId,
+      eventEmitter,
+      message.channel
+    );
+    // message.channel.send(messageszzz);
+  }
+});
+
+eventEmitter.on("beginningBJ", (messageThatWasSent, channelToSendTo) => {
+  channelToSendTo.send(messageThatWasSent);
+});
+
+eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
+  if (occasion === "dealer") {
+    channelToSendTo.send(`Its now the dealers turn.`);
+    return;
+  }
+  channelToSendTo.send(
+    `<@${messageThatWasSent}>, your turn. $hit , or $stand ?`
+  );
 });
 
 client.login(process.env.DISCORD_TOKEN);
