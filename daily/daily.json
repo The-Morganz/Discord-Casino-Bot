@@ -26,5 +26,33 @@
     "challengeType": "image",
     "imagesSent": 1,
     "requiredImages": 1
+  },
+  "607669561566953505": {
+    "date": "2024-10-11",
+    "completed": true,
+    "challengeType": "message",
+    "messages": 35,
+    "requiredMessages": 35
+  },
+  "685620500797718726": {
+    "date": "2024-10-11",
+    "completed": true,
+    "challengeType": "image",
+    "imagesSent": 1,
+    "requiredImages": 1
+  },
+  "188354104664260608": {
+    "date": "2024-10-11",
+    "completed": true,
+    "challengeType": "message",
+    "messages": 7,
+    "requiredMessages": 7
+  },
+  "189147556717002752": {
+    "date": "2024-10-11",
+    "completed": false,
+    "challengeType": "image",
+    "imagesSent": 0,
+    "requiredImages": 1
   }
 }

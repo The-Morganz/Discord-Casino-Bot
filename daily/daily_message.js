@@ -1,14 +1,14 @@
-const wallet = require('../wallet');
+const wallet = require("../wallet");
 
 // Generate a random message requirement between 20 and 40
 function generateRandomMessageRequirement() {
-  return Math.floor(Math.random() * 21) + 20; // Generates a random number between 20 and 40
+  return Math.floor(Math.random() * 11) + 5; // Generates a random number between 20 and 40
 }
 
 // Initialize a message challenge for a user
 function initializeMessageChallenge(userId) {
   return {
-    challengeType: 'message',
+    challengeType: "message",
     messages: 0,
     requiredMessages: generateRandomMessageRequirement(),
     completed: false,
@@ -24,7 +24,9 @@ function incrementMessageCount(userChallenge, userId) {
     if (userChallenge.messages >= userChallenge.requiredMessages) {
       userChallenge.completed = true;
       wallet.addCoins(userId, 100); // Reward the user with 100 coins
-      console.log(`User ${userId} has completed the message challenge and earned 100 coins.`);
+      console.log(
+        `User ${userId} has completed the message challenge and earned 100 coins.`
+      );
     }
   }
   return userChallenge;
