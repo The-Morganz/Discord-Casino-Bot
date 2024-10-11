@@ -158,15 +158,17 @@ client.on("messageCreate", async (message) => {
     }
     const coins = wallet.getCoins(userId);
     if (coins <= 0) {
-      message.channel.send(
-        `Guys! <@${userId}> is BROKE! :index_pointing_at_the_viewer: ahahahahahah :index_pointing_at_the_viewer: broke ass nigga`
-      );
+      message.channel.send(`Guys! <@${userId}> is BROKE!`);
       return;
     }
     const whatDoItSay = await blackjackRooms.makeRoom(userId, channelId);
     message.reply(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$deleteroombj")) {
+    if (userId !== ownerId2) {
+      message.reply(`You can't do that!`);
+      return;
+    }
     const whatDoItSay = await blackjackRooms.deleteRoom(userId, channelId);
     message.channel.send(whatDoItSay);
   }
@@ -291,11 +293,11 @@ client.on("messageCreate", async (message) => {
       !blackjackRooms.areWePlaying(channelId) ||
       !blackjackRooms.checkIfAlreadyInRoom(userId)
     ) {
-      message.channel.send(`pa gde si krenuo buraz`);
+      message.channel.send(`:question: pa gde si krenuo buraz :question:`);
       return;
     }
     if (!blackjackRooms.isItYoTurn(userId, channelId)) {
-      message.reply(`pa gde si krenuo buraz`);
+      message.reply(`:question: pa gde si krenuo buraz :question:`);
       return;
     }
     const messageszzz = blackjackGame.stand(
@@ -314,7 +316,9 @@ eventEmitter.on("beginningBJ", (messageThatWasSent, channelToSendTo) => {
 
 eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
   if (occasion === "dealer") {
-    channelToSendTo.send(`Its now the dealers turn.`);
+    channelToSendTo.send(
+      `:bust_in_silhouette: Its now the dealers turn. :bust_in_silhouette:`
+    );
     blackjackGame.dealerTurn(channelToSendTo.id, eventEmitter, channelToSendTo);
     return;
   }
@@ -326,31 +330,33 @@ eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
     }
   });
   channelToSendTo.send(
-    `<@${messageThatWasSent}>, your turn. **$hit** , or **$stand** ? Your sum is **${theirSum}**`
+    `:stopwatch: <@${messageThatWasSent}>, your turn. **$hit** , or **$stand** ? Your sum is **${theirSum}** :stopwatch:`
   );
 });
 eventEmitter.on("dealerTurn", (messageThatWasSent, channelToSendTo) => {
   const dealer = blackjackRooms.findRoom(channelToSendTo.id).dealer;
   if (messageThatWasSent === "stand") {
     channelToSendTo.send(
-      `The DEALER **stands**, with a sum of **${dealer.sum}**`
+      `:bust_in_silhouette: The DEALER **stands**, with a sum of **${dealer.sum}** :bust_in_silhouette:`
     );
     blackjackGame.endGame(channelToSendTo.id, channelToSendTo, eventEmitter);
   }
   if (messageThatWasSent === "hit") {
     channelToSendTo.send(
-      `The DEALER **hits**, and gets a **${dealer.cards.at(
+      `:bust_in_silhouette: The DEALER **hits**, and gets a **${dealer.cards.at(
         -1
-      )}**, and has a sum of **${dealer.sum}**`
+      )}**, and has a sum of **${dealer.sum}** :bust_in_silhouette:`
     );
   }
   if (messageThatWasSent === "bust") {
-    channelToSendTo.send(`The DEALER **BUSTS** **all ova** the place`);
+    channelToSendTo.send(
+      `:bust_in_silhouette: :boom: The DEALER **BUSTS** **all ova** the place :bust_in_silhouette: :boom:`
+    );
     blackjackGame.endGame(channelToSendTo.id, channelToSendTo, eventEmitter);
   }
   if (messageThatWasSent === `aceSave`) {
     channelToSendTo.send(
-      `The DEALER was about to bust, but got saved by their **ACE**. Their sum is **${dealer.sum}**`
+      `:bust_in_silhouette: The DEALER was about to bust, but got saved by their **ACE**. Their sum is **${dealer.sum}** :bust_in_silhouette:`
     );
   }
 });
