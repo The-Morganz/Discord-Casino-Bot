@@ -150,7 +150,6 @@ client.on("messageCreate", async (message) => {
   }
 
   // Command to roll with betting
-  // Command to roll with betting
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
     const betAmount = parseInt(args[1]);
@@ -468,6 +467,22 @@ eventEmitter.on(`dealerWinningsStatistic`, (profits, channelToSendTo) => {
   channelToSendTo.send(
     `The dealers profit: ${profits > 0 ? `+${profits}` : `${profits}`}`
   );
+});
+
+client.on('voiceStateUpdate', (oldState, newState) => {
+  const userId = newState.id;
+
+  // Check if the user joined a voice channel
+  if (!oldState.channel && newState.channel) {
+    // User joined a voice channel
+    voiceReward.userJoinedVoice(userId);
+  }
+
+  // Check if the user left a voice channel
+  if (oldState.channel && !newState.channel) {
+    // User left a voice channel
+    voiceReward.userLeftVoice(userId);
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
