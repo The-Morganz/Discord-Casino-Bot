@@ -27,7 +27,6 @@ function findRoom(channelId) {
 }
 
 function checkIfAlreadyInRoom(userId) {
-  console.log(rooms);
   try {
     rooms.forEach((e) => {
       e.players.forEach((e) => {
@@ -56,6 +55,7 @@ function makeRoom(userId, channelId) {
         cards: [],
         played: false,
         turn: false,
+        lost: false,
       },
     ],
     playing: false,
@@ -64,11 +64,42 @@ function makeRoom(userId, channelId) {
 
     dealer: { sum: 0, cards: [] },
   });
-  console.log(rooms);
   return `You have made a room, and joined it.`;
 }
 
-function updateRoom(channelId) {}
+function restartRoom(channelId) {
+  const thatRoom = findRoom(channelId);
+  thatRoom.players.forEach((e) => {
+    e.betAmount = 0;
+    e.sum = 0;
+    e.cards = [];
+    e.played = false;
+    e.turn = false;
+    e.lost = false;
+  });
+  thatRoom.dealer.sum = 0;
+  thatRoom.dealer.cards = [];
+  changeGameState(channelId, "playing", false);
+  changeGameState(channelId, "betting", true);
+}
+function removePersonFromRoom(userId, channelId) {
+  const thatRoom = findRoom(channelId);
+  thatRoom.players.forEach((e, i, arr) => {
+    if (e.userId === userId) {
+      arr.splice(e.index, 1);
+      updatePlayerIndexes(channelId);
+    }
+  });
+  if (thatRoom.players.length === 0) {
+    deleteRoom(userId, channelId);
+  }
+}
+function updatePlayerIndexes(channelId) {
+  const thatRoom = findRoom(channelId);
+  thatRoom.players.forEach((e, i) => {
+    e.index = i;
+  });
+}
 
 function joinRoom(userId, channelId) {
   let joined = false;
@@ -85,6 +116,7 @@ function joinRoom(userId, channelId) {
         cards: [],
         played: false,
         turn: false,
+        lost: false,
       });
       joined = true;
     }
@@ -101,7 +133,6 @@ function deleteRoom(userId, channelId) {
         throw error;
       }
     });
-    console.log(rooms);
     return `There was a error deleting the room.`;
   } catch (error) {
     return `Successfully deleted room.`;
@@ -175,9 +206,19 @@ function isItYoTurn(userId, channelId) {
   return result;
 }
 
+function playerLose(userId, channelId) {
+  const thatRoom = findRoom(channelId);
+  thatRoom.players.forEach((e) => {
+    if (e.userId === userId) {
+      e.lost = true;
+    }
+  });
+}
+
 module.exports = {
   makeRoom,
   deleteRoom,
+  removePersonFromRoom,
   getAllRooms,
   checkIfAlreadyInRoom,
   findRoom,
@@ -187,5 +228,6 @@ module.exports = {
   areWeLettingTheDealerDealSoWeCantDoCommands,
   isItYoTurn,
   changeGameState,
-  updateRoom,
+  playerLose,
+  restartRoom,
 };
