@@ -190,11 +190,11 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     }
     if (player.sum > 21) {
       message = `:boom: <@${player.userId}> has BUST! They have lost -${player.betAmount} :boom:`;
-      wallet.removeCoins(player.userId, player.betAmount);
+      // wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
       message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${player.betAmount} :performing_arts:`;
-      wallet.removeCoins(player.userId, player.betAmount);
+      // wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
       message = `:gem: <@${player.userId}> has won +${
@@ -229,3 +229,6 @@ module.exports = {
   dealerTurn,
   endGame,
 };
+// redosled je pogresan kad dobijes blackjack na hit
+// dve 11 da bude 12 a ne 22
+// leavebj sad ne radi kako treba kad svi izadju

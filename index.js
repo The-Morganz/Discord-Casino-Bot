@@ -67,7 +67,7 @@ client.on("messageCreate", async (message) => {
 
   // Command to add coins (restricted to bot owner)
   if (message.content.toLowerCase().startsWith("$add")) {
-    if (message.author.id !== ownerId) {
+    if (message.author.id !== ownerId && message.author.id !== ownerId2) {
       return message.reply("You don't have permission to use this command.");
     }
 
@@ -96,6 +96,40 @@ client.on("messageCreate", async (message) => {
     wallet.addCoins(targetUserId, amount);
     await message.reply(
       `You have added ${amount} coins to ${mentionedUser.username}'s wallet.`
+    );
+  }
+
+  if (message.content.toLowerCase().startsWith("$give")) {
+    // if (message.author.id !== ownerId && message.author.id !== ownerId2) {
+    //   return message.reply("You don't have permission to use this command.");
+    // }
+
+    const args = message.content.split(" ");
+    const amount = parseInt(args[1]);
+
+    // Check if the amount is valid
+    if (isNaN(amount) || amount <= 0) {
+      return message.reply("Please provide a valid amount of coins to add.");
+    }
+
+    // Get the tagged user from the message (the second argument)
+    const mentionedUser = message.mentions.users.first();
+
+    // Check if a user is tagged
+    if (!mentionedUser) {
+      return message.reply(
+        "Please mention a valid user to add coins to their wallet."
+      );
+    }
+
+    // Extract the user ID of the mentioned user
+    const targetUserId = mentionedUser.id;
+
+    // Add coins to the mentioned user's wallet
+    wallet.addCoins(targetUserId, amount);
+    wallet.removeCoins(userId, amount);
+    await message.reply(
+      `<@${userId}> has added ${amount} coins to ${mentionedUser.username}'s wallet.`
     );
   }
 
@@ -237,7 +271,22 @@ client.on("messageCreate", async (message) => {
       return;
     }
     message.reply(`Removing you from the room...`);
+    const thatRoom = blackjackRooms.findRoom(channelId);
     blackjackRooms.removePersonFromRoom(userId, channelId);
+    console.log(thatRoom.players.length);
+    if (thatRoom.players.length === 0) {
+      blackjackRooms.deleteRoom(userId, channelId);
+      return;
+    }
+    if (thatRoom.players.every((player) => player.betAmount > 0)) {
+      setTimeout(() => {
+        blackjackGame.startDealing(eventEmitter, channelId, message.channel);
+      }, 2000);
+      blackjackRooms.changeGameState(channelId, "betting", false);
+      blackjackRooms.changeGameState(channelId, "dealing", true);
+      message.channel.send(`All bets are placed, **the game is starting...**`);
+      return;
+    }
   }
   if (message.content.toLowerCase().startsWith("$startbj")) {
     if (blackjackRooms.areWePlaying(channelId)) {
