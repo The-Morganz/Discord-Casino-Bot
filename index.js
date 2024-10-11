@@ -9,6 +9,7 @@ const EventEmitter = require("events");
 const daily = require("./daily/daily");
 const voiceReward = require('./voiceReward');
 const { info } = require("console");
+const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
 
 const client = new Client({
@@ -23,7 +24,6 @@ const client = new Client({
 
 const ownerId = "237903516234940416";
 const ownerId2 = "294522326182002710";
-
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
@@ -201,7 +201,6 @@ client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().startsWith("$joinbj")) {
     if (
       blackjackRooms.areWePlaying(channelId) ||
-      blackjackRooms.areWeBetting(channelId) ||
       blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
     ) {
       message.reply(`A game is currently in session.`);
@@ -242,10 +241,15 @@ client.on("messageCreate", async (message) => {
 
     const args = message.content.split(" ");
     const betAmount = parseInt(args[1]);
+
+    if (betAmount > 100000001) {
+      message.reply(`You've hit the betting limit!`);
+      return;
+    }
     // Ne mozes da betujes ako nisi u room
 
     // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
-    if (isNaN(betAmount) || betAmount <= 0) {
+    if (isNaN(betAmount) || betAmount <= 0 || betAmount > 10000001) {
       message.reply(`Bet amount invalid!`);
       return;
     }
@@ -346,6 +350,7 @@ client.on("messageCreate", async (message) => {
       message.channel.send(
         `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`
       );
+      return;
     }
     if (infoAboutPlayer.bust) {
       message.channel.send(
@@ -385,6 +390,9 @@ client.on("messageCreate", async (message) => {
     );
     // message.channel.send(messageszzz);
   }
+  if (message.content.toLowerCase().startsWith("pusi ga")) {
+    message.reply(`That's not very nice!`);
+  }
 });
 
 eventEmitter.on("beginningBJ", (messageThatWasSent, channelToSendTo) => {
@@ -393,10 +401,19 @@ eventEmitter.on("beginningBJ", (messageThatWasSent, channelToSendTo) => {
 
 eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
   if (occasion === "dealer") {
-    channelToSendTo.send(
-      `:bust_in_silhouette: Its now the dealers turn. :bust_in_silhouette:`
-    );
-    blackjackGame.dealerTurn(channelToSendTo.id, eventEmitter, channelToSendTo);
+    setTimeout(() => {
+      channelToSendTo.send(
+        `:bust_in_silhouette: Its now the dealers turn. :bust_in_silhouette:`
+      );
+      blackjackGame.dealerTurn(
+        channelToSendTo.id,
+        eventEmitter,
+        channelToSendTo
+      );
+      return;
+    }, 300);
+  }
+  if (!messageThatWasSent) {
     return;
   }
   const thatRoom = blackjackRooms.findRoom(channelToSendTo.id);
@@ -406,6 +423,7 @@ eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
       theirSum = e.sum;
     }
   });
+  console.log(messageThatWasSent);
   channelToSendTo.send(
     `:stopwatch: <@${messageThatWasSent}>, your turn. **$hit** , or **$stand** ? Your sum is **${theirSum}** :stopwatch:`
   );
@@ -437,31 +455,19 @@ eventEmitter.on("dealerTurn", (messageThatWasSent, channelToSendTo) => {
     );
   }
 });
-  eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
-    channelToSendTo.send(messageThatWasSent);
-  });
-  eventEmitter.on("restartGame", (channelToSendTo) => {
-    blackjackRooms.restartRoom(channelToSendTo.id);
-    channelToSendTo.send(
-      `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
-    );
-  });
-
-  client.on('voiceStateUpdate', (oldState, newState) => {
-    const userId = newState.id;
-  
-    // Check if the user joined a voice channel
-    if (!oldState.channel && newState.channel) {
-      // User joined a voice channel
-      voiceReward.userJoinedVoice(userId);
-    }
-  
-    // Check if the user left a voice channel
-    if (oldState.channel && !newState.channel) {
-      // User left a voice channel
-      voiceReward.userLeftVoice(userId);
-    }
-  });
-  
+eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
+  channelToSendTo.send(messageThatWasSent);
+});
+eventEmitter.on("restartGame", (channelToSendTo) => {
+  blackjackRooms.restartRoom(channelToSendTo.id);
+  channelToSendTo.send(
+    `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
+  );
+});
+eventEmitter.on(`dealerWinningsStatistic`, (profits, channelToSendTo) => {
+  channelToSendTo.send(
+    `The dealers profit: ${profits > 0 ? `+${profits}` : `${profits}`}`
+  );
+});
 
 client.login(process.env.DISCORD_TOKEN);

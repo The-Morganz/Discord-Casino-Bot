@@ -1,5 +1,7 @@
 const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
+const { makeDeck } = require("./makeDeck");
+const { reset } = require("nodemon");
 
 function startBettingPhase(channelId) {
   rooms.changeGameState(channelId, "betting", true);
@@ -11,21 +13,37 @@ function randomNumber(min, max) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+let i = 0;
+function resetDeckCounter() {
+  i = 0;
+}
 // please lord have mercy on my soul
 async function startDealing(eventEmitter, channelId, channelToSendTo) {
   // Example function that triggers a message
   const thePlayingRoom = rooms.findRoom(channelId);
+  if (!i) {
+    thePlayingRoom.deckOfCards = makeDeck();
+    i++;
+  }
   for (let i = 0; i < thePlayingRoom.players.length; i++) {
     const player = thePlayingRoom.players[i];
-    const unoRandomNumero = randomNumber(2, 11);
+    const randomNumberFromDeck = randomNumber(
+      0,
+      thePlayingRoom.deckOfCards.length - 1
+    );
+    const randomCard = thePlayingRoom.deckOfCards[randomNumberFromDeck];
+    const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     player.sum += unoRandomNumero;
     player.cards.push(unoRandomNumero);
+    if (player.sum === 22) {
+      player.sum -= 10;
+    }
     let message = `:mag: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum} :mag:`;
     if (player.sum === 21) {
       player.played = true;
       message = `:fireworks: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum}. **BLACKJACK** :fireworks:`;
     }
-
     eventEmitter.emit("beginningBJ", message, channelToSendTo);
     await sleep(1000);
   }
@@ -39,7 +57,13 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     eventEmitter.emit("upNext", message, channelToSendTo);
   }
   if (dealer.cards.length === 0) {
-    const unoRandomNumero = randomNumber(2, 11);
+    const randomNumberFromDeck = randomNumber(
+      0,
+      thePlayingRoom.deckOfCards.length - 1
+    );
+    const randomCard = thePlayingRoom.deckOfCards[randomNumberFromDeck];
+    const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     dealer.sum += unoRandomNumero;
     dealer.cards.push(unoRandomNumero);
 
@@ -90,9 +114,18 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
       }
     });
   } catch (error) {
-    const unoRandomNumero = randomNumber(2, 11);
+    const randomNumberFromDeck = randomNumber(
+      0,
+      thatRoom.deckOfCards.length - 1
+    );
+    const randomCard = thatRoom.deckOfCards[randomNumberFromDeck];
+    const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    thatRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     thePlayer.sum += unoRandomNumero;
     thePlayer.cards.push(unoRandomNumero);
+    if (thatRoom.deckOfCards.length <= 6) {
+      thatRoom.deckOfCards = makeDeck();
+    }
     if (thePlayer.sum > 21) {
       if (aceSave(thePlayer.cards, thePlayer.sum)) {
         thePlayer.sum -= 10;
@@ -142,6 +175,7 @@ function stand(userId, channelId, eventEmitter, channelToSendTo) {
   }
 }
 async function dealerTurn(channelId, eventEmitter, channelToSendTo) {
+  const thatRoom = rooms.findRoom(channelId);
   const dealer = rooms.findRoom(channelId).dealer;
   await sleep(1000);
 
@@ -152,7 +186,14 @@ async function dealerTurn(channelId, eventEmitter, channelToSendTo) {
   }
   if (dealer.sum < 17) {
     // Dealer hit
-    const unoRandomNumero = randomNumber(2, 11);
+
+    const randomNumberFromDeck = randomNumber(
+      0,
+      thatRoom.deckOfCards.length - 1
+    );
+    const randomCard = thatRoom.deckOfCards[randomNumberFromDeck];
+    const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    thatRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     dealer.sum += unoRandomNumero;
     dealer.cards.push(unoRandomNumero);
     eventEmitter.emit("dealerTurn", `hit`, channelToSendTo);
@@ -187,6 +228,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 2
       } :gem:`;
       wallet.addCoins(player.userId, player.betAmount * 2);
+      thatRoom.dealer.profits -= player.betAmount;
     }
     if (player.sum > 21) {
       message = `:boom: <@${player.userId}> has BUST! They have lost -${player.betAmount} :boom:`;
@@ -195,12 +237,14 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
       message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${player.betAmount} :performing_arts:`;
       // wallet.removeCoins(player.userId, player.betAmount);
+      thatRoom.dealer.profits += player.betAmount;
     }
     if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
       wallet.addCoins(player.userId, player.betAmount * 2);
+      thatRoom.dealer.profits -= player.betAmount;
     }
     if (player.sum === 21) {
       message = `:fireworks: <@${
@@ -209,6 +253,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 3
       } :fireworks:`;
       wallet.addCoins(player.userId, player.betAmount * 3);
+      thatRoom.dealer.profits -= player.betAmount * 2;
     }
     if (thatRoom.dealer.sum === player.sum && player.sum < 21) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
@@ -218,7 +263,13 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     eventEmitter.emit("endGame", message, channelToSendTo);
     await sleep(1000);
   }
+  eventEmitter.emit(
+    `dealerWinningsStatistic`,
+    thatRoom.dealer.profits,
+    channelToSendTo
+  );
   eventEmitter.emit("restartGame", channelToSendTo);
+  resetDeckCounter();
 }
 
 module.exports = {
@@ -228,7 +279,5 @@ module.exports = {
   stand,
   dealerTurn,
   endGame,
+  resetDeckCounter,
 };
-// redosled je pogresan kad dobijes blackjack na hit
-// dve 11 da bude 12 a ne 22
-// leavebj sad ne radi kako treba kad svi izadju
