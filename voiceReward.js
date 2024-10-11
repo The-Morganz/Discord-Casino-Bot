@@ -1,4 +1,4 @@
-const wallet = require('./wallet');
+const wallet = require("./wallet");
 
 // Store users and their join times
 const userVoiceTimes = new Map();
@@ -8,7 +8,6 @@ const rewardIntervalMs = 60000; // 60 seconds
 function userJoinedVoice(userId) {
   if (!userVoiceTimes.has(userId)) {
     userVoiceTimes.set(userId, { joinTime: Date.now(), interval: null });
-    
     // Start rewarding the user every 60 seconds
     const interval = setInterval(() => {
       rewardUserForVoice(userId);
@@ -23,7 +22,7 @@ function userLeftVoice(userId) {
   if (userVoiceTimes.has(userId)) {
     const { joinTime, interval } = userVoiceTimes.get(userId);
     rewardUserForVoice(userId); // Reward them one last time when they leave
-    
+
     // Clear the interval to stop further rewards
     clearInterval(interval);
     userVoiceTimes.delete(userId);

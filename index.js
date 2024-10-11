@@ -7,7 +7,7 @@ const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
-const voiceReward = require('./voiceReward');
+const voiceReward = require("./voiceReward");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
@@ -18,7 +18,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
 
@@ -37,14 +37,24 @@ client.on("messageCreate", async (message) => {
   // Initialize the user's wallet if it doesn't exist
   wallet.initializeWallet(userId);
 
+  if (message.content.toLowerCase() === "$help") {
+    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n\n**"$joinbj"**- Join a blackjack room.\n\n**"$startbj"**- Used to start a game of blackjack\n\n**"$betbj [amount of coins]"**- Place a bet in a blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.`;
+    message.author.send(theHelpMessage);
+  }
+
   // Leaderboard command
-  if (message.content.toLowerCase() === "$leaderboard" || message.content.toLowerCase() === "$lb") {
+  if (
+    message.content.toLowerCase() === "$leaderboard" ||
+    message.content.toLowerCase() === "$lb"
+  ) {
     const topUsers = wallet.getTopUsers(); // Get the top 5 users
 
     // Build the leaderboard message
     let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
     topUsers.forEach((user, index) => {
-      leaderboardMessage += `${index + 1}. <@${user.userId}> - **${user.coins}** coins\n`;
+      leaderboardMessage += `${index + 1}. <@${user.userId}> - **${
+        user.coins
+      }** coins\n`;
     });
 
     // Send the leaderboard message
@@ -469,7 +479,7 @@ eventEmitter.on(`dealerWinningsStatistic`, (profits, channelToSendTo) => {
   );
 });
 
-client.on('voiceStateUpdate', (oldState, newState) => {
+client.on("voiceStateUpdate", (oldState, newState) => {
   const userId = newState.id;
 
   // Check if the user joined a voice channel
