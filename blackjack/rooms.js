@@ -1,3 +1,5 @@
+const { makeDeck } = require("./makeDeck");
+
 const rooms = [];
 
 // Koristim catch kao success block da bi zaustavio forEach loop odma, da ne ide kroz ceo array ako ima vise
@@ -61,14 +63,15 @@ function makeRoom(userId, channelId) {
     playing: false,
     dealerDealingPhase: false,
     bettingPhase: false,
-
-    dealer: { sum: 0, cards: [] },
+    deckOfCards: [],
+    dealer: { sum: 0, cards: [], profits: 0 },
   });
   return `You have made a room, and joined it.`;
 }
 
 function restartRoom(channelId) {
   const thatRoom = findRoom(channelId);
+
   thatRoom.players.forEach((e) => {
     e.betAmount = 0;
     e.sum = 0;
@@ -81,6 +84,7 @@ function restartRoom(channelId) {
   thatRoom.dealer.cards = [];
   changeGameState(channelId, "playing", false);
   changeGameState(channelId, "betting", true);
+  // thatRoom.deckOfCards = makeDeck();
 }
 function removePersonFromRoom(userId, channelId) {
   const thatRoom = findRoom(channelId);
