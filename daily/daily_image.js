@@ -1,4 +1,4 @@
-const wallet = require('./wallet');
+const wallet = require('../wallet');
 
 // Initialize an image challenge for a user
 function initializeImageChallenge(userId) {

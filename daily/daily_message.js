@@ -1,4 +1,4 @@
-const wallet = require('./wallet');
+const wallet = require('../wallet');
 
 // Generate a random message requirement between 20 and 40
 function generateRandomMessageRequirement() {

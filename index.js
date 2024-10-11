@@ -6,7 +6,7 @@ const blackjackRooms = require("./blackjack/rooms");
 const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
-const daily = require("./daily");
+const daily = require("./daily/daily");
 const eventEmitter = new EventEmitter();
 
 const client = new Client({

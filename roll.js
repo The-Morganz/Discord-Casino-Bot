@@ -39,6 +39,7 @@ function checkForMatch(matrix) {
         }
     });
 
+    /*
     // Check columns for matches
     for (let col = 0; col < 3; col++) {
         const emoji = matrix[0][col].emoji;
@@ -46,6 +47,7 @@ function checkForMatch(matrix) {
             matchCount[emoji] = (matchCount[emoji] || 0) + 1;  // Count the matches
         }
     }
+    */
 
     // Check diagonals for matches
     const diag1Emoji = matrix[0][0].emoji;
