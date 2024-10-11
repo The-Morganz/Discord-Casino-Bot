@@ -193,7 +193,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
-      message = `:preforming_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${player.betAmount} :preforming_arts:`;
+      message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${player.betAmount} :performing_arts:`;
       wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
