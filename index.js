@@ -157,10 +157,12 @@ client.on("messageCreate", async (message) => {
       return;
     }
     const coins = wallet.getCoins(userId);
-    // if(coins <= 0){
-    //     message.channel.send(`Guys! <@${userId}> is BROKE! :index_pointing_at_the_viewer: ahahahahahah :index_pointing_at_the_viewer: broke ass nigga`);
-    //     return;
-    // }
+    if (coins <= 0) {
+      message.channel.send(
+        `Guys! <@${userId}> is BROKE! :index_pointing_at_the_viewer: ahahahahahah :index_pointing_at_the_viewer: broke ass nigga`
+      );
+      return;
+    }
     const whatDoItSay = await blackjackRooms.makeRoom(userId, channelId);
     message.reply(whatDoItSay);
   }
@@ -194,7 +196,14 @@ client.on("messageCreate", async (message) => {
       message.reply(`Bet amount invalid!`);
       return;
     }
-
+    if (wallet.getCoins(userId) <= 0) {
+      message.reply(
+        `You don't have any more money to play with... Removing you from the room...`
+      );
+      blackjackRooms.removePersonFromRoom(userId, channelId);
+      return;
+    }
+    wallet.removeCoins(userId, betAmount);
     const whatDoItSay = await blackjackBets.addBet(
       userId,
       channelId,
@@ -207,10 +216,25 @@ client.on("messageCreate", async (message) => {
       }, 2000);
       blackjackRooms.changeGameState(channelId, "betting", false);
       blackjackRooms.changeGameState(channelId, "dealing", true);
-      message.channel.send(`All bets are placed, the game is starting...`);
+      message.channel.send(`All bets are placed, **the game is starting...**`);
       return;
     }
     message.channel.send(whatDoItSay);
+  }
+  if (message.content.toLowerCase().startsWith("$leavebj")) {
+    if (
+      blackjackRooms.areWePlaying(channelId) ||
+      blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
+    ) {
+      message.reply(`Can't leave the room mid game.`);
+      return;
+    }
+    if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
+      message.reply(`You are not in a room.`);
+      return;
+    }
+    message.reply(`Removing you from the room...`);
+    blackjackRooms.removePersonFromRoom(userId, channelId);
   }
   if (message.content.toLowerCase().startsWith("$startbj")) {
     if (blackjackRooms.areWePlaying(channelId)) {
@@ -223,7 +247,7 @@ client.on("messageCreate", async (message) => {
     }
     blackjackGame.startBettingPhase(channelId);
     message.channel.send(
-      `Starting the game. Please place your bets using "$betbj (amount)"`
+      `Starting the game. Please place your bets using **"$betbj (amount)"**`
     );
   }
   if (message.content.toLowerCase().startsWith("$hit")) {
@@ -246,12 +270,19 @@ client.on("messageCreate", async (message) => {
     );
     if (infoAboutPlayer.bust) {
       message.channel.send(
-        `<@${userId}> got a ${infoAboutPlayer.cardTheyGot}, their sum is ${infoAboutPlayer.theirSum}, and so they have **BUST**!`
+        `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`
       );
+      blackjackRooms.playerLose(userId, channelId);
       blackjackGame.stand(userId, channelId, eventEmitter, message.channel);
     } else {
       message.channel.send(
-        `<@${userId}> got a ${infoAboutPlayer.cardTheyGot}, their sum is ${infoAboutPlayer.theirSum}`
+        `<@${userId}> got a **${
+          infoAboutPlayer.cardTheyGot
+        }**, their sum is **${infoAboutPlayer.theirSum}**.${
+          infoAboutPlayer.aceSave
+            ? `They've got an ace, so their 11 is now counted as a 1.`
+            : ``
+        } **$hit** , or **$stand** ?`
       );
     }
   }
@@ -284,10 +315,52 @@ eventEmitter.on("beginningBJ", (messageThatWasSent, channelToSendTo) => {
 eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
   if (occasion === "dealer") {
     channelToSendTo.send(`Its now the dealers turn.`);
+    blackjackGame.dealerTurn(channelToSendTo.id, eventEmitter, channelToSendTo);
     return;
   }
+  const thatRoom = blackjackRooms.findRoom(channelToSendTo.id);
+  let theirSum;
+  thatRoom.players.forEach((e) => {
+    if (e.userId === messageThatWasSent) {
+      theirSum = e.sum;
+    }
+  });
   channelToSendTo.send(
-    `<@${messageThatWasSent}>, your turn. $hit , or $stand ?`
+    `<@${messageThatWasSent}>, your turn. **$hit** , or **$stand** ? Your sum is **${theirSum}**`
+  );
+});
+eventEmitter.on("dealerTurn", (messageThatWasSent, channelToSendTo) => {
+  const dealer = blackjackRooms.findRoom(channelToSendTo.id).dealer;
+  if (messageThatWasSent === "stand") {
+    channelToSendTo.send(
+      `The DEALER **stands**, with a sum of **${dealer.sum}**`
+    );
+    blackjackGame.endGame(channelToSendTo.id, channelToSendTo, eventEmitter);
+  }
+  if (messageThatWasSent === "hit") {
+    channelToSendTo.send(
+      `The DEALER **hits**, and gets a **${dealer.cards.at(
+        -1
+      )}**, and has a sum of **${dealer.sum}**`
+    );
+  }
+  if (messageThatWasSent === "bust") {
+    channelToSendTo.send(`The DEALER **BUSTS** **all ova** the place`);
+    blackjackGame.endGame(channelToSendTo.id, channelToSendTo, eventEmitter);
+  }
+  if (messageThatWasSent === `aceSave`) {
+    channelToSendTo.send(
+      `The DEALER was about to bust, but got saved by their **ACE**. Their sum is **${dealer.sum}**`
+    );
+  }
+});
+eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
+  channelToSendTo.send(messageThatWasSent);
+});
+eventEmitter.on("restartGame", (channelToSendTo) => {
+  blackjackRooms.restartRoom(channelToSendTo.id);
+  channelToSendTo.send(
+    `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
   );
 });
 
