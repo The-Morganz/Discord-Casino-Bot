@@ -26,5 +26,19 @@
     "challengeType": "image",
     "imagesSent": 1,
     "requiredImages": 1
+  },
+  "685620500797718726": {
+    "date": "2024-10-11",
+    "completed": true,
+    "challengeType": "message",
+    "messages": 22,
+    "requiredMessages": 22
+  },
+  "188354104664260608": {
+    "date": "2024-10-11",
+    "completed": false,
+    "challengeType": "image",
+    "imagesSent": 0,
+    "requiredImages": 1
   }
 }
