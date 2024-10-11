@@ -7,6 +7,7 @@ const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
+const voiceReward = require('./voiceReward');
 const { info } = require("console");
 const eventEmitter = new EventEmitter();
 
@@ -16,6 +17,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates
   ],
 });
 
@@ -34,6 +36,20 @@ client.on("messageCreate", async (message) => {
 
   // Initialize the user's wallet if it doesn't exist
   wallet.initializeWallet(userId);
+
+  // Leaderboard command
+  if (message.content.toLowerCase() === "$leaderboard" || message.content.toLowerCase() === "$lb") {
+    const topUsers = wallet.getTopUsers(); // Get the top 5 users
+
+    // Build the leaderboard message
+    let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
+    topUsers.forEach((user, index) => {
+      leaderboardMessage += `${index + 1}. <@${user.userId}> - **${user.coins}** coins\n`;
+    });
+
+    // Send the leaderboard message
+    await message.reply(leaderboardMessage);
+  }
 
   // Track messages for the daily message challenge
   daily.incrementChallenge(userId, false);
@@ -62,7 +78,7 @@ client.on("messageCreate", async (message) => {
     message.content.toLowerCase() === "$w"
   ) {
     const coins = wallet.getCoins(userId); // Get the user's balance
-    await message.reply(`You have ${coins} coins in your wallet.`);
+    await message.reply(`You have **${coins}** coins in your wallet.`);
   }
 
   // Command to add coins (restricted to bot owner)
@@ -95,7 +111,7 @@ client.on("messageCreate", async (message) => {
     // Add coins to the mentioned user's wallet
     wallet.addCoins(targetUserId, amount);
     await message.reply(
-      `You have added ${amount} coins to ${mentionedUser.username}'s wallet.`
+      `You have added **${amount}** coins to **${mentionedUser.username}'s** wallet.`
     );
   }
 
@@ -167,7 +183,7 @@ client.on("messageCreate", async (message) => {
         if (rollResult.payout > 0) {
           // Display payout
           await message.reply(
-            `🎰 You rolled:\n${rollResult.result}\nYou won ${rollResult.payout} coins!`
+            `🎰 You rolled:\n${rollResult.result}\nYou won **${rollResult.payout} coins!**  🎉 `
           );
         } else {
           await message.reply(
@@ -421,14 +437,31 @@ eventEmitter.on("dealerTurn", (messageThatWasSent, channelToSendTo) => {
     );
   }
 });
-eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
-  channelToSendTo.send(messageThatWasSent);
-});
-eventEmitter.on("restartGame", (channelToSendTo) => {
-  blackjackRooms.restartRoom(channelToSendTo.id);
-  channelToSendTo.send(
-    `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
-  );
-});
+  eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
+    channelToSendTo.send(messageThatWasSent);
+  });
+  eventEmitter.on("restartGame", (channelToSendTo) => {
+    blackjackRooms.restartRoom(channelToSendTo.id);
+    channelToSendTo.send(
+      `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
+    );
+  });
+
+  client.on('voiceStateUpdate', (oldState, newState) => {
+    const userId = newState.id;
+  
+    // Check if the user joined a voice channel
+    if (!oldState.channel && newState.channel) {
+      // User joined a voice channel
+      voiceReward.userJoinedVoice(userId);
+    }
+  
+    // Check if the user left a voice channel
+    if (oldState.channel && !newState.channel) {
+      // User left a voice channel
+      voiceReward.userLeftVoice(userId);
+    }
+  });
+  
 
 client.login(process.env.DISCORD_TOKEN);

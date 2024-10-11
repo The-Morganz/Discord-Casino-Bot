@@ -59,6 +59,16 @@ function removeCoins(userId, amount) {
     }
 }
 
+// Function to get the top 5 users by coin balance
+function getTopUsers() {
+    const users = Object.entries(wallets); // Convert wallets object to array of [userId, wallet] pairs
+    const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins); // Sort by coin balance, descending
+  
+    // Get the top 5 users
+    const topUsers = sortedUsers.slice(0, 5);
+  
+    return topUsers.map(([userId, wallet]) => ({ userId, coins: wallet.coins })); // Return array of top 5 users with coins
+  }
 
 // Load wallets on startup
 loadWallets();
@@ -69,4 +79,5 @@ module.exports = {
     getCoins,
     addCoins,
     removeCoins,
+    getTopUsers,
 };

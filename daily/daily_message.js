@@ -23,7 +23,7 @@ function incrementMessageCount(userChallenge, userId) {
     // Check if the required number of messages has been sent
     if (userChallenge.messages >= userChallenge.requiredMessages) {
       userChallenge.completed = true;
-      wallet.addCoins(userId, 100); // Reward the user with 100 coins
+      wallet.addCoins(userId, 1000); // Reward the user with 100 coins
       console.log(
         `User ${userId} has completed the message challenge and earned 100 coins.`
       );

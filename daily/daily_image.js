@@ -18,7 +18,7 @@ function incrementImageCount(userChallenge, userId) {
     // Check if the required number of images has been sent
     if (userChallenge.imagesSent >= userChallenge.requiredImages) {
       userChallenge.completed = true;
-      wallet.addCoins(userId, 100); // Reward the user with 100 coins
+      wallet.addCoins(userId, 1000); // Reward the user with 100 coins
       console.log(`User ${userId} has completed the image challenge and earned 100 coins.`);
     }
   }
