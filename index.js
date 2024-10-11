@@ -7,6 +7,7 @@ const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
+const { info } = require("console");
 const eventEmitter = new EventEmitter();
 
 const client = new Client({
@@ -270,6 +271,17 @@ client.on("messageCreate", async (message) => {
       eventEmitter,
       message.channel
     );
+    if (infoAboutPlayer.theirSum === 21) {
+      const messagezz = blackjackGame.stand(
+        userId,
+        channelId,
+        eventEmitter,
+        message.channel
+      );
+      message.channel.send(
+        `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`
+      );
+    }
     if (infoAboutPlayer.bust) {
       message.channel.send(
         `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`
