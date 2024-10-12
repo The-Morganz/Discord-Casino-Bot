@@ -39,7 +39,6 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
       0,
       thePlayingRoom.deckOfCards.length - 1
     );
-    console.log(thePlayingRoom.deckOfCards);
     const randomCard = thePlayingRoom.deckOfCards[randomNumberFromDeck];
     const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
     thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
@@ -258,7 +257,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       continue;
       // wallet.removeCoins(player.userId, player.betAmount);
     }
-    if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
+    if (thatRoom.dealer.sum > 21 && player.sum < 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
@@ -267,7 +266,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       await sleep(1000);
       continue;
     }
-    if (thatRoom.dealer.sum === player.sum && player.sum < 21) {
+    if (thatRoom.dealer.sum === player.sum && player.sum <= 21) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
       wallet.addCoins(player.userId, player.betAmount);
       eventEmitter.emit("endGame", message, channelToSendTo);
