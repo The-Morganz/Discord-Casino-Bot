@@ -8,6 +8,7 @@ const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
 const voiceReward = require("./voiceReward");
+const coinflip = require('./coinflip');
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
@@ -42,24 +43,6 @@ client.on("messageCreate", async (message) => {
     message.author.send(theHelpMessage);
   }
 
-  // Leaderboard command
-  // if (
-  //   message.content.toLowerCase() === "$leaderboard" ||
-  //   message.content.toLowerCase() === "$lb"
-  // ) {
-  //   const topUsers = wallet.getTopUsers(); // Get the top 5 users
-
-  //   // Build the leaderboard message
-  //   let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
-  //   topUsers.forEach((user, index) => {
-  //     leaderboardMessage += `${index + 1}. <@${user.userId}> - **${
-  //       user.coins
-  //     }** coins\n`;
-  //   });
-
-  //   // Send the leaderboard message
-  //   await message.reply(leaderboardMessage);
-  // }
   if (
     message.content.toLowerCase() === "$leaderboard" ||
     message.content.toLowerCase() === "$lb"
@@ -76,6 +59,47 @@ client.on("messageCreate", async (message) => {
 
     // Send the leaderboard message
     await message.reply(leaderboardMessage);
+  }
+
+   // Command to start a coinflip challenge
+   if (message.content.toLowerCase().startsWith("$flip")) {
+    const args = message.content.split(" ");
+    const amount = parseInt(args[1]);
+
+    if (isNaN(amount) || amount <= 0) {
+      return message.reply("Please provide a valid bet amount.");
+    }
+
+    const mentionedUser = message.mentions.users.first();
+    if (!mentionedUser) {
+      return message.reply("Please mention a user to challenge.");
+    }
+
+    if (mentionedUser.id === userId) {
+      return message.reply("You can't challenge yourself!");
+    }
+
+    const challengeMessage = coinflip.startFlipChallenge(userId, mentionedUser.id, amount);
+    return message.reply(challengeMessage);
+  }
+
+  // Command to confirm the challenge
+  if (message.content.toLowerCase() === "$confirm") {
+    const confirmationMessage = coinflip.confirmChallenge(userId);
+    return message.reply(confirmationMessage);
+  }
+
+  // Command to deny the challenge
+  if (message.content.toLowerCase() === "$deny") {
+    const denyMessage = coinflip.denyChallenge(userId);
+    return message.reply(denyMessage);
+  }
+
+  // Command to pick heads or tails
+  if (message.content.toLowerCase() === "$heads" || message.content.toLowerCase() === "$tails") {
+    const choice = message.content.toLowerCase().substring(1); // Get 'heads' or 'tails'
+    const choiceMessage = coinflip.pickChoice(userId, choice);
+    return message.reply(choiceMessage);
   }
 
   // Track messages for the daily message challenge
