@@ -58,7 +58,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
   const dealer = thePlayingRoom.dealer;
   if (dealer.cards.length === 1) {
     const message = whoIsUpNext(channelId);
-    rooms.changeGameState(channelId, "betting", false);
+    rooms.changeGameState(channelId, "dealing", false);
 
     if (thePlayingRoom.players.every((player) => player.played === true)) {
       eventEmitter.emit("upNext", message, channelToSendTo, "dealer");

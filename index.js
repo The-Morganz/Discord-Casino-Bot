@@ -8,7 +8,7 @@ const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
 const voiceReward = require("./voiceReward");
-const coinflip = require('./coinflip');
+const coinflip = require("./coinflip");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
@@ -61,7 +61,7 @@ client.on("messageCreate", async (message) => {
     await message.reply(leaderboardMessage);
   }
 
-   // Command to start a coinflip challenge
+  // Command to start a coinflip challenge
   if (message.content.toLowerCase().startsWith("$flip")) {
     const args = message.content.split(" ");
     const amount = parseInt(args[1]);
@@ -79,7 +79,12 @@ client.on("messageCreate", async (message) => {
       return message.reply("You can't challenge yourself!");
     }
 
-    const challengeMessage = coinflip.startFlipChallenge(userId, mentionedUser.id, amount, message); // Pass the message object
+    const challengeMessage = coinflip.startFlipChallenge(
+      userId,
+      mentionedUser.id,
+      amount,
+      message
+    ); // Pass the message object
     return message.reply(challengeMessage);
   }
 
@@ -96,10 +101,16 @@ client.on("messageCreate", async (message) => {
   }
 
   // Command to pick heads or tails
-  if (message.content.toLowerCase() === "$heads" || message.content.toLowerCase() === "$tails") {
+  if (
+    message.content.toLowerCase() === "$heads" ||
+    message.content.toLowerCase() === "$tails"
+  ) {
     const choice = message.content.toLowerCase().substring(1); // Get 'heads' or 'tails'
-    const choiceMessage = coinflip.pickChoice(userId, choice);
-    return message.reply(choiceMessage);
+    const choiceMessage = await coinflip.pickChoice(userId, choice, `flip`);
+    console.log(choiceMessage);
+    message.reply(choiceMessage);
+    const resultMessage = await coinflip.pickChoice(userId, choice);
+    return message.reply(resultMessage);
   }
 
   // Track messages for the daily message challenge

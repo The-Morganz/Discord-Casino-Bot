@@ -1,9 +1,12 @@
-const wallet = require('./wallet');
+const wallet = require("./wallet");
 
 // Utility function to create a delay
 function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function randomNumber(min, max) {
+  return Math.floor(Math.random() * (max - min) + 1) + min;
+}
 
 let pendingChallenges = {};
 
@@ -42,7 +45,10 @@ function confirmChallenge(userId) {
     return "Nothing to confirm";
   }
 
-  if (wallet.getCoins(userId) < challenge.amount || wallet.getCoins(challenge.challengerId) < challenge.amount) {
+  if (
+    wallet.getCoins(userId) < challenge.amount ||
+    wallet.getCoins(challenge.challengerId) < challenge.amount
+  ) {
     delete pendingChallenges[userId];
     return "Someone is broke.";
   }
@@ -64,7 +70,7 @@ function denyChallenge(userId) {
   }
 }
 
-async function pickChoice(userId, choice) {
+async function pickChoice(userId, choice, action) {
   const challenge = pendingChallenges[userId];
 
   if (!challenge || !challenge.confirmed) {
@@ -80,11 +86,14 @@ async function pickChoice(userId, choice) {
 
   // Announce the choices
   const message = `You chose **${choice}**, and <@${challenge.challengerId}> is **${challengerChoice}**! Flipping the coin... 👍⤴️🪙`;
-  challenge.message.reply(message);
+  // challenge.message.reply(message);
 
   // Add suspense: wait for 5 seconds before flipping the coin
-  await sleep(3000);
-
+  if (action === `flip`) {
+    console.log(message);
+    return message;
+  }
+  await sleep(randomNumber(3000, 6000));
   // Flip the coin and return the result
   return flipCoin(userId);
 }
@@ -112,7 +121,9 @@ function flipCoin(userId) {
   // Add double the amount to the winner
   wallet.addCoins(winnerId, challenge.amount * 2);
 
-  const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${challenge.amount * 2}** coins! 🪙`;
+  const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${
+    challenge.amount * 2
+  }** coins! 🪙`;
   delete pendingChallenges[userId];
 
   return resultMessage;
