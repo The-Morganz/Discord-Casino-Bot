@@ -1,40 +1,5 @@
 {
-  "294522326182002710": {
-    "date": "2024-10-12",
-    "completed": true,
-    "challengeType": "message",
-    "messages": 9,
-    "requiredMessages": 9
-  },
   "237903516234940416": {
-    "date": "2024-10-12",
-    "completed": true,
-    "challengeType": "message",
-    "messages": 9,
-    "requiredMessages": 9
-  },
-  "685620500797718726": {
-    "date": "2024-10-12",
-    "completed": true,
-    "challengeType": "image",
-    "imagesSent": 1,
-    "requiredImages": 1
-  },
-  "188354104664260608": {
-    "date": "2024-10-12",
-    "completed": false,
-    "challengeType": "image",
-    "imagesSent": 0,
-    "requiredImages": 1
-  },
-  "189147556717002752": {
-    "date": "2024-10-12",
-    "completed": false,
-    "challengeType": "message",
-    "messages": 3,
-    "requiredMessages": 7
-  },
-  "466610484766834690": {
     "date": "2024-10-12",
     "completed": true,
     "challengeType": "image",

@@ -1,4 +1,4 @@
-const wallet = require('./wallet');
+const wallet = require('../wallet');
 
 // Initialize an image challenge for a user
 function initializeImageChallenge(userId) {
@@ -18,8 +18,8 @@ function incrementImageCount(userChallenge, userId) {
     // Check if the required number of images has been sent
     if (userChallenge.imagesSent >= userChallenge.requiredImages) {
       userChallenge.completed = true;
-      wallet.addCoins(userId, 100); // Reward the user with 100 coins
-      console.log(`User ${userId} has completed the image challenge and earned 100 coins.`);
+      wallet.addCoins(userId, 1000); // Reward the user with 1000 coins
+      console.log(`User ${userId} has completed the image challenge and earned 1000 coins.`);
     }
   }
   return userChallenge;
@@ -29,9 +29,9 @@ function incrementImageCount(userChallenge, userId) {
 function getImageStatus(userChallenge) {
   const { imagesSent, requiredImages, completed } = userChallenge;
   if (completed) {
-    return `You have already completed today's image challenge and earned 100 coins! Try again tomorrow.`;
+    return `🎉 You have completed today's image challenge and earned 1000 coins!`;
   } else {
-    return `Today's challenge: Send ${requiredImages} image(s). Progress: ${imagesSent}/${requiredImages} image(s).`;
+    return `🎁 Today's challenge: Send ${requiredImages} image(s). Progress: ${imagesSent}/${requiredImages} image(s).`;
   }
 }
 

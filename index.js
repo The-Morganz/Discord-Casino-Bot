@@ -69,7 +69,7 @@ client.on("messageCreate", async (message) => {
     message.attachments.forEach((attachment) => {
       if (attachment.contentType && attachment.contentType.startsWith('image/')) {
         daily.incrementChallenge(userId, true);
-        message.reply('Your image counts towards today\'s challenge!');
+        //message.reply('Your image counts towards today\'s challenge!');
       }
     });
   }

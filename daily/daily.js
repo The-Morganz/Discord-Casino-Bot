@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const messageChallenge = require('./messageChallenge');
-const imageChallenge = require('./imageChallenge');
+const messageChallenge = require('./daily_message');
+const imageChallenge = require('./daily_image');
 
 // Path to store daily challenge progress
 const dailyFilePath = path.join(__dirname, 'daily.json');
