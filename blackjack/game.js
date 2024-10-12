@@ -7,6 +7,8 @@ let afkRoomTimeout;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
   afkRoomTimeout = setTimeout(() => {
+    if (!rooms.findRoom(channelId)) return;
+    
     rooms.deleteRoom(channelId);
     eventEmitter.emit(`afkRoom`, channelToSendTo);
   }, howLongUntilRoomAfk);
