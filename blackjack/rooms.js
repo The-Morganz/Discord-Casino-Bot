@@ -1,3 +1,4 @@
+// const { startBettingPhase } = require("./game");
 const { makeDeck } = require("./makeDeck");
 
 const rooms = [];
@@ -69,7 +70,7 @@ function makeRoom(userId, channelId) {
   return `You have made a room, and joined it.`;
 }
 
-function restartRoom(channelId) {
+function restartRoom(channelId, eventEmitter, channelToSendTo) {
   const thatRoom = findRoom(channelId);
 
   thatRoom.players.forEach((e) => {
@@ -83,7 +84,7 @@ function restartRoom(channelId) {
   thatRoom.dealer.sum = 0;
   thatRoom.dealer.cards = [];
   changeGameState(channelId, "playing", false);
-  changeGameState(channelId, "betting", true);
+  eventEmitter.emit(`startBettingPhase`, channelToSendTo);
   // thatRoom.deckOfCards = makeDeck();
 }
 function removePersonFromRoom(userId, channelId) {
@@ -95,7 +96,7 @@ function removePersonFromRoom(userId, channelId) {
     }
   });
   if (thatRoom.players.length === 0) {
-    deleteRoom(userId, channelId);
+    deleteRoom(channelId);
   }
 }
 function updatePlayerIndexes(channelId) {
@@ -129,7 +130,7 @@ function joinRoom(userId, channelId) {
   else return `There has been a error.`;
 }
 
-function deleteRoom(userId, channelId) {
+function deleteRoom(channelId) {
   try {
     rooms.forEach((e) => {
       if (e.id === channelId) {
