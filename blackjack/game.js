@@ -2,16 +2,11 @@ const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
 const { makeDeck } = require("./makeDeck");
 const { reset } = require("nodemon");
-const howLongUntilRoomAfk = 180000; //3 minuta ja msm
-let afkRoomTimeout;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
-  afkRoomTimeout = setTimeout(() => {
-    if (!rooms.findRoom(channelId)) return;
-    
-    rooms.deleteRoom(channelId);
-    eventEmitter.emit(`afkRoom`, channelToSendTo);
-  }, howLongUntilRoomAfk);
+
+  const room = rooms.findRoom(channelId);
+  room.bettingStartTime = new Date();
 }
 
 function randomNumber(min, max) {
@@ -20,18 +15,19 @@ function randomNumber(min, max) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-let i = 0;
-function resetDeckCounter() {
-  i = 0;
+function resetDeckCounter(channeId) {
+  const thatRoom = rooms.findRoom(channeId);
+  thatRoom.resetDeck = 0;
 }
 // please lord have mercy on my soul
 async function startDealing(eventEmitter, channelId, channelToSendTo) {
   // Example function that triggers a message
   const thePlayingRoom = rooms.findRoom(channelId);
-  clearTimeout(afkRoomTimeout);
-  if (!i) {
+  rooms.changeGameState(channelId, "betting", false);
+  rooms.changeGameState(channelId, "playing", true);
+  if (!thePlayingRoom.resetDeck) {
     thePlayingRoom.deckOfCards = makeDeck();
-    i++;
+    thePlayingRoom.resetDeck = 1;
   }
   for (let i = 0; i < thePlayingRoom.players.length; i++) {
     const player = thePlayingRoom.players[i];
@@ -62,9 +58,12 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
   const dealer = thePlayingRoom.dealer;
   if (dealer.cards.length === 1) {
     const message = whoIsUpNext(channelId);
-    rooms.changeGameState(channelId, `dealing`, false);
-    rooms.changeGameState(channelId, `playing`, true);
+    rooms.changeGameState(channelId, "betting", false);
 
+    if (thePlayingRoom.players.every((player) => player.played === true)) {
+      eventEmitter.emit("upNext", message, channelToSendTo, "dealer");
+      return;
+    }
     eventEmitter.emit("upNext", message, channelToSendTo);
   }
   if (dealer.cards.length === 0) {
@@ -89,7 +88,11 @@ function whoIsUpNext(channelId) {
   const thatRoom = rooms.findRoom(channelId);
   let whoIsNext;
   try {
-    thatRoom.players.forEach((e) => {
+    thatRoom.players.forEach((e, i, arr) => {
+      if (e.played && arr.length === 1) {
+        e.turn = false;
+        return;
+      }
       if (e.played) {
         e.turn = false;
         return;
@@ -234,7 +237,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
   await sleep(1000);
   for (let i = 0; i < thatRoom.players.length; i++) {
     const player = thatRoom.players[i];
-    if (player.sum > thatRoom.dealer.sum && player.sum <= 21) {
+    if (player.sum > thatRoom.dealer.sum && player.sum < 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
@@ -257,11 +260,18 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       continue;
       // wallet.removeCoins(player.userId, player.betAmount);
     }
-    if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
+    if (thatRoom.dealer.sum > 21 && player.sum < 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
       wallet.addCoins(player.userId, player.betAmount * 2);
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
+    }
+    if (thatRoom.dealer.sum === player.sum && player.sum <= 21) {
+      message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
+      wallet.addCoins(player.userId, player.betAmount);
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -277,16 +287,9 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       await sleep(1000);
       continue;
     }
-    if (thatRoom.dealer.sum === player.sum && player.sum < 21) {
-      message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
-      wallet.addCoins(player.userId, player.betAmount);
-      eventEmitter.emit("endGame", message, channelToSendTo);
-      await sleep(1000);
-      continue;
-    }
   }
   eventEmitter.emit("restartGame", channelToSendTo);
-  resetDeckCounter();
+  resetDeckCounter(channelId);
 }
 
 module.exports = {

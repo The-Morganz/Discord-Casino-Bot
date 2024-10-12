@@ -1,5 +1,6 @@
-// const { startBettingPhase } = require("./game");
 const { makeDeck } = require("./makeDeck");
+const wallet = require(`../wallet`);
+const client = require("../index");
 
 const rooms = [];
 
@@ -65,10 +66,46 @@ function makeRoom(userId, channelId) {
     dealerDealingPhase: false,
     bettingPhase: false,
     deckOfCards: [],
+    resetDeck: 0,
+    bettingStartTime: null,
     dealer: { sum: 0, cards: [], profits: 0 },
   });
   return `You have made a room, and joined it.`;
 }
+
+function jusGivMeMyMooony(channelId) {
+  const room = findRoom(channelId);
+  room.players.forEach((e) => {
+    wallet.addCoins(e.userId, e.betAmount);
+  });
+}
+function checkBettingPhase(channelId) {
+  const room = findRoom(channelId);
+  if (room.bettingPhase) {
+    const now = new Date();
+    const bettingStartTime = new Date(room.bettingStartTime);
+    const timeDiff = now - bettingStartTime; // Time difference in milliseconds
+
+    if (timeDiff >= 180000) {
+      // 3 minutes = 180000 milliseconds
+      jusGivMeMyMooony(channelId);
+      deleteRoom(channelId);
+      // const channelToSendTo = client.channels.fetch(channelId);
+      // client.channels.fetch(channelId);
+
+      // channelToSendTo.send(`Deleting blackjack room due to inactivity....`);
+      console.log(`I deleted the room.`);
+    }
+  }
+}
+
+function checkAllRooms() {
+  rooms.forEach((room) => checkBettingPhase(room.id));
+}
+setInterval(checkAllRooms, 10000);
+
+// Call this periodically, e.g., every 30 seconds or 1 minute using setInterval
+// Check every minute
 
 function restartRoom(channelId, eventEmitter, channelToSendTo) {
   const thatRoom = findRoom(channelId);
@@ -84,6 +121,7 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   thatRoom.dealer.sum = 0;
   thatRoom.dealer.cards = [];
   changeGameState(channelId, "playing", false);
+  console.log(thatRoom);
   eventEmitter.emit(`startBettingPhase`, channelToSendTo);
   // thatRoom.deckOfCards = makeDeck();
 }
@@ -235,4 +273,6 @@ module.exports = {
   changeGameState,
   playerLose,
   restartRoom,
+  jusGivMeMyMooony,
+  checkAllRooms,
 };
