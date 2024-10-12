@@ -67,11 +67,9 @@ client.on("messageCreate", async (message) => {
   // Track image posts for the daily image challenge
   if (message.attachments.size > 0) {
     message.attachments.forEach((attachment) => {
-      if (
-        attachment.contentType &&
-        attachment.contentType.startsWith("image/")
-      ) {
+      if (attachment.contentType && attachment.contentType.startsWith('image/')) {
         daily.incrementChallenge(userId, true);
+        message.reply('Your image counts towards today\'s challenge!');
       }
     });
   }
