@@ -508,12 +508,15 @@ client.on("voiceStateUpdate", (oldState, newState) => {
   // Check if the user joined a voice channel
   if (!oldState.channel && newState.channel) {
     // User joined a voice channel
+    console.log(`${userId} has joined the voice chat`);
     voiceReward.userJoinedVoice(userId);
   }
 
   // Check if the user left a voice channel
   if (oldState.channel && !newState.channel) {
     // User left a voice channel
+    console.log(`${userId} has left the voice chat`);
+
     voiceReward.userLeftVoice(userId);
   }
 });

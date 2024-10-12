@@ -234,7 +234,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
   await sleep(1000);
   for (let i = 0; i < thatRoom.players.length; i++) {
     const player = thatRoom.players[i];
-    if (player.sum > thatRoom.dealer.sum && player.sum <= 21) {
+    if (player.sum > thatRoom.dealer.sum && player.sum < 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
