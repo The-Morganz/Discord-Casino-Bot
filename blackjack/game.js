@@ -38,6 +38,9 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     player.cards.push(unoRandomNumero);
     if (player.sum === 22) {
       player.sum -= 10;
+      const aceIndex = player.cards.indexOf(11);
+      player.cards.splice(aceIndex, 1);
+      player.cards.push(1);
     }
     let message = `:mag: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum} :mag:`;
     if (player.sum === 21) {
@@ -228,23 +231,32 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 2
       } :gem:`;
       wallet.addCoins(player.userId, player.betAmount * 2);
-      thatRoom.dealer.profits -= player.betAmount;
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
     }
     if (player.sum > 21) {
       message = `:boom: <@${player.userId}> has BUST! They have lost -${player.betAmount} :boom:`;
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
       // wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
       message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${player.betAmount} :performing_arts:`;
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
       // wallet.removeCoins(player.userId, player.betAmount);
-      thatRoom.dealer.profits += player.betAmount;
     }
     if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
       wallet.addCoins(player.userId, player.betAmount * 2);
-      thatRoom.dealer.profits -= player.betAmount;
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
     }
     if (player.sum === 21) {
       message = `:fireworks: <@${
@@ -253,21 +265,18 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 3
       } :fireworks:`;
       wallet.addCoins(player.userId, player.betAmount * 3);
-      thatRoom.dealer.profits -= player.betAmount * 2;
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
     }
     if (thatRoom.dealer.sum === player.sum && player.sum < 21) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
       wallet.addCoins(player.userId, player.betAmount);
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
     }
-
-    eventEmitter.emit("endGame", message, channelToSendTo);
-    await sleep(1000);
   }
-  eventEmitter.emit(
-    `dealerWinningsStatistic`,
-    thatRoom.dealer.profits,
-    channelToSendTo
-  );
   eventEmitter.emit("restartGame", channelToSendTo);
   resetDeckCounter();
 }

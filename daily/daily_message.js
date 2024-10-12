@@ -25,7 +25,7 @@ function incrementMessageCount(userChallenge, userId) {
       userChallenge.completed = true;
       wallet.addCoins(userId, 1000); // Reward the user with 100 coins
       console.log(
-        `User ${userId} has completed the message challenge and earned 100 coins.`
+        `User ${userId} has completed the message challenge and earned 1000 coins.`
       );
     }
   }
@@ -36,7 +36,7 @@ function incrementMessageCount(userChallenge, userId) {
 function getMessageStatus(userChallenge) {
   const { messages, requiredMessages, completed } = userChallenge;
   if (completed) {
-    return `🎉 You have completed today's challenge and earned 100 coins!`;
+    return `🎉 You have completed today's challenge and earned 1000 coins!`;
   } else {
     return `🎁 Today's challenge: Send ${requiredMessages} messages. 📈 Progress: ${messages}/${requiredMessages} messages.`;
   }

@@ -473,11 +473,6 @@ eventEmitter.on("restartGame", (channelToSendTo) => {
     `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
   );
 });
-eventEmitter.on(`dealerWinningsStatistic`, (profits, channelToSendTo) => {
-  channelToSendTo.send(
-    `The dealers profit: ${profits > 0 ? `+${profits}` : `${profits}`}`
-  );
-});
 
 client.on("voiceStateUpdate", (oldState, newState) => {
   const userId = newState.id;
