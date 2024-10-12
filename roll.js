@@ -4,9 +4,9 @@ const wallet = require('./wallet');
 const emojiSet = [
     { emoji: '🍋', rarity: 25, multiplier: 1 },
     { emoji: '🍊', rarity: 22, multiplier: 2 },
-    { emoji: '🍒', rarity: 17, multiplier: 4 }, 
-    { emoji: '🍉', rarity: 15, multiplier: 6 },   
-    { emoji: '🍀', rarity: 12, multiplier: 10 },   
+    { emoji: '🍒', rarity: 17, multiplier: 5 }, 
+    { emoji: '🍉', rarity: 15, multiplier: 10 },   
+    { emoji: '🍀', rarity: 12, multiplier: 20 },   
     { emoji: '7️⃣', rarity: 6, multiplier: 50 },  
     { emoji: '💎', rarity: 3, multiplier: 200 } 
 ];
