@@ -66,14 +66,33 @@ function removeCoins(userId, amount) {
 }
 
 // Function to get the top 5 users by coin balance
-function getTopUsers() {
+// function getTopUsers() {
+//   const users = Object.entries(wallets); // Convert wallets object to array of [userId, wallet] pairs
+//   const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins); // Sort by coin balance, descending
+//   // Get the top 5 users
+//   const topUsers = sortedUsers.slice(0, 5);
+
+//   return topUsers.map(([userId, wallet]) => ({ userId, coins: wallet.coins })); // Return array of top 5 users with coins
+// }
+async function getTopUsers(message) {
   const users = Object.entries(wallets); // Convert wallets object to array of [userId, wallet] pairs
   const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins); // Sort by coin balance, descending
+  const topUsers = sortedUsers.slice(0, 5); // Get the top 5 users
 
-  // Get the top 5 users
-  const topUsers = sortedUsers.slice(0, 5);
+  const leaderboard = await Promise.all(
+    topUsers.map(async ([userId, wallet]) => {
+      try {
+        const member = await message.guild.members.fetch(userId); // Fetch member to get display name
+        const displayName = member ? member.displayName : "Unknown User";
+        return { displayName, coins: wallet.coins };
+      } catch (err) {
+        console.error(`Error fetching member for userId: ${userId}`, err);
+        return { displayName: "Unknown User", coins: wallet.coins }; // In case of error, fallback to 'Unknown User'
+      }
+    })
+  );
 
-  return topUsers.map(([userId, wallet]) => ({ userId, coins: wallet.coins })); // Return array of top 5 users with coins
+  return leaderboard; // Return array of top 5 users with display names and coins
 }
 
 // Load wallets on startup

@@ -38,21 +38,38 @@ client.on("messageCreate", async (message) => {
   wallet.initializeWallet(userId);
 
   if (message.content.toLowerCase() === "$help") {
-    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n\n**"$joinbj"**- Join a blackjack room.\n\n**"$startbj"**- Used to start a game of blackjack\n\n**"$betbj [amount of coins]"**- Place a bet in a blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.`;
+    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n\n**"$joinbj"**- Join a blackjack room.\n\n**"$startbj"**- Used to start a game of blackjack\n\n**"$betbj [amount of coins]"**- Place a bet in a blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.`;
     message.author.send(theHelpMessage);
   }
 
   // Leaderboard command
+  // if (
+  //   message.content.toLowerCase() === "$leaderboard" ||
+  //   message.content.toLowerCase() === "$lb"
+  // ) {
+  //   const topUsers = wallet.getTopUsers(); // Get the top 5 users
+
+  //   // Build the leaderboard message
+  //   let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
+  //   topUsers.forEach((user, index) => {
+  //     leaderboardMessage += `${index + 1}. <@${user.userId}> - **${
+  //       user.coins
+  //     }** coins\n`;
+  //   });
+
+  //   // Send the leaderboard message
+  //   await message.reply(leaderboardMessage);
+  // }
   if (
     message.content.toLowerCase() === "$leaderboard" ||
     message.content.toLowerCase() === "$lb"
   ) {
-    const topUsers = wallet.getTopUsers(); // Get the top 5 users
+    const topUsers = await wallet.getTopUsers(message); // Pass 'message' to get the top 5 users with display names
 
     // Build the leaderboard message
     let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
     topUsers.forEach((user, index) => {
-      leaderboardMessage += `${index + 1}. <@${user.userId}> - **${
+      leaderboardMessage += `${index + 1}. ${user.displayName} - **${
         user.coins
       }** coins\n`;
     });
@@ -67,7 +84,10 @@ client.on("messageCreate", async (message) => {
   // Track image posts for the daily image challenge
   if (message.attachments.size > 0) {
     message.attachments.forEach((attachment) => {
-      if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+      if (
+        attachment.contentType &&
+        attachment.contentType.startsWith("image/")
+      ) {
         daily.incrementChallenge(userId, true);
         //message.reply('Your image counts towards today\'s challenge!');
       }
