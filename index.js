@@ -62,7 +62,7 @@ client.on("messageCreate", async (message) => {
   }
 
    // Command to start a coinflip challenge
-   if (message.content.toLowerCase().startsWith("$flip")) {
+  if (message.content.toLowerCase().startsWith("$flip")) {
     const args = message.content.split(" ");
     const amount = parseInt(args[1]);
 
@@ -79,7 +79,7 @@ client.on("messageCreate", async (message) => {
       return message.reply("You can't challenge yourself!");
     }
 
-    const challengeMessage = coinflip.startFlipChallenge(userId, mentionedUser.id, amount);
+    const challengeMessage = coinflip.startFlipChallenge(userId, mentionedUser.id, amount, message); // Pass the message object
     return message.reply(challengeMessage);
   }
 
