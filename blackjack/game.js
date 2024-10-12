@@ -7,6 +7,8 @@ let afkRoomTimeout;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
   afkRoomTimeout = setTimeout(() => {
+    if (!rooms.findRoom(channelId)) return;
+
     rooms.deleteRoom(channelId);
     eventEmitter.emit(`afkRoom`, channelToSendTo);
   }, howLongUntilRoomAfk);
@@ -18,18 +20,18 @@ function randomNumber(min, max) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-let i = 0;
-function resetDeckCounter() {
-  i = 0;
+function resetDeckCounter(channeId) {
+  const thatRoom = rooms.findRoom(channeId);
+  thatRoom.resetDeck = 0;
 }
 // please lord have mercy on my soul
 async function startDealing(eventEmitter, channelId, channelToSendTo) {
   // Example function that triggers a message
   const thePlayingRoom = rooms.findRoom(channelId);
   clearTimeout(afkRoomTimeout);
-  if (!i) {
+  if (!thePlayingRoom.resetDeck) {
     thePlayingRoom.deckOfCards = makeDeck();
-    i++;
+    thePlayingRoom.resetDeck = 1;
   }
   for (let i = 0; i < thePlayingRoom.players.length; i++) {
     const player = thePlayingRoom.players[i];
@@ -37,6 +39,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
       0,
       thePlayingRoom.deckOfCards.length - 1
     );
+    console.log(thePlayingRoom.deckOfCards);
     const randomCard = thePlayingRoom.deckOfCards[randomNumberFromDeck];
     const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
     thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
@@ -264,6 +267,13 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       await sleep(1000);
       continue;
     }
+    if (thatRoom.dealer.sum === player.sum && player.sum < 21) {
+      message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
+      wallet.addCoins(player.userId, player.betAmount);
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
+    }
     if (player.sum === 21) {
       message = `:fireworks: <@${
         player.userId
@@ -275,16 +285,9 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       await sleep(1000);
       continue;
     }
-    if (thatRoom.dealer.sum === player.sum && player.sum < 21) {
-      message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
-      wallet.addCoins(player.userId, player.betAmount);
-      eventEmitter.emit("endGame", message, channelToSendTo);
-      await sleep(1000);
-      continue;
-    }
   }
   eventEmitter.emit("restartGame", channelToSendTo);
-  resetDeckCounter();
+  resetDeckCounter(channelId);
 }
 
 module.exports = {

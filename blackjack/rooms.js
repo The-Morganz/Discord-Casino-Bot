@@ -65,6 +65,7 @@ function makeRoom(userId, channelId) {
     dealerDealingPhase: false,
     bettingPhase: false,
     deckOfCards: [],
+    resetDeck: 0,
     dealer: { sum: 0, cards: [], profits: 0 },
   });
   return `You have made a room, and joined it.`;
