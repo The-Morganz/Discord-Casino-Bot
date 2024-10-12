@@ -6,18 +6,18 @@
     "imagesSent": 1,
     "requiredImages": 1
   },
-  "466610484766834690": {
-    "date": "2024-10-12",
-    "completed": true,
-    "challengeType": "image",
-    "imagesSent": 1,
-    "requiredImages": 1
-  },
   "294522326182002710": {
     "date": "2024-10-12",
-    "completed": true,
+    "completed": false,
+    "challengeType": "image",
+    "imagesSent": 0,
+    "requiredImages": 1
+  },
+  "466610484766834690": {
+    "date": "2024-10-12",
+    "completed": false,
     "challengeType": "message",
-    "messages": 9,
-    "requiredMessages": 9
+    "messages": 3,
+    "requiredMessages": 5
   }
 }
