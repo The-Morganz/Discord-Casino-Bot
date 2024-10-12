@@ -2,16 +2,11 @@ const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
 const { makeDeck } = require("./makeDeck");
 const { reset } = require("nodemon");
-const howLongUntilRoomAfk = 180000; //3 minuta ja msm
-let afkRoomTimeout;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
-  afkRoomTimeout = setTimeout(() => {
-    if (!rooms.findRoom(channelId)) return;
 
-    rooms.deleteRoom(channelId);
-    eventEmitter.emit(`afkRoom`, channelToSendTo);
-  }, howLongUntilRoomAfk);
+  const room = rooms.findRoom(channelId);
+  room.bettingStartTime = new Date();
 }
 
 function randomNumber(min, max) {
@@ -28,7 +23,8 @@ function resetDeckCounter(channeId) {
 async function startDealing(eventEmitter, channelId, channelToSendTo) {
   // Example function that triggers a message
   const thePlayingRoom = rooms.findRoom(channelId);
-  clearTimeout(afkRoomTimeout);
+  rooms.changeGameState(channelId, "betting", false);
+  rooms.changeGameState(channelId, "playing", true);
   if (!thePlayingRoom.resetDeck) {
     thePlayingRoom.deckOfCards = makeDeck();
     thePlayingRoom.resetDeck = 1;
@@ -62,9 +58,12 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
   const dealer = thePlayingRoom.dealer;
   if (dealer.cards.length === 1) {
     const message = whoIsUpNext(channelId);
-    rooms.changeGameState(channelId, `dealing`, false);
-    rooms.changeGameState(channelId, `playing`, true);
+    rooms.changeGameState(channelId, "betting", false);
 
+    if (thePlayingRoom.players.every((player) => player.played === true)) {
+      eventEmitter.emit("upNext", message, channelToSendTo, "dealer");
+      return;
+    }
     eventEmitter.emit("upNext", message, channelToSendTo);
   }
   if (dealer.cards.length === 0) {
@@ -89,7 +88,11 @@ function whoIsUpNext(channelId) {
   const thatRoom = rooms.findRoom(channelId);
   let whoIsNext;
   try {
-    thatRoom.players.forEach((e) => {
+    thatRoom.players.forEach((e, i, arr) => {
+      if (e.played && arr.length === 1) {
+        e.turn = false;
+        return;
+      }
       if (e.played) {
         e.turn = false;
         return;

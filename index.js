@@ -344,6 +344,7 @@ client.on("messageCreate", async (message) => {
       message.reply(`You aren't in a room!`);
       return;
     }
+
     blackjackGame.startBettingPhase(channelId, eventEmitter, message.channel);
     message.channel.send(
       `Starting the game. Please place your bets using **"$betbj (amount)"**`
@@ -487,6 +488,7 @@ eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
 });
 eventEmitter.on("restartGame", (channelToSendTo) => {
   blackjackRooms.restartRoom(channelToSendTo.id, eventEmitter, channelToSendTo);
+
   channelToSendTo.send(
     `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
   );
@@ -498,7 +500,8 @@ eventEmitter.on(`startBettingPhase`, (channelToSendTo) => {
     channelToSendTo
   );
 });
-eventEmitter.on(`afkRoom`, (channelToSendTo) => {
+eventEmitter.on(`afkRoom`, (channelId) => {
+  const channelToSendTo = client.channels.fetch(channelId);
   channelToSendTo.send(`Deleting blackjack room due to inactivity....`);
 });
 
@@ -520,5 +523,4 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     voiceReward.userLeftVoice(userId);
   }
 });
-
 client.login(process.env.DISCORD_TOKEN);
