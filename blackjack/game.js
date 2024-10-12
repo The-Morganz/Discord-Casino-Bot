@@ -2,9 +2,14 @@ const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
 const { makeDeck } = require("./makeDeck");
 const { reset } = require("nodemon");
-
-function startBettingPhase(channelId) {
+const howLongUntilRoomAfk = 180000; //3 minuta ja msm
+let afkRoomTimeout;
+function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
+  afkRoomTimeout = setTimeout(() => {
+    rooms.deleteRoom(channelId);
+    eventEmitter.emit(`afkRoom`, channelToSendTo);
+  }, howLongUntilRoomAfk);
 }
 
 function randomNumber(min, max) {
@@ -21,6 +26,7 @@ function resetDeckCounter() {
 async function startDealing(eventEmitter, channelId, channelToSendTo) {
   // Example function that triggers a message
   const thePlayingRoom = rooms.findRoom(channelId);
+  clearTimeout(afkRoomTimeout);
   if (!i) {
     thePlayingRoom.deckOfCards = makeDeck();
     i++;

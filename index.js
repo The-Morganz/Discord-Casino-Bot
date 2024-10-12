@@ -246,7 +246,7 @@ client.on("messageCreate", async (message) => {
       message.reply(`You can't do that!`);
       return;
     }
-    const whatDoItSay = await blackjackRooms.deleteRoom(userId, channelId);
+    const whatDoItSay = await blackjackRooms.deleteRoom(channelId);
     message.channel.send(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$betbj")) {
@@ -322,7 +322,7 @@ client.on("messageCreate", async (message) => {
     blackjackRooms.removePersonFromRoom(userId, channelId);
     console.log(thatRoom.players.length);
     if (thatRoom.players.length === 0) {
-      blackjackRooms.deleteRoom(userId, channelId);
+      blackjackRooms.deleteRoom(channelId);
       return;
     }
     if (thatRoom.players.every((player) => player.betAmount > 0)) {
@@ -344,7 +344,7 @@ client.on("messageCreate", async (message) => {
       message.reply(`You aren't in a room!`);
       return;
     }
-    blackjackGame.startBettingPhase(channelId);
+    blackjackGame.startBettingPhase(channelId, eventEmitter, message.channel);
     message.channel.send(
       `Starting the game. Please place your bets using **"$betbj (amount)"**`
     );
@@ -486,10 +486,20 @@ eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
   channelToSendTo.send(messageThatWasSent);
 });
 eventEmitter.on("restartGame", (channelToSendTo) => {
-  blackjackRooms.restartRoom(channelToSendTo.id);
+  blackjackRooms.restartRoom(channelToSendTo.id, eventEmitter, channelToSendTo);
   channelToSendTo.send(
     `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
   );
+});
+eventEmitter.on(`startBettingPhase`, (channelToSendTo) => {
+  blackjackGame.startBettingPhase(
+    channelToSendTo.id,
+    eventEmitter,
+    channelToSendTo
+  );
+});
+eventEmitter.on(`afkRoom`, (channelToSendTo) => {
+  channelToSendTo.send(`Deleting blackjack room due to inactivity....`);
 });
 
 client.on("voiceStateUpdate", (oldState, newState) => {
