@@ -23,31 +23,20 @@ function getRandomEmoji() {
     }
   }
 
-  // If no emoji matched (rare case), return the least rare emoji (fallback)
-  return emojiSet[0];
+  return emojiSet[0]; // Fallback to least rare emoji
 }
 
-// Function to check for matches in rows, columns, and diagonals
+// Function to check for matches in rows and diagonals
 function checkForMatch(matrix) {
   const matchCount = {};
 
-  // Check rows for matches
+  // Check rows for 3-in-a-row matches
   matrix.forEach((row) => {
     const emoji = row[0].emoji;
     if (row.every((item) => item.emoji === emoji)) {
       matchCount[emoji] = (matchCount[emoji] || 0) + 1; // Count the matches
     }
   });
-
-  /*
-    // Check columns for matches
-    for (let col = 0; col < 3; col++) {
-        const emoji = matrix[0][col].emoji;
-        if (matrix[0][col].emoji === matrix[1][col].emoji && matrix[1][col].emoji === matrix[2][col].emoji) {
-            matchCount[emoji] = (matchCount[emoji] || 0) + 1;  // Count the matches
-        }
-    }
-    */
 
   // Check diagonals for matches
   const diag1Emoji = matrix[0][0].emoji;
@@ -56,55 +45,88 @@ function checkForMatch(matrix) {
     matrix[0][0].emoji === matrix[1][1].emoji &&
     matrix[1][1].emoji === matrix[2][2].emoji
   ) {
-    matchCount[diag1Emoji] = (matchCount[diag1Emoji] || 0) + 1; // Count the matches
+    matchCount[diag1Emoji] = (matchCount[diag1Emoji] || 0) + 1; // Count the diagonal matches
   }
   if (
     matrix[0][2].emoji === matrix[1][1].emoji &&
     matrix[1][1].emoji === matrix[2][0].emoji
   ) {
-    matchCount[diag2Emoji] = (matchCount[diag2Emoji] || 0) + 1; // Count the matches
+    matchCount[diag2Emoji] = (matchCount[diag2Emoji] || 0) + 1; // Count the diagonal matches
   }
 
-  return matchCount; // Return the matches count
+  return matchCount;
 }
 
 // Function to handle a roll with betting
-function roll(userId, betAmount) {
-  // Generate a 3x3 matrix of random emojis
+async function roll(userId, betAmount, message) {
+  const frames = 5;
+  const delay = 500; // 0.5 seconds
+
   const rollResult = [
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
   ];
 
+  let interimResult;
+
+  // Send the initial message with the first frame
+  let sentMessage = await message.reply("🎰 Rolling...");
+
+  for (let i = 0; i < frames; i++) {
+    interimResult = [
+      [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+      [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+      [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+    ];
+
+    const interimDisplay = interimResult
+      .map((row) => row.map((item) => item.emoji).join(" "))
+      .join("\n");
+
+    // Edit the message with the interim result
+    await sentMessage.edit(`🎰 Rolling...\n${interimDisplay}`);
+
+    // Wait for 0.5 seconds before showing the next frame
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  // Now, process the final roll
+  const finalRollResult = rollResult
+    .map((row) => row.map((item) => item.emoji).join(" "))
+    .join("\n");
+
   const matches = checkForMatch(rollResult);
   let totalMultiplier = 0;
 
-  // Calculate total multiplier based on matches count
+  // Calculate the total multiplier based on matches
   for (const emoji in matches) {
     if (matches.hasOwnProperty(emoji)) {
-      const matchCount = matches[emoji]; // How many times this emoji matched
+      const matchCount = matches[emoji];
       const emojiInfo = emojiSet.find((item) => item.emoji === emoji);
-      totalMultiplier += matchCount * (emojiInfo ? emojiInfo.multiplier : 0); // Total multiplier
+      totalMultiplier += matchCount * (emojiInfo ? emojiInfo.multiplier : 0);
     }
   }
 
   let payout = 0;
   if (totalMultiplier > 0) {
-    payout = Math.round(betAmount * totalMultiplier); // Calculate payout based on total multiplier
-    wallet.addCoins(userId, payout); // Add payout to user's wallet
-    //} else {
-    //    wallet.removeCoins(userId, betAmount);  // Deduct the bet if no match
+    payout = Math.round(betAmount * totalMultiplier);
+    wallet.addCoins(userId, payout);
   }
 
-  // Format the output as a 3x3 matrix string
-  const formattedResult = rollResult
-    .map((row) => row.map((item) => item.emoji).join(" "))
-    .join("\n");
+  // Create the final message string
+  const finalMessage = `🎰 You rolled:\n${finalRollResult}\n${
+    payout > 0 ? `You won **${payout}** coins! 🎉` : "Better luck next time."
+  }`;
 
+  // Edit the same message to show the final result
+  await sentMessage.edit(finalMessage);
+
+  // Return the final result and payout (if needed)
   return {
-    result: formattedResult, // Return the formatted string for display
-    payout,
+    result: finalRollResult,
+    payout: payout,
+    finalMessage: finalMessage, // Final message returned (if needed in index.js)
   };
 }
 
