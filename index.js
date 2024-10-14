@@ -8,7 +8,7 @@ const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
 const voiceReward = require("./voiceReward");
-const coinflip = require('./coinflip');
+const coinflip = require("./coinflip");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
@@ -39,7 +39,7 @@ client.on("messageCreate", async (message) => {
   wallet.initializeWallet(userId);
 
   if (message.content.toLowerCase() === "$help") {
-    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n\n**"$joinbj"**- Join a blackjack room.\n\n**"$startbj"**- Used to start a game of blackjack\n\n**"$betbj [amount of coins]"**- Place a bet in a blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.`;
+    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n\n**"$joinbj"**- Join a blackjack room.\n\n**"$startbj"**- Used to start a game of blackjack\n\n**"$betbj [amount of coins]"**- Place a bet in a blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?`;
     message.author.send(theHelpMessage);
   }
 
@@ -61,7 +61,7 @@ client.on("messageCreate", async (message) => {
     await message.reply(leaderboardMessage);
   }
 
-   // Command to start a coinflip challenge
+  // Command to start a coinflip challenge
   if (message.content.toLowerCase().startsWith("$flip")) {
     const args = message.content.split(" ");
     const amount = parseInt(args[1]);
@@ -79,7 +79,12 @@ client.on("messageCreate", async (message) => {
       return message.reply("You can't challenge yourself!");
     }
 
-    const challengeMessage = coinflip.startFlipChallenge(userId, mentionedUser.id, amount, message); // Pass the message object
+    const challengeMessage = coinflip.startFlipChallenge(
+      userId,
+      mentionedUser.id,
+      amount,
+      message
+    ); // Pass the message object
     return message.reply(challengeMessage);
   }
 
@@ -96,10 +101,16 @@ client.on("messageCreate", async (message) => {
   }
 
   // Command to pick heads or tails
-  if (message.content.toLowerCase() === "$heads" || message.content.toLowerCase() === "$tails") {
+  if (
+    message.content.toLowerCase() === "$heads" ||
+    message.content.toLowerCase() === "$tails"
+  ) {
     const choice = message.content.toLowerCase().substring(1); // Get 'heads' or 'tails'
-    const choiceMessage = coinflip.pickChoice(userId, choice);
-    return message.reply(choiceMessage);
+    const choiceMessage = await coinflip.pickChoice(userId, choice, `flip`);
+    console.log(choiceMessage);
+    message.reply(choiceMessage);
+    const resultMessage = await coinflip.pickChoice(userId, choice);
+    return message.reply(resultMessage);
   }
 
   // Track messages for the daily message challenge
@@ -309,6 +320,10 @@ client.on("messageCreate", async (message) => {
         `You don't have any more money to play with... Removing you from the room...`
       );
       blackjackRooms.removePersonFromRoom(userId, channelId);
+      return;
+    }
+    if (wallet.getCoins(userId) < betAmount) {
+      message.reply(`You don't have enough money to make this bet!`);
       return;
     }
     wallet.removeCoins(userId, betAmount);
