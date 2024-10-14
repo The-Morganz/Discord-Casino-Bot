@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Client, GatewayIntentBits, channelLink } = require("discord.js");
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, channelLink } = require("discord.js");
 const wallet = require("./wallet");
 const roll = require("./roll");
 const blackjackRooms = require("./blackjack/rooms");
@@ -9,6 +9,7 @@ const EventEmitter = require("events");
 const daily = require("./daily/daily");
 const voiceReward = require("./voiceReward");
 const coinflip = require("./coinflip");
+const grid = require('./grid');
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
@@ -28,6 +29,8 @@ const ownerId2 = "294522326182002710";
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
+
+let gridOwners = {}; // Object to store the grid owner by message ID
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return; // Ignore bot messages
@@ -59,6 +62,20 @@ client.on("messageCreate", async (message) => {
 
     // Send the leaderboard message
     await message.reply(leaderboardMessage);
+  }
+
+  // Command to generate the grid
+  if (message.content.toLowerCase() === "$grid") {
+    const buttonGrid = grid.createButtonGrid(); // Use the createButtonGrid function via the grid module
+
+    // Send the grid of buttons as a message
+    const sentMessage = await message.reply({
+      content: "Click a button to unlock!",
+      components: buttonGrid, // Attach the button grid to the message
+    });
+
+    // Store the message ID and the user ID of the grid creator
+    gridOwners[sentMessage.id] = message.author.id;
   }
 
   // Command to start a coinflip challenge
@@ -544,4 +561,52 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     voiceReward.userLeftVoice(userId);
   }
 });
+
+// Handle button interaction
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const gridOwnerId = gridOwners[interaction.message.id]; // Get the grid owner for this message
+
+  // Check if the user who clicked the button is the same as the one who created the grid
+  if (interaction.user.id !== gridOwnerId) {
+    // Only reply once, with an ephemeral message
+    if (!interaction.replied) {
+      await interaction.reply({ content: "You are not allowed to interact with this grid.", ephemeral: true });
+    }
+    return;
+  }
+
+  // Extract the position from the button's custom ID (e.g., button_0_0)
+  const [_, row, col] = interaction.customId.split("_");
+
+  // Retrieve the original message
+  const message = interaction.message;
+
+  // Clone the components (button grid) to modify them
+  const updatedComponents = message.components.map((row) => {
+    return new ActionRowBuilder().addComponents(
+      row.components.map((button) => {
+        // If this is the button that was clicked, disable it and change emoji
+        if (button.customId === interaction.customId) {
+          return ButtonBuilder.from(button)
+            .setLabel("✅") // Change to "unlocked" emoji
+            .setStyle(ButtonStyle.Success) // Change the button style to "Success" (green)
+            .setDisabled(true); // Disable the button
+        }
+        return button; // Keep other buttons as is
+      })
+    );
+  });
+
+  // Edit the original message with the updated buttons
+  await message.edit({ components: updatedComponents });
+
+  // Ensure that interaction is deferred only once and has not already been acknowledged
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferUpdate();
+  }
+});
+
+
 client.login(process.env.DISCORD_TOKEN);
