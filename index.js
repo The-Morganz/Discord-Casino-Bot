@@ -216,42 +216,24 @@ client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
     const betAmount = parseInt(args[1]);
-
+  
     // Debugging logs
     console.log(`Received $roll command with bet amount: ${betAmount}`);
-
+  
     // Check if bet amount is valid
     if (!isNaN(betAmount) && betAmount > 0) {
       const coins = wallet.getCoins(userId);
       console.log(`User's balance before betting: ${coins}`); // Log the user's balance
-
+  
       // Check if user has enough coins to bet
       if (coins >= betAmount) {
         // User has enough coins
-        console.log(
-          `User has enough coins. Attempting to remove ${betAmount} coins...`
-        );
+        console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
         wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
-
-        // Perform the roll
-        const rollResult = roll.roll(userId, betAmount);
-
-        // Log the result of the roll
-        console.log(
-          `Roll result: ${rollResult.result}, Payout: ${rollResult.payout}`
-        );
-
-        // Handle payout logic
-        if (rollResult.payout > 0) {
-          // Display payout
-          await message.reply(
-            `🎰 You rolled:\n${rollResult.result}\nYou won **${rollResult.payout} coins!**  🎉 `
-          );
-        } else {
-          await message.reply(
-            `🎰 You rolled:\n${rollResult.result}\nBetter luck next time.`
-          );
-        }
+  
+        // Perform the roll and capture the result
+        await roll.roll(userId, betAmount, message); // No need to use result here, as it's handled in roll.js
+        
       } else {
         await message.reply("You don't have enough coins to place this bet.");
       }
