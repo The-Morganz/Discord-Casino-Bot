@@ -27,6 +27,7 @@ function incrementMessageCount(userChallenge, userId) {
       console.log(
         `User ${userId} has completed the message challenge and earned 1000 coins.`
       );
+      return `🎉 You have completed today's challenge and earned 1000 coins!`;
     }
   }
   return userChallenge;
