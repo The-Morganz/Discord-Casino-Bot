@@ -322,6 +322,10 @@ client.on("messageCreate", async (message) => {
       blackjackRooms.removePersonFromRoom(userId, channelId);
       return;
     }
+    if (wallet.getCoins(userId) < betAmount) {
+      message.reply(`You don't have enough money to make this bet!`);
+      return;
+    }
     wallet.removeCoins(userId, betAmount);
     const whatDoItSay = await blackjackBets.addBet(
       userId,
