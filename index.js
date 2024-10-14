@@ -203,7 +203,9 @@ client.on("messageCreate", async (message) => {
 
     // Extract the user ID of the mentioned user
     const targetUserId = mentionedUser.id;
-
+    if (userId === mentionedUser.id) {
+      return message.reply("You can't give yourself coins.");
+    }
     // Add coins to the mentioned user's wallet
     wallet.addCoins(targetUserId, amount);
     wallet.removeCoins(userId, amount);
