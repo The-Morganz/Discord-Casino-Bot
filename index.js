@@ -64,18 +64,42 @@ client.on("messageCreate", async (message) => {
     await message.reply(leaderboardMessage);
   }
 
-  // Command to generate the grid
-  if (message.content.toLowerCase() === "$grid") {
-    const buttonGrid = grid.createButtonGrid(); // Use the createButtonGrid function via the grid module
+  // Command to generate the grid with an amount of coins
+  if (message.content.toLowerCase().startsWith("$grid")) {
+    const args = message.content.split(" ");
+    const amount = parseInt(args[1]); // Get the coin amount from the command
+
+    // Check if the amount is a valid number
+    if (isNaN(amount) || amount <= 0) {
+      return message.reply("Please provide a valid amount of coins.");
+    }
+
+    const userId = message.author.id;
+    const userCoins = wallet.getCoins(userId); // Get the user's coin balance
+
+    // Check if the user has enough coins
+    if (userCoins < amount) {
+      return message.reply("You don't have enough coins to start the grid.");
+    }
+
+    // Check if the user already has an active grid
+    if (Object.values(gridOwners).some((grid) => grid.userId === userId && !grid.isComplete)) {
+      return message.reply("You already have an active grid! Complete it before creating a new one.");
+    }
+
+    // Deduct the coins from the user's wallet
+    wallet.removeCoins(userId, amount);
+
+    const buttonGrid = grid.createButtonGrid(); // Use the createButtonGrid function from grid.js
 
     // Send the grid of buttons as a message
     const sentMessage = await message.reply({
-      content: "Click a button to unlock!",
+      content: `You have started a grid game with **${amount}** coins! Click a button to unlock!`,
       components: buttonGrid, // Attach the button grid to the message
     });
 
-    // Store the message ID and the user ID of the grid creator
-    gridOwners[sentMessage.id] = message.author.id;
+    // Store the message ID, user ID, and completion status of the grid
+    gridOwners[sentMessage.id] = { userId: message.author.id, isComplete: false, betAmount: amount };
   }
 
   // Command to start a coinflip challenge
@@ -130,27 +154,24 @@ client.on("messageCreate", async (message) => {
     return message.reply(resultMessage);
   }
 
-  // Track messages for the daily message challenge
-  daily.incrementChallenge(userId, false);
+   // Track messages for the daily message challenge
+   daily.incrementChallenge(userId, false);
 
-  // Track image posts for the daily image challenge
-  if (message.attachments.size > 0) {
-    message.attachments.forEach((attachment) => {
-      if (
-        attachment.contentType &&
-        attachment.contentType.startsWith("image/")
-      ) {
-        daily.incrementChallenge(userId, true);
-        //message.reply('Your image counts towards today\'s challenge!');
-      }
-    });
-  }
-
-  // Command to check daily challenge progress
-  if (message.content.toLowerCase() === "$daily") {
-    const status = daily.getDailyStatus(userId);
-    await message.reply(status);
-  }
+   // Track image posts for the daily image challenge
+   if (message.attachments.size > 0) {
+     message.attachments.forEach((attachment) => {
+       if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+         daily.incrementChallenge(userId, true);
+         message.reply('Your image counts towards today\'s challenge!');
+       }
+     });
+   }
+ 
+   // Command to check daily challenge progress
+   if (message.content.toLowerCase() === "$daily") {
+     const status = daily.getDailyStatus(userId);
+     await message.reply(status);
+   }
 
   // Command to check wallet balance
   if (
@@ -565,13 +586,14 @@ client.on("voiceStateUpdate", (oldState, newState) => {
 });
 
 // Handle button interaction
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  const gridOwnerId = gridOwners[interaction.message.id]; // Get the grid owner for this message
+  const gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
 
   // Check if the user who clicked the button is the same as the one who created the grid
-  if (interaction.user.id !== gridOwnerId) {
+  if (interaction.user.id !== gridData.userId) {
     // Only reply once, with an ephemeral message
     if (!interaction.replied) {
       await interaction.reply({ content: "You are not allowed to interact with this grid.", ephemeral: true });
@@ -579,36 +601,44 @@ client.on("interactionCreate", async (interaction) => {
     return;
   }
 
-  // Extract the position from the button's custom ID (e.g., button_0_0)
-  const [_, row, col] = interaction.customId.split("_");
+  // Reveal the multiplier for the clicked button
+  const multiplier = grid.revealMultiplier(interaction.component);
 
-  // Retrieve the original message
-  const message = interaction.message;
+  // Ensure the button has a valid label for the multiplier
+  let label = `x${multiplier}`; // Set a valid label for the button
 
-  // Clone the components (button grid) to modify them
-  const updatedComponents = message.components.map((row) => {
-    return new ActionRowBuilder().addComponents(
-      row.components.map((button) => {
-        // If this is the button that was clicked, disable it and change emoji
-        if (button.customId === interaction.customId) {
-          return ButtonBuilder.from(button)
-            .setLabel("✅") // Change to "unlocked" emoji
-            .setStyle(ButtonStyle.Success) // Change the button style to "Success" (green)
-            .setDisabled(true); // Disable the button
-        }
-        return button; // Keep other buttons as is
-      })
-    );
+  // If the multiplier is 0, end the game and remove the grid
+  if (multiplier === 0) {
+    gridData.isComplete = true;
+    label = 'x0'; // Set the label to 'x0'
+    await interaction.reply("Game over! You revealed the x0 multiplier.");
+    await interaction.message.delete(); // Remove the grid message
+    return;
+  }
+
+  // Update the button with the revealed multiplier
+  const updatedButton = ButtonBuilder.from(interaction.component)
+    .setLabel(label) // Always set a valid label for the button
+    .setStyle(ButtonStyle.Success) // Change the button style to "Success" (green)
+    .setDisabled(true); // Disable the button
+
+  // Edit the original message with the updated button
+  await interaction.update({
+    components: interaction.message.components.map((row) =>
+      new ActionRowBuilder().addComponents(
+        row.components.map((button) =>
+          button.customId === interaction.customId ? updatedButton : button
+        )
+      )
+    ),
   });
 
-  // Edit the original message with the updated buttons
-  await message.edit({ components: updatedComponents });
-
-  // Ensure that interaction is deferred only once and has not already been acknowledged
+  // Ensure the interaction is acknowledged
   if (!interaction.deferred && !interaction.replied) {
     await interaction.deferUpdate();
   }
 });
+
 
 
 client.login(process.env.DISCORD_TOKEN);

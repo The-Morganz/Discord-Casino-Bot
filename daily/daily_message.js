@@ -2,7 +2,7 @@ const wallet = require('../wallet');
 
 // Generate a random message requirement between 20 and 40
 function generateRandomMessageRequirement() {
-  return Math.floor(Math.random() * 11) + 4; // Generates a random number between 20 and 40
+  return Math.floor(Math.random() * 11) + 5; // Generates a random number between 20 and 40
 }
 
 // Initialize a message challenge for a user
@@ -23,11 +23,8 @@ function incrementMessageCount(userChallenge, userId) {
     // Check if the required number of messages has been sent
     if (userChallenge.messages >= userChallenge.requiredMessages) {
       userChallenge.completed = true;
-      wallet.addCoins(userId, 1000); // Reward the user with 1000 coins
-      console.log(
-        `User ${userId} has completed the message challenge and earned 1000 coins.`
-      );
-      return `🎉 You have completed today's challenge and earned 1000 coins!`;
+      wallet.addCoins(userId, 1000); // Reward the user with 100 coins
+      console.log(`User ${userId} has completed the message challenge and earned 1000 coins.`);
     }
   }
   return userChallenge;
@@ -37,7 +34,7 @@ function incrementMessageCount(userChallenge, userId) {
 function getMessageStatus(userChallenge) {
   const { messages, requiredMessages, completed } = userChallenge;
   if (completed) {
-    return `🎉 You have completed today's message challenge and earned 1000 coins! Try again tomorrow.`;
+    return `🎉 You have completed today's message challenge and earned 1000 coins!`;
   } else {
     return `🎁 Today's challenge: Send ${requiredMessages} messages. Progress: ${messages}/${requiredMessages} messages.`;
   }
