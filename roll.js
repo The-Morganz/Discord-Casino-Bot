@@ -56,11 +56,15 @@ function checkForMatch(matrix) {
 
   return matchCount;
 }
+let skipAnim = false;
 
+function skipAnimChange(state) {
+  skipAnim = state;
+}
 // Function to handle a roll with betting
 async function roll(userId, betAmount, message) {
-  const frames = 5;
-  const delay = 500; // 0.5 seconds
+  const frames = 3;
+  const delay = 200; // 0.2 seconds
 
   const rollResult = [
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
@@ -69,26 +73,27 @@ async function roll(userId, betAmount, message) {
   ];
 
   let interimResult;
-
+  let sentMessage;
   // Send the initial message with the first frame
-  let sentMessage = await message.reply("🎰 Rolling...");
+  if (!skipAnim) {
+    sentMessage = await message.reply("🎰 Rolling...");
+    for (let i = 0; i < frames; i++) {
+      interimResult = [
+        [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+        [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+        [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
+      ];
 
-  for (let i = 0; i < frames; i++) {
-    interimResult = [
-      [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
-      [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
-      [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
-    ];
+      const interimDisplay = interimResult
+        .map((row) => row.map((item) => item.emoji).join(" "))
+        .join("\n");
 
-    const interimDisplay = interimResult
-      .map((row) => row.map((item) => item.emoji).join(" "))
-      .join("\n");
+      // Edit the message with the interim result
+      await sentMessage.edit(`🎰 Rolling...\n${interimDisplay}`);
 
-    // Edit the message with the interim result
-    await sentMessage.edit(`🎰 Rolling...\n${interimDisplay}`);
-
-    // Wait for 0.5 seconds before showing the next frame
-    await new Promise((resolve) => setTimeout(resolve, delay));
+      // Wait for 0.5 seconds before showing the next frame
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 
   // Now, process the final roll
@@ -120,7 +125,11 @@ async function roll(userId, betAmount, message) {
   }`;
 
   // Edit the same message to show the final result
-  await sentMessage.edit(finalMessage);
+  if (!skipAnim) {
+    await sentMessage.edit(finalMessage);
+  } else {
+    message.reply(finalMessage);
+  }
 
   // Return the final result and payout (if needed)
   return {
@@ -132,4 +141,5 @@ async function roll(userId, betAmount, message) {
 
 module.exports = {
   roll,
+  skipAnimChange,
 };

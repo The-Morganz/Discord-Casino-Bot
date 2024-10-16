@@ -169,7 +169,7 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
     };
   }
 }
-function stand(userId, channelId, eventEmitter, channelToSendTo) {
+async function stand(userId, channelId, eventEmitter, channelToSendTo) {
   const thatRoom = rooms.findRoom(channelId);
   let aPersonIsPlaying = false;
   try {
@@ -182,9 +182,11 @@ function stand(userId, channelId, eventEmitter, channelToSendTo) {
     });
   } catch (whoNextString) {
     if (!whoNextString) {
+      await sleep(2000);
       eventEmitter.emit("upNext", whoNextString, channelToSendTo, "dealer");
       return;
     }
+    await sleep(2000);
     eventEmitter.emit("upNext", whoNextString, channelToSendTo);
   }
 }

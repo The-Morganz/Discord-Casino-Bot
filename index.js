@@ -1,5 +1,16 @@
 require("dotenv").config();
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, channelLink } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  channelLink,
+  GuildForumThreadManager,
+} = require("discord.js");
 const wallet = require("./wallet");
 const roll = require("./roll");
 const blackjackRooms = require("./blackjack/rooms");
@@ -9,11 +20,11 @@ const EventEmitter = require("events");
 const daily = require("./daily/daily");
 const voiceReward = require("./voiceReward");
 const coinflip = require("./coinflip");
-const grid = require('./grid');
+const grid = require("./grid");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const eventEmitter = new EventEmitter();
-
+let toggleAnimState = false;
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -42,7 +53,7 @@ client.on("messageCreate", async (message) => {
   wallet.initializeWallet(userId);
 
   if (message.content.toLowerCase() === "$help") {
-    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n\n**"$joinbj"**- Join a blackjack room.\n\n**"$startbj"**- Used to start a game of blackjack\n\n**"$betbj [amount of coins]"**- Place a bet in a blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?`;
+    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n\n**"$startbj"**- Used to start a game of Blackjack.\n\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?`;
     message.author.send(theHelpMessage);
   }
 
@@ -83,8 +94,14 @@ client.on("messageCreate", async (message) => {
     }
 
     // Check if the user already has an active grid
-    if (Object.values(gridOwners).some((grid) => grid.userId === userId && !grid.isComplete)) {
-      return message.reply("You already have an active grid! Complete it before creating a new one.");
+    if (
+      Object.values(gridOwners).some(
+        (grid) => grid.userId === userId && !grid.isComplete
+      )
+    ) {
+      return message.reply(
+        "You already have an active grid! Complete it before creating a new one."
+      );
     }
 
     // Deduct the coins from the user's wallet
@@ -99,7 +116,11 @@ client.on("messageCreate", async (message) => {
     });
 
     // Store the message ID, user ID, and completion status of the grid
-    gridOwners[sentMessage.id] = { userId: message.author.id, isComplete: false, betAmount: amount };
+    gridOwners[sentMessage.id] = {
+      userId: message.author.id,
+      isComplete: false,
+      betAmount: amount,
+    };
   }
 
   // Command to start a coinflip challenge
@@ -154,24 +175,27 @@ client.on("messageCreate", async (message) => {
     return message.reply(resultMessage);
   }
 
-   // Track messages for the daily message challenge
-   daily.incrementChallenge(userId, false);
+  // Track messages for the daily message challenge
+  daily.incrementChallenge(userId, false);
 
-   // Track image posts for the daily image challenge
-   if (message.attachments.size > 0) {
-     message.attachments.forEach((attachment) => {
-       if (attachment.contentType && attachment.contentType.startsWith('image/')) {
-         daily.incrementChallenge(userId, true);
-         message.reply('Your image counts towards today\'s challenge!');
-       }
-     });
-   }
- 
-   // Command to check daily challenge progress
-   if (message.content.toLowerCase() === "$daily") {
-     const status = daily.getDailyStatus(userId);
-     await message.reply(status);
-   }
+  // Track image posts for the daily image challenge
+  if (message.attachments.size > 0) {
+    message.attachments.forEach((attachment) => {
+      if (
+        attachment.contentType &&
+        attachment.contentType.startsWith("image/")
+      ) {
+        daily.incrementChallenge(userId, true);
+        // message.reply("Your image counts towards today's challenge!");
+      }
+    });
+  }
+
+  // Command to check daily challenge progress
+  if (message.content.toLowerCase() === "$daily") {
+    const status = daily.getDailyStatus(userId);
+    await message.reply(status);
+  }
 
   // Command to check wallet balance
   if (
@@ -252,28 +276,44 @@ client.on("messageCreate", async (message) => {
     );
   }
 
+  if (message.content.toLowerCase().startsWith("$toggleanim")) {
+    if (!toggleAnimState) {
+      roll.skipAnimChange(true);
+      toggleAnimState = true;
+      message.reply(`Animation for rolling will be skipped!`);
+      return;
+    }
+    if (toggleAnimState) {
+      roll.skipAnimChange(false);
+      toggleAnimState = false;
+      message.reply(`Animation for rolling will not be skipped!`);
+      return;
+    }
+  }
+
   // Command to roll with betting
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
     const betAmount = parseInt(args[1]);
-  
+
     // Debugging logs
     console.log(`Received $roll command with bet amount: ${betAmount}`);
-  
+
     // Check if bet amount is valid
     if (!isNaN(betAmount) && betAmount > 0) {
       const coins = wallet.getCoins(userId);
       console.log(`User's balance before betting: ${coins}`); // Log the user's balance
-  
+
       // Check if user has enough coins to bet
       if (coins >= betAmount) {
         // User has enough coins
-        console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
+        console.log(
+          `User has enough coins. Attempting to remove ${betAmount} coins...`
+        );
         wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
-  
+
         // Perform the roll and capture the result
         await roll.roll(userId, betAmount, message); // No need to use result here, as it's handled in roll.js
-        
       } else {
         await message.reply("You don't have enough coins to place this bet.");
       }
@@ -296,7 +336,8 @@ client.on("messageCreate", async (message) => {
       return;
     }
     const whatDoItSay = await blackjackRooms.makeRoom(userId, channelId);
-    message.reply(whatDoItSay);
+    generateStartBjButton(message.channel);
+    // message.reply(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$deleteroombj")) {
     if (userId !== ownerId2) {
@@ -307,6 +348,8 @@ client.on("messageCreate", async (message) => {
     message.channel.send(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$betbj")) {
+    console.log(userId);
+
     if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
       message.reply(`You aren't in a room!`);
       return;
@@ -407,9 +450,10 @@ client.on("messageCreate", async (message) => {
     }
 
     blackjackGame.startBettingPhase(channelId, eventEmitter, message.channel);
-    message.channel.send(
-      `Starting the game. Please place your bets using **"$betbj (amount)"**`
-    );
+    generateBetButtons(message.channel, true);
+    // message.channel.send(
+    //   `Starting the game. Please place your bets using **"$betbj (amount)"**`
+    // );
   }
   if (message.content.toLowerCase().startsWith("$hit")) {
     if (
@@ -482,6 +526,9 @@ client.on("messageCreate", async (message) => {
   if (message.content.toLowerCase().startsWith("pusi ga")) {
     message.reply(`That's not very nice!`);
   }
+  if (message.content.toLowerCase().startsWith("$bj")) {
+    generateBlackjackButtons(message.channel);
+  }
 });
 
 eventEmitter.on("beginningBJ", (messageThatWasSent, channelToSendTo) => {
@@ -513,10 +560,12 @@ eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
     }
   });
   console.log(messageThatWasSent);
-  channelToSendTo.send(
-    `:stopwatch: <@${messageThatWasSent}>, your turn. **$hit** , or **$stand** ? Your sum is **${theirSum}** :stopwatch:`
-  );
+  // channelToSendTo.send(
+  //   `:stopwatch: <@${messageThatWasSent}>, your turn. Your sum is **${theirSum}** :stopwatch:`
+  // );
+  sendPlayerTurnButtons(messageThatWasSent, channelToSendTo, theirSum);
 });
+
 eventEmitter.on("dealerTurn", (messageThatWasSent, channelToSendTo) => {
   const dealer = blackjackRooms.findRoom(channelToSendTo.id).dealer;
   if (messageThatWasSent === "stand") {
@@ -548,11 +597,12 @@ eventEmitter.on(`endGame`, (messageThatWasSent, channelToSendTo) => {
   channelToSendTo.send(messageThatWasSent);
 });
 eventEmitter.on("restartGame", (channelToSendTo) => {
+  generateBetButtons(channelToSendTo);
   blackjackRooms.restartRoom(channelToSendTo.id, eventEmitter, channelToSendTo);
 
-  channelToSendTo.send(
-    `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
-  );
+  // channelToSendTo.send(
+  //   `**Restarting game...** Use **$betbj (amount)** to place a new bet...`
+  // );
 });
 eventEmitter.on(`startBettingPhase`, (channelToSendTo) => {
   blackjackGame.startBettingPhase(
@@ -585,10 +635,511 @@ client.on("voiceStateUpdate", (oldState, newState) => {
   }
 });
 
+function sendPlayerTurnButtons(userId, channel, theirSum) {
+  const thatRoom = blackjackRooms.findRoom(channel.id);
+  let buttonCounter;
+  let turn;
+  thatRoom.players.forEach((e) => {
+    if (e.userId === userId) {
+      buttonCounter = e.buttonCounter;
+      turn = e.turn;
+    }
+  });
+  const hitButton = new ButtonBuilder()
+    .setCustomId(`bj_hit_${userId}_${buttonCounter}`) // unique custom ID with player ID
+    .setLabel("Hit")
+    .setStyle(ButtonStyle.Primary);
+
+  const standButton = new ButtonBuilder()
+    .setCustomId(`bj_stand_${userId}_${buttonCounter}`) // unique custom ID with player ID
+    .setLabel("Stand")
+    .setStyle(ButtonStyle.Danger);
+
+  const row = new ActionRowBuilder().addComponents(hitButton, standButton);
+  channel.send({
+    content: `<@${userId}>, it's your turn! Your sum is ${theirSum}`,
+    components: [row],
+  });
+}
+
+function generateBetButtons(channel, start = false) {
+  const betPrevButton = new ButtonBuilder()
+    .setCustomId(`bj_betPrev`)
+    .setLabel("Bet Previous")
+    .setStyle(ButtonStyle.Success);
+
+  const betAllButton = new ButtonBuilder()
+    .setCustomId(`bj_betAll`) // unique custom ID with player ID
+    .setLabel("Bet All")
+    .setStyle(ButtonStyle.Secondary);
+  const betCustomButton = new ButtonBuilder()
+    .setCustomId(`bj_betCustom`)
+    .setLabel(`${start ? `Place Bet` : `Custom Bet`}`)
+    .setStyle(ButtonStyle.Primary);
+  const leaveButton = new ButtonBuilder()
+    .setCustomId(`bj_leaveRoom`)
+    .setLabel(`Leave Room`)
+    .setStyle(ButtonStyle.Danger);
+
+  const row = new ActionRowBuilder().addComponents(
+    betPrevButton,
+    betAllButton,
+    betCustomButton,
+    leaveButton
+  );
+  const startRow = new ActionRowBuilder().addComponents(betCustomButton);
+  if (!start) {
+    channel.send({
+      content: `**Restarting game...** Please place your bets.`,
+      components: [row],
+    });
+  } else {
+    channel.send({
+      content: `**Starting the game...** Please place your bets.`,
+      components: [startRow],
+    });
+  }
+}
+function generateStartBjButton(channel) {
+  const startBjButton = new ButtonBuilder()
+    .setCustomId(`bj_start`)
+    .setLabel("Start Game")
+    .setStyle(ButtonStyle.Success);
+  const row = new ActionRowBuilder().addComponents(startBjButton);
+  let stringOfPeople = ``;
+  const thatRoom = blackjackRooms.findRoom(channel.id);
+  thatRoom.players.forEach((e) => {
+    stringOfPeople += `\n<@${e.userId}>`;
+  });
+  channel.send({
+    content: `Start the game when everyone has joined the table. People in room: ${stringOfPeople}`,
+    components: [row],
+  });
+}
+function generateBlackjackButtons(channel) {
+  const blackjackButton = new ButtonBuilder()
+    .setCustomId(`bj_portal`)
+    .setLabel("Join Blackjack Room")
+    .setStyle(ButtonStyle.Success);
+  const row = new ActionRowBuilder().addComponents(blackjackButton);
+  channel.send({
+    content: `Welcome to the blackjack table. To start a game, you must join a room.`,
+    components: [row],
+  });
+}
+
 // Handle button interaction
 
 client.on("interactionCreate", async (interaction) => {
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId === "custom_bet_modal") {
+      // Retrieve the user's input from the modal
+      const customBet =
+        interaction.fields.getTextInputValue("custom_bet_input");
+      const userId = interaction.user.id;
+      const channelId = interaction.channel.id;
+      // Validate the input to ensure it's a valid number
+      const betAmount = parseInt(customBet, 10);
+      // Process the custom bet (this is where you would add your bet logic)
+
+      if (betAmount > 100000001) {
+        await interaction.reply({
+          content: `You've hit the betting limit!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      // Ne mozes da betujes ako nisi u room
+
+      // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
+      if (isNaN(betAmount) || betAmount <= 0 || betAmount > 10000001) {
+        await interaction.reply({
+          content: `Bet amount invalid!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (wallet.getCoins(userId) <= 0) {
+        await interaction.reply({
+          content: `You don't have any more money to play with... Removing you from the room...`,
+          ephemeral: true,
+        });
+        blackjackRooms.removePersonFromRoom(userId, channelId);
+        return;
+      }
+      if (wallet.getCoins(userId) < betAmount) {
+        await interaction.reply({
+          content: `You don't have enough money to make this bet!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      wallet.removeCoins(userId, betAmount);
+      const whatDoItSay = await blackjackBets.addBet(
+        userId,
+        channelId,
+        betAmount
+      );
+      // stard da gamez
+      if (whatDoItSay === "true") {
+        setTimeout(() => {
+          blackjackGame.startDealing(
+            eventEmitter,
+            channelId,
+            interaction.channel
+          );
+        }, 2000);
+        blackjackRooms.changeGameState(channelId, "betting", false);
+        blackjackRooms.changeGameState(channelId, "dealing", true);
+        await interaction.reply({
+          content: `All bets are placed, **the game is starting...**`,
+          components: [],
+        });
+        return;
+      }
+      await interaction.reply(whatDoItSay);
+      return;
+
+      // Add custom logic to handle bet (e.g., store bet amount, etc.)
+    }
+  }
   if (!interaction.isButton()) return;
+
+  if (interaction.customId.startsWith("bj_")) {
+    // Extract the userId and action from the customId
+    let [action, userId] = interaction.customId.split("_").slice(1); // bj_hit_userId or bj_stand_userId
+    const channelId = interaction.channel.id;
+    userId = interaction.user.id;
+    if (action === `portal`) {
+      if (
+        blackjackRooms.areWePlaying(channelId) ||
+        blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
+      ) {
+        interaction.reply({
+          content: `A game is currently in session.`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const coins = wallet.getCoins(userId);
+      if (coins <= 0) {
+        interaction.reply({
+          content: `You don't have enough money to play a game of blackjack.`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const whatDoItSay = await blackjackRooms.makeRoom(userId, channelId);
+      generateStartBjButton(interaction.channel);
+      return;
+    }
+    if (action === `start`) {
+      if (blackjackRooms.areWePlaying(channelId)) {
+        interaction.reply({
+          content: `The game has already started.`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
+        interaction.reply({
+          content: `You aren't in a room!`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      blackjackGame.startBettingPhase(
+        channelId,
+        eventEmitter,
+        interaction.channel
+      );
+      generateBetButtons(interaction.channel, true);
+      return;
+    }
+    if (action === "betCustom") {
+      const modal = new ModalBuilder()
+        .setCustomId("custom_bet_modal")
+        .setTitle("Enter Your Custom Bet");
+
+      // Add a text input field to the modal
+      const betInput = new TextInputBuilder()
+        .setCustomId("custom_bet_input")
+        .setLabel("Your Bet")
+        .setStyle(TextInputStyle.Short) // A short text input
+        .setRequired(true);
+
+      const actionRow = new ActionRowBuilder().addComponents(betInput);
+      modal.addComponents(actionRow);
+
+      // Show the modal to the user
+      await interaction.showModal(modal);
+      return;
+    }
+    if (action === "betPrev" || action === "betAll") {
+      if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
+        await interaction.reply({
+          content: `You aren't in a room!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (
+        blackjackRooms.areWePlaying(channelId) ||
+        blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
+      ) {
+        await interaction.reply({
+          content: `You can't bet now!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!blackjackRooms.areWeBetting(channelId)) {
+        await interaction.reply({
+          content: `The game must be started to bet.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // const args = message.content.split(" ");
+      const thatRoom = blackjackRooms.findRoom(channelId);
+      let betAmount;
+      if (action === "betPrev") {
+        thatRoom.players.forEach((e) => {
+          if (e.userId === userId) {
+            betAmount = e.prevBetAmount;
+          }
+        });
+      }
+      if (action === "betAll") {
+        betAmount = wallet.getCoins(userId);
+      }
+
+      if (betAmount > 100000001) {
+        await interaction.reply({
+          content: `You've hit the betting limit!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      // Ne mozes da betujes ako nisi u room
+
+      // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
+      if (isNaN(betAmount) || betAmount <= 0 || betAmount > 10000001) {
+        await interaction.reply({
+          content: `Bet amount invalid!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (wallet.getCoins(userId) <= 0) {
+        await interaction.reply({
+          content: `You don't have any more money to play with... Removing you from the room...`,
+          ephemeral: true,
+        });
+        blackjackRooms.removePersonFromRoom(userId, channelId);
+        return;
+      }
+      if (wallet.getCoins(userId) < betAmount) {
+        await interaction.reply({
+          content: `You don't have enough money to make this bet!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      wallet.removeCoins(userId, betAmount);
+      const whatDoItSay = await blackjackBets.addBet(
+        userId,
+        channelId,
+        betAmount
+      );
+      // stard da gamez
+      if (whatDoItSay === "true") {
+        setTimeout(() => {
+          blackjackGame.startDealing(
+            eventEmitter,
+            channelId,
+            interaction.channel
+          );
+        }, 2000);
+        blackjackRooms.changeGameState(channelId, "betting", false);
+        blackjackRooms.changeGameState(channelId, "dealing", true);
+        await interaction.reply({
+          content: `All bets are placed, **the game is starting...**`,
+          components: [],
+        });
+        return;
+      }
+      await interaction.reply(whatDoItSay);
+      return;
+    }
+    if (action === `leaveRoom`) {
+      if (
+        blackjackRooms.areWePlaying(channelId) ||
+        blackjackRooms.areWeLettingTheDealerDealSoWeCantDoCommands(channelId)
+      ) {
+        interaction.reply({
+          content: `Can't leave the room mid game.`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
+        interaction.reply({
+          content: `You are not in a room.`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const thatRoom = blackjackRooms.findRoom(channelId);
+      blackjackRooms.removePersonFromRoom(userId, channelId);
+
+      console.log(thatRoom.players.length);
+      if (thatRoom.players.length === 0) {
+        await interaction.reply(`Removing <@${userId}> from the room...`);
+
+        blackjackRooms.deleteRoom(channelId);
+        return;
+      }
+      if (thatRoom.players.every((player) => player.betAmount > 0)) {
+        setTimeout(() => {
+          blackjackGame.startDealing(
+            eventEmitter,
+            channelId,
+            interaction.channel
+          );
+        }, 2000);
+
+        blackjackRooms.changeGameState(channelId, "betting", false);
+        blackjackRooms.changeGameState(channelId, "dealing", true);
+        await interaction.reply({
+          content: `<@${userId}> left the room, and everyone else has placed their bet.**The game is starting...**`,
+          components: [],
+        });
+        return;
+      }
+      await interaction.reply(`Removing <@${userId}> from the room...`);
+
+      return;
+    }
+    // Handle blackjack button interactions
+    if (interaction.user.id !== userId) {
+      await interaction.reply({
+        content: "It's not your turn to act in the blackjack game.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (action === "hit") {
+      // ovde sam picko
+      // Handle hit logic here
+      if (
+        !blackjackRooms.areWePlaying(channelId) ||
+        !blackjackRooms.checkIfAlreadyInRoom(userId)
+      ) {
+        await interaction.reply({
+          content: `pa gde si krenuo buraz`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+        await interaction.reply({
+          content: `pa gde si krenuo buraz`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const infoAboutPlayer = blackjackGame.hit(
+        userId,
+        channelId,
+        eventEmitter,
+        interaction.channel
+      );
+      if (infoAboutPlayer.theirSum === 21) {
+        const messagezz = blackjackGame.stand(
+          userId,
+          channelId,
+          eventEmitter,
+          interaction.channel
+        );
+        await interaction.update({
+          content: `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`,
+          components: [],
+        });
+
+        return;
+      }
+      if (infoAboutPlayer.bust) {
+        await interaction.update({
+          content: `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`,
+          components: [],
+        });
+        blackjackRooms.playerLose(userId, channelId);
+        blackjackGame.stand(
+          userId,
+          channelId,
+          eventEmitter,
+          interaction.channel
+        );
+      } else {
+        await interaction.update({
+          content: `<@${userId}> got a **${
+            infoAboutPlayer.cardTheyGot
+          }**, their sum is **${infoAboutPlayer.theirSum}**.${
+            infoAboutPlayer.aceSave
+              ? `They've got an ace, so their 11 is now counted as a 1.`
+              : ``
+          }`,
+          components: [],
+        });
+        sendPlayerTurnButtons(
+          userId,
+          interaction.channel,
+          infoAboutPlayer.theirSum
+        );
+      }
+    } else if (action === "stand") {
+      // Handle stand logic here
+      if (
+        !blackjackRooms.areWePlaying(channelId) ||
+        !blackjackRooms.checkIfAlreadyInRoom(userId)
+      ) {
+        interaction.reply({
+          content: `:question: pa gde si krenuo buraz :question:`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+        interaction.reply({
+          content: `:question: pa gde si krenuo buraz :question:`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const messageszzz = blackjackGame.stand(
+        userId,
+        channelId,
+        eventEmitter,
+        interaction.channel
+      );
+      await interaction.update({
+        content: `<@${userId}> chose to stand!`,
+        components: [],
+      });
+      // Regenerate buttons for next action if necessary
+    }
+
+    // Ensure the interaction is acknowledged
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferUpdate();
+    }
+
+    return; // Exit since the blackjack logic is done
+  }
 
   const gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
 
@@ -596,7 +1147,10 @@ client.on("interactionCreate", async (interaction) => {
   if (interaction.user.id !== gridData.userId) {
     // Only reply once, with an ephemeral message
     if (!interaction.replied) {
-      await interaction.reply({ content: "You are not allowed to interact with this grid.", ephemeral: true });
+      await interaction.reply({
+        content: "You are not allowed to interact with this grid.",
+        ephemeral: true,
+      });
     }
     return;
   }
@@ -610,7 +1164,7 @@ client.on("interactionCreate", async (interaction) => {
   // If the multiplier is 0, end the game and remove the grid
   if (multiplier === 0) {
     gridData.isComplete = true;
-    label = 'x0'; // Set the label to 'x0'
+    label = "x0"; // Set the label to 'x0'
     await interaction.reply("Game over! You revealed the x0 multiplier.");
     await interaction.message.delete(); // Remove the grid message
     return;
@@ -638,7 +1192,5 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.deferUpdate();
   }
 });
-
-
 
 client.login(process.env.DISCORD_TOKEN);

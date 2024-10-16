@@ -54,12 +54,14 @@ function makeRoom(userId, channelId) {
       {
         userId: userId,
         betAmount: 0,
+        prevBetAmount: 0,
         index: 0,
         sum: 0,
         cards: [],
         played: false,
         turn: false,
         lost: false,
+        buttonCounter: 0,
       },
     ],
     playing: false,
@@ -68,6 +70,7 @@ function makeRoom(userId, channelId) {
     deckOfCards: [],
     resetDeck: 0,
     bettingStartTime: null,
+    games: 0,
     dealer: { sum: 0, cards: [], profits: 0 },
   });
   return `You have made a room, and joined it.`;
@@ -89,12 +92,13 @@ function checkBettingPhase(channelId) {
     if (timeDiff >= 180000) {
       // 3 minutes = 180000 milliseconds
       jusGivMeMyMooony(channelId);
-      deleteRoom(channelId);
+      const message = deleteRoom(channelId);
+      console.log(rooms);
       // const channelToSendTo = client.channels.fetch(channelId);
       // client.channels.fetch(channelId);
 
       // channelToSendTo.send(`Deleting blackjack room due to inactivity....`);
-      console.log(`I deleted the room.`);
+      console.log(message);
     }
   }
 }
@@ -111,6 +115,7 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   const thatRoom = findRoom(channelId);
 
   thatRoom.players.forEach((e) => {
+    e.prevBetAmount = e.betAmount;
     e.betAmount = 0;
     e.sum = 0;
     e.cards = [];
@@ -118,6 +123,7 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
     e.turn = false;
     e.lost = false;
   });
+  thatRoom.games++;
   thatRoom.dealer.sum = 0;
   thatRoom.dealer.cards = [];
   changeGameState(channelId, "playing", false);
@@ -154,12 +160,14 @@ function joinRoom(userId, channelId) {
       e.players.push({
         userId: userId,
         betAmount: 0,
+        prevBetAmount: 0,
         index: e.players.length,
         sum: 0,
         cards: [],
         played: false,
         turn: false,
         lost: false,
+        buttonCounter: 0,
       });
       joined = true;
     }
@@ -167,12 +175,17 @@ function joinRoom(userId, channelId) {
   if (joined) return `You joined the current room.`;
   else return `There has been a error.`;
 }
-
+function updateRoomsIndex() {
+  rooms.forEach((e, i, arr) => {
+    e.index = i;
+  });
+}
 function deleteRoom(channelId) {
   try {
     rooms.forEach((e) => {
       if (e.id === channelId) {
         rooms.splice(e.index, 1);
+        updateRoomsIndex();
         throw error;
       }
     });
