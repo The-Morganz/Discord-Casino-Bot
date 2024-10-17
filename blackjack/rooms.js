@@ -122,7 +122,6 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   const thatRoom = findRoom(channelId);
 
   thatRoom.players.forEach((e) => {
-    e.prevBetAmount = e.betAmount;
     e.betAmount = 0;
     e.sum = 0;
     e.cards = [];

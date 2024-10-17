@@ -1,7 +1,8 @@
 const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
 const { makeDeck } = require("./makeDeck");
-const { reset } = require("nodemon");
+const xpSystem = require("../xp/xp");
+const xpGain = 15;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
 
@@ -35,6 +36,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
       0,
       thePlayingRoom.deckOfCards.length - 1
     );
+    player.prevBetAmount = player.betAmount;
     const randomCard = thePlayingRoom.deckOfCards[randomNumberFromDeck];
     const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
     thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
@@ -66,7 +68,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     if (unoRandomNumero === 10 || unoRandomNumero === 11) {
       const checkMessage = `:bust_in_silhouette: THE DEALER is checking their other card. :bust_in_silhouette:`;
       eventEmitter.emit("beginningBJ", checkMessage, channelToSendTo);
-      await sleep(1000);
+      await sleep(2500);
       const randomNumberFromDeck = randomNumber(
         0,
         thePlayingRoom.deckOfCards.length - 1
@@ -200,6 +202,59 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
     };
   }
 }
+function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
+  const thatRoom = rooms.findRoom(channelId);
+  let thePlayer;
+  try {
+    thatRoom.players.forEach((e) => {
+      if (e.userId === userId) {
+        thePlayer = e;
+        throw error;
+      }
+    });
+  } catch (error) {
+    const randomNumberFromDeck = randomNumber(
+      0,
+      thatRoom.deckOfCards.length - 1
+    );
+    const randomCard = thatRoom.deckOfCards[randomNumberFromDeck];
+    const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    thatRoom.deckOfCards.splice(randomNumberFromDeck, 1);
+    thePlayer.sum += unoRandomNumero;
+    thePlayer.cards.push(unoRandomNumero);
+    if (thatRoom.deckOfCards.length <= 6) {
+      thatRoom.deckOfCards = makeDeck();
+    }
+    thePlayer.betAmount *= 2;
+    if (thePlayer.sum > 21) {
+      if (aceSave(thePlayer.cards, thePlayer.sum)) {
+        thePlayer.sum -= 10;
+        const aceIndex = thePlayer.cards.indexOf(11);
+        thePlayer.cards.splice(aceIndex, 1);
+        thePlayer.cards.push(1);
+        return {
+          bust: false,
+          cardTheyGot: unoRandomNumero,
+          theirSum: thePlayer.sum,
+          aceSave: true,
+        };
+      }
+      const whoNextString = whoIsUpNext(channelId);
+      return {
+        bust: true,
+        cardTheyGot: unoRandomNumero,
+        theirSum: thePlayer.sum,
+        aceSave: false,
+      };
+    }
+    return {
+      bust: false,
+      cardTheyGot: unoRandomNumero,
+      theirSum: thePlayer.sum,
+      aceSave: false,
+    };
+  }
+}
 async function stand(userId, channelId, eventEmitter, channelToSendTo) {
   const thatRoom = rooms.findRoom(channelId);
   let aPersonIsPlaying = false;
@@ -279,26 +334,28 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     const player = thatRoom.players[i];
     if (player.natBlackjack && thatRoom.dealer.natBlackjack) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has gotten a NATURAL **BLACKJACK**, but the DEALER also got a NATURAL **BLACKJACK**, resulting in a push. You notice that the DEALER smiles at you. :rightwards_pushing_hand:`;
-      wallet.addCoins(player.userId, player.betAmount);
+      wallet.addCoins(player.userId, player.betAmount, true);
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
     if (player.natBlackjack) {
+      const coinMessage = wallet.addCoins(player.userId, player.betAmount * 3);
+
       message = `:fireworks: <@${
         player.userId
       }> has gotten a NATURAL BLACKJACK and has won +${
         player.betAmount * 3
-      } :fireworks:`;
+      } :fireworks:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
     if (player.sum > thatRoom.dealer.sum && player.sum <= 21) {
+      const coinMessage = wallet.addCoins(player.userId, player.betAmount * 2);
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
-      } :gem:`;
-      wallet.addCoins(player.userId, player.betAmount * 2);
+      } :gem:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -318,33 +375,26 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       // wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
+      const coinMessage = wallet.addCoins(player.userId, player.betAmount * 2);
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
-      } :gem:`;
-      wallet.addCoins(player.userId, player.betAmount * 2);
+      } :gem:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
     if (thatRoom.dealer.sum === player.sum && player.sum <= 21) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
-      wallet.addCoins(player.userId, player.betAmount);
+      wallet.addCoins(player.userId, player.betAmount, true);
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
-    // if (player.sum === 21) {
-    //   message = `:fireworks: <@${
-    //     player.userId
-    //   }> has gotten a BLACKJACK, resulting in bigger winnings. They have won +${
-    //     player.betAmount * 3
-    //   } :fireworks:`;
-    //   wallet.addCoins(player.userId, player.betAmount * 3);
-    //   eventEmitter.emit("endGame", message, channelToSendTo);
-    //   await sleep(1000);
-    //   continue;
-    // }
   }
+  thatRoom.players.forEach((e) => {
+    const xpGainAfterCut = xpSystem.calculateXpGain(e.betAmount, xpGain);
+    xpSystem.addXp(e.userId, xpGainAfterCut);
+  });
   eventEmitter.emit("restartGame", channelToSendTo);
   resetDeckCounter(channelId);
 }
@@ -354,9 +404,8 @@ module.exports = {
   startDealing,
   hit,
   stand,
+  doubleDown,
   dealerTurn,
   endGame,
   resetDeckCounter,
 };
-// wallet na $startbj
-// wallet na restarting game...

@@ -119,11 +119,11 @@ function flipCoin(userId) {
   wallet.removeCoins(challenge.challengerId, challenge.amount);
 
   // Add double the amount to the winner
-  wallet.addCoins(winnerId, challenge.amount * 2);
+  const coinMessage = wallet.addCoins(winnerId, challenge.amount * 2);
 
   const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${
     challenge.amount * 2
-  }** coins! 🪙`;
+  }** coins! 🪙 ${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
   delete pendingChallenges[userId];
 
   return resultMessage;

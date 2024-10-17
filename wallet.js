@@ -22,7 +22,7 @@ function saveWallets() {
 // Initialize a user's wallet
 function initializeWallet(userId) {
   if (!wallets[userId]) {
-    wallets[userId] = { coins: 0 };
+    wallets[userId] = { coins: 0, debt: 0 };
     saveWallets();
   }
 }
@@ -31,17 +31,74 @@ function initializeWallet(userId) {
 function getCoins(userId) {
   return wallets[userId] ? wallets[userId].coins : 0;
 }
+function getDebt(userId) {
+  return wallets[userId] ? wallets[userId].debt : 0;
+}
+function addDebt(userId, amount) {
+  if (!wallets[userId]) {
+    wallets[userId] = { coins: 0, debt: 0 }; // Initialize if not present
+  }
+  const addAmount = amount + amount * 0.05;
+  wallets[userId].debt += Math.round(addAmount); // Update balance
+  console.log(
+    `Added ${amount} debt to user ${userId}. New balance: ${wallets[userId].debt}`
+  );
+  saveWallets(); // Save changes to JSON file
+}
+
+function payDebt(userId, amount) {
+  if (wallets[userId]) {
+    console.log(`Attempting to remove ${amount} coins from user ${userId}.`);
+
+    if (wallets[userId].debt > 0) {
+      wallets[userId].debt -= Math.round(amount);
+      console.log(
+        `Paid ${amount} coins to debt payoff from user ${userId}. New balance: ${wallets[userId].coins}`
+      );
+      saveWallets(); // Save changes to the JSON file
+    } else {
+      console.log(
+        `Failed to remove coins: User ${userId} doesn't have enough coins.`
+      );
+    }
+  } else {
+    console.log(`Failed to remove coins: User ${userId} doesn't exist.`);
+  }
+}
+
+function clearDebt(userId) {
+  if (wallets[userId]) {
+    wallets[userId].debt = 0;
+    console.log(`Cleared ${userId}'s debt.`);
+    saveWallets(); // Save changes to the JSON file
+  } else {
+    console.log(`Failed to remove coins: User ${userId} doesn't exist.`);
+  }
+}
 
 // Add coins to a user's wallet
-function addCoins(userId, amount) {
+function addCoins(userId, amount, debtFree = false) {
   if (!wallets[userId]) {
-    wallets[userId] = { coins: 0 }; // Initialize if not present
+    wallets[userId] = { coins: 0, debt: 0 }; // Initialize if not present
   }
-  wallets[userId].coins += amount; // Update balance
+  let message = ``;
+  if (wallets[userId].debt > 0 && !debtFree) {
+    const tenPercentOffWinnings = amount * 0.1;
+    payDebt(userId, tenPercentOffWinnings);
+    amount = amount * 0.9;
+    console.log(`The bank has taken their fair share...`);
+    message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
+    if (wallets[userId].debt <= 0) {
+      message += `\nYou're debt free!`;
+    }
+  }
+  wallets[userId].coins += Math.round(amount); // Update balance
   console.log(
     `Added ${amount} coins to user ${userId}. New balance: ${wallets[userId].coins}`
   );
+
   saveWallets(); // Save changes to JSON file
+  return message;
 }
 
 // Remove coins from a user's wallet
@@ -103,6 +160,10 @@ module.exports = {
   initializeWallet,
   getCoins,
   addCoins,
+  addDebt,
+  payDebt,
+  getDebt,
+  clearDebt,
   removeCoins,
   getTopUsers,
 };

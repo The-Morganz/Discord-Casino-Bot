@@ -23,6 +23,7 @@ const coinflip = require("./coinflip");
 const grid = require("./grid");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
+const xpSystem = require("./xp/xp");
 const eventEmitter = new EventEmitter();
 let toggleAnimState = false;
 const client = new Client({
@@ -53,7 +54,7 @@ client.on("messageCreate", async (message) => {
   wallet.initializeWallet(userId);
 
   if (message.content.toLowerCase() === "$help") {
-    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n\n**"$startbj"**- Used to start a game of Blackjack.\n\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?`;
+    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n**"$startbj"**- Used to start a game of Blackjack.\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?\n\n**"$level"**- Shows your level, how much xp you have,and need for the next level.\nWhen you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.\nYou can gain xp by playing our various games!\n\n**"$paydebt"**- Pay off all of your debt, if you have the coins for it.`;
     message.author.send(theHelpMessage);
   }
 
@@ -203,7 +204,32 @@ client.on("messageCreate", async (message) => {
     message.content.toLowerCase() === "$w"
   ) {
     const coins = wallet.getCoins(userId); // Get the user's balance
-    await message.reply(`You have **${coins}** coins in your wallet.`);
+    const debt = wallet.getDebt(userId);
+    await message.reply(
+      `You have **${coins}** coins in your wallet. ${
+        debt > 0 ? `\nTheir debt: ${debt}` : ``
+      }`
+    );
+  }
+  if (message.content.toLowerCase().startsWith("$cleardebt")) {
+    console.log(`uhh hello?`);
+    if (message.author.id !== ownerId && message.author.id !== ownerId2) {
+      return message.reply("You don't have permission to use this command.");
+    }
+
+    // const args = message.content.split(" ");
+
+    const mentionedUser = message.mentions.users.first();
+    if (!mentionedUser) {
+      return message.reply("Please mention a valid user to clear their debt.");
+    }
+    const targetUserId = mentionedUser.id;
+
+    // Add coins to the mentioned user's wallet
+    wallet.clearDebt(targetUserId);
+    await message.reply(
+      `You have cleared **${mentionedUser.username}'s** debt.`
+    );
   }
 
   // Command to add coins (restricted to bot owner)
@@ -232,12 +258,36 @@ client.on("messageCreate", async (message) => {
 
     // Extract the user ID of the mentioned user
     const targetUserId = mentionedUser.id;
+    const debtFreeAdd = args[3];
 
     // Add coins to the mentioned user's wallet
-    wallet.addCoins(targetUserId, amount);
+    wallet.addCoins(targetUserId, amount, true);
+    if (debtFreeAdd !== "debtFree") {
+      wallet.addDebt(targetUserId, amount);
+    }
     await message.reply(
-      `You have added **${amount}** coins to **${mentionedUser.username}'s** wallet.`
+      `You have added **${amount}** coins to **${
+        mentionedUser.username
+      }'s** wallet. Their debt: ${wallet.getDebt(targetUserId)}`
     );
+  }
+  if (message.content.toLowerCase().startsWith("$paydebt")) {
+    const playerCoins = wallet.getCoins(userId);
+    const playerDebt = wallet.getDebt(userId);
+    if (playerDebt <= 0) {
+      await message.reply(`You don't have any debt!`);
+      return;
+    }
+    if (playerDebt > playerCoins) {
+      await message.reply(`You don't have enough coins to pay off your debt!`);
+      return;
+    }
+    if (playerCoins >= playerDebt) {
+      wallet.removeCoins(userId, playerDebt);
+      wallet.payDebt(userId, playerDebt);
+      await message.reply(`You have paid off your debt!`);
+      return;
+    }
   }
 
   if (message.content.toLowerCase().startsWith("$give")) {
@@ -320,6 +370,9 @@ client.on("messageCreate", async (message) => {
     } else {
       await message.reply("Please provide a valid bet amount.");
     }
+  }
+  if (message.content.toLowerCase().startsWith("$level")) {
+    return message.reply(xpSystem.xpOverview(userId));
   }
 
   if (message.content.toLowerCase().startsWith("$joinbj")) {
@@ -503,6 +556,49 @@ client.on("messageCreate", async (message) => {
       );
     }
   }
+  if (message.content.toLowerCase().startsWith("$dd")) {
+    if (
+      !blackjackRooms.areWePlaying(channelId) ||
+      !blackjackRooms.checkIfAlreadyInRoom(userId)
+    ) {
+      message.channel.send(`pa gde si krenuo buraz`);
+      return;
+    }
+    if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+      message.reply(`pa gde si krenuo buraz`);
+      return;
+    }
+    const infoAboutPlayer = blackjackGame.doubleDown(
+      userId,
+      channelId,
+      eventEmitter,
+      message.channel
+    );
+    if (infoAboutPlayer.theirSum === 21) {
+      const messagezz = blackjackGame.stand(
+        userId,
+        channelId,
+        eventEmitter,
+        message.channel
+      );
+      message.channel.send(
+        `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`
+      );
+      return;
+    }
+    if (infoAboutPlayer.bust) {
+      message.channel.send(
+        `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`
+      );
+      blackjackRooms.playerLose(userId, channelId);
+      blackjackGame.stand(userId, channelId, eventEmitter, message.channel);
+    } else {
+      message.channel.send(
+        `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**.`
+      );
+      blackjackGame.stand(userId, channelId, eventEmitter, message.channel);
+    }
+  }
   if (message.content.toLowerCase().startsWith("$stand")) {
     if (
       !blackjackRooms.areWePlaying(channelId) ||
@@ -651,10 +747,14 @@ function sendPlayerTurnButtons(userId, channel, theirSum) {
   const thatRoom = blackjackRooms.findRoom(channel.id);
   let buttonCounter;
   let turn;
+  let canDD = false;
   thatRoom.players.forEach((e) => {
     if (e.userId === userId) {
       buttonCounter = e.buttonCounter;
       turn = e.turn;
+      if (wallet.getCoins(userId) >= e.betAmount * 2) {
+        canDD = true;
+      }
     }
   });
   const hitButton = new ButtonBuilder()
@@ -666,8 +766,24 @@ function sendPlayerTurnButtons(userId, channel, theirSum) {
     .setCustomId(`bj_stand_${userId}_${buttonCounter}`) // unique custom ID with player ID
     .setLabel("Stand")
     .setStyle(ButtonStyle.Danger);
-
+  const doubleDownButton = new ButtonBuilder()
+    .setCustomId(`bj_dd_${userId}_${buttonCounter}`) // unique custom ID with player ID
+    .setLabel("Double Down")
+    .setStyle(ButtonStyle.Success);
+  if (canDD) {
+    const row = new ActionRowBuilder().addComponents(
+      hitButton,
+      standButton,
+      doubleDownButton
+    );
+    channel.send({
+      content: `<@${userId}>, it's your turn! Your sum is ${theirSum}`,
+      components: [row],
+    });
+    return;
+  }
   const row = new ActionRowBuilder().addComponents(hitButton, standButton);
+
   channel.send({
     content: `<@${userId}>, it's your turn! Your sum is ${theirSum}`,
     components: [row],
@@ -692,14 +808,23 @@ function generateBetButtons(channel, start = false) {
     .setCustomId(`bj_leaveRoom`)
     .setLabel(`Leave Room`)
     .setStyle(ButtonStyle.Danger);
+  const walletButton = new ButtonBuilder()
+    .setCustomId(`bj_wallet`)
+    .setLabel(`Wallet`)
+    .setStyle(ButtonStyle.Primary);
 
   const row = new ActionRowBuilder().addComponents(
     betPrevButton,
     betAllButton,
     betCustomButton,
+    walletButton,
     leaveButton
   );
-  const startRow = new ActionRowBuilder().addComponents(betCustomButton);
+  const startRow = new ActionRowBuilder().addComponents(
+    betCustomButton,
+    betAllButton,
+    walletButton
+  );
   if (!start) {
     channel.send({
       content: `**Restarting game...** Please place your bets.`,
@@ -842,7 +967,16 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
       const whatDoItSay = await blackjackRooms.makeRoom(userId, channelId);
+      await interaction.reply({ content: whatDoItSay, ephemeral: true });
       generateStartBjButton(interaction.channel);
+      return;
+    }
+    if (action === `wallet`) {
+      const coins = wallet.getCoins(userId); // Get the user's balance
+      await interaction.reply({
+        content: `You have **${coins}** coins in your wallet.`,
+        ephemeral: true,
+      });
       return;
     }
     if (action === `start`) {
@@ -866,6 +1000,8 @@ client.on("interactionCreate", async (interaction) => {
         eventEmitter,
         interaction.channel
       );
+      await interaction.reply({ content: `Starting game...`, ephemeral: true });
+
       generateBetButtons(interaction.channel, true);
       return;
     }
@@ -1143,6 +1279,67 @@ client.on("interactionCreate", async (interaction) => {
         components: [],
       });
       // Regenerate buttons for next action if necessary
+    } else if (action === `dd`) {
+      if (
+        !blackjackRooms.areWePlaying(channelId) ||
+        !blackjackRooms.checkIfAlreadyInRoom(userId)
+      ) {
+        await interaction.reply({
+          content: `:question: pa gde si krenuo buraz :question:`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+        await interaction.reply({
+          content: `:question: pa gde si krenuo buraz :question:`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const infoAboutPlayer = blackjackGame.doubleDown(
+        userId,
+        channelId,
+        eventEmitter,
+        interaction.channel
+      );
+      if (infoAboutPlayer.theirSum === 21) {
+        const interactionzz = blackjackGame.stand(
+          userId,
+          channelId,
+          eventEmitter,
+          interaction.channel
+        );
+        await interaction.update({
+          content: `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`,
+          components: [],
+        });
+        return;
+      }
+      if (infoAboutPlayer.bust) {
+        await interaction.update({
+          content: `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`,
+          components: [],
+        });
+        blackjackRooms.playerLose(userId, channelId);
+        blackjackGame.stand(
+          userId,
+          channelId,
+          eventEmitter,
+          interaction.channel
+        );
+      } else {
+        await interaction.update({
+          content: `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**.`,
+          components: [],
+        });
+        blackjackGame.stand(
+          userId,
+          channelId,
+          eventEmitter,
+          interaction.channel
+        );
+      }
     }
 
     // Ensure the interaction is acknowledged

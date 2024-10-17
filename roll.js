@@ -1,4 +1,5 @@
 const wallet = require("./wallet");
+const xpSystem = require("./xp/xp");
 
 // Define emoji set with rarity, payout, and multiplier for betting
 const emojiSet = [
@@ -114,14 +115,19 @@ async function roll(userId, betAmount, message) {
   }
 
   let payout = 0;
+  let coinMessage = ``;
   if (totalMultiplier > 0) {
     payout = Math.round(betAmount * totalMultiplier);
-    wallet.addCoins(userId, payout);
+    coinMessage = wallet.addCoins(userId, payout);
   }
 
   // Create the final message string
   const finalMessage = `🎰 You rolled:\n${finalRollResult}\n${
-    payout > 0 ? `You won **${payout}** coins! 🎉` : "Better luck next time."
+    payout > 0
+      ? `You won **${payout}** coins! 🎉${
+          coinMessage !== `` ? `\n*${coinMessage}*` : ``
+        }`
+      : "Better luck next time."
   }`;
 
   // Edit the same message to show the final result
@@ -130,6 +136,9 @@ async function roll(userId, betAmount, message) {
   } else {
     message.reply(finalMessage);
   }
+  const xpGain = xpSystem.calculateXpGain(payout, 10);
+  console.log(xpGain);
+  xpSystem.addXp(userId, xpGain);
 
   // Return the final result and payout (if needed)
   return {
