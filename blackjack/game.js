@@ -49,7 +49,10 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     let message = `:mag: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum} :mag:`;
     if (player.sum === 21) {
       player.played = true;
-      message = `:fireworks: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum}. **BLACKJACK** :fireworks:`;
+      player.natBlackjack = true;
+      message = `:fireworks: <@${player.userId}> has gotten ${unoRandomNumero}, which means they got a **BLACKJACK!** :fireworks:`;
+      await sleep(1000);
+      // message = `:fireworks: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum}. **BLACKJACK** :fireworks:`;
     }
     eventEmitter.emit("beginningBJ", message, channelToSendTo);
     await sleep(1000);
@@ -59,7 +62,36 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
   if (dealer.cards.length === 1) {
     const message = whoIsUpNext(channelId);
     rooms.changeGameState(channelId, "dealing", false);
-
+    const unoRandomNumero = dealer.cards[0];
+    if (unoRandomNumero === 10 || unoRandomNumero === 11) {
+      const checkMessage = `:bust_in_silhouette: THE DEALER is checking their other card. :bust_in_silhouette:`;
+      eventEmitter.emit("beginningBJ", checkMessage, channelToSendTo);
+      await sleep(1000);
+      const randomNumberFromDeck = randomNumber(
+        0,
+        thePlayingRoom.deckOfCards.length - 1
+      );
+      const randomCard2 = thePlayingRoom.deckOfCards[randomNumberFromDeck];
+      const unoRandomNumero2 = Number(randomCard2.replace(/\D/g, ""));
+      const sumOfCards = unoRandomNumero + unoRandomNumero2;
+      if (sumOfCards === 21) {
+        const dealerNatBjMessage = `:bust_in_silhouette: THE DEALER GOT A **${unoRandomNumero2}**, NATURAL BLACKJACK :bust_in_silhouette:`;
+        eventEmitter.emit("beginningBJ", dealerNatBjMessage, channelToSendTo);
+        // thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
+        dealer.sum += unoRandomNumero2;
+        dealer.cards.push(unoRandomNumero2);
+        dealer.natBlackjack = true;
+        endGame(channelId, channelToSendTo, eventEmitter);
+        return;
+      }
+      dealer.checkFailed = true;
+      eventEmitter.emit(
+        "beginningBJ",
+        `:bust_in_silhouette: THE DEALER has a disappointed look on their face. :bust_in_silhouette:`,
+        channelToSendTo
+      );
+      await sleep(1000);
+    }
     if (thePlayingRoom.players.every((player) => player.played === true)) {
       eventEmitter.emit("upNext", message, channelToSendTo, "dealer");
       return;
@@ -76,7 +108,6 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     dealer.sum += unoRandomNumero;
     dealer.cards.push(unoRandomNumero);
-
     const message = `:bust_in_silhouette: THE DEALER HAS A **${dealer.sum}** :bust_in_silhouette:`;
     eventEmitter.emit("beginningBJ", message, channelToSendTo);
     await sleep(1000);
@@ -209,6 +240,13 @@ async function dealerTurn(channelId, eventEmitter, channelToSendTo) {
     );
     const randomCard = thatRoom.deckOfCards[randomNumberFromDeck];
     const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    if (dealer.checkFailed && dealer.cards.length === 1) {
+      const currentSum = dealer.sum + unoRandomNumero;
+      if (currentSum === 21) {
+        dealerTurn(channelId, eventEmitter, channelToSendTo);
+        return;
+      }
+    }
     thatRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     dealer.sum += unoRandomNumero;
     dealer.cards.push(unoRandomNumero);
@@ -239,7 +277,24 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
   await sleep(1000);
   for (let i = 0; i < thatRoom.players.length; i++) {
     const player = thatRoom.players[i];
-    if (player.sum > thatRoom.dealer.sum && player.sum < 21) {
+    if (player.natBlackjack && thatRoom.dealer.natBlackjack) {
+      message = `:rightwards_pushing_hand: <@${player.userId}> has gotten a NATURAL **BLACKJACK**, but the DEALER also got a NATURAL **BLACKJACK**, resulting in a push. You notice that the DEALER smiles at you. :rightwards_pushing_hand:`;
+      wallet.addCoins(player.userId, player.betAmount);
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
+    }
+    if (player.natBlackjack) {
+      message = `:fireworks: <@${
+        player.userId
+      }> has gotten a NATURAL BLACKJACK and has won +${
+        player.betAmount * 3
+      } :fireworks:`;
+      eventEmitter.emit("endGame", message, channelToSendTo);
+      await sleep(1000);
+      continue;
+    }
+    if (player.sum > thatRoom.dealer.sum && player.sum <= 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
@@ -262,7 +317,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       continue;
       // wallet.removeCoins(player.userId, player.betAmount);
     }
-    if (thatRoom.dealer.sum > 21 && player.sum < 21) {
+    if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:`;
@@ -278,17 +333,17 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       await sleep(1000);
       continue;
     }
-    if (player.sum === 21) {
-      message = `:fireworks: <@${
-        player.userId
-      }> has gotten a BLACKJACK, resulting in bigger winnings. They have won +${
-        player.betAmount * 3
-      } :fireworks:`;
-      wallet.addCoins(player.userId, player.betAmount * 3);
-      eventEmitter.emit("endGame", message, channelToSendTo);
-      await sleep(1000);
-      continue;
-    }
+    // if (player.sum === 21) {
+    //   message = `:fireworks: <@${
+    //     player.userId
+    //   }> has gotten a BLACKJACK, resulting in bigger winnings. They have won +${
+    //     player.betAmount * 3
+    //   } :fireworks:`;
+    //   wallet.addCoins(player.userId, player.betAmount * 3);
+    //   eventEmitter.emit("endGame", message, channelToSendTo);
+    //   await sleep(1000);
+    //   continue;
+    // }
   }
   eventEmitter.emit("restartGame", channelToSendTo);
   resetDeckCounter(channelId);
@@ -303,3 +358,5 @@ module.exports = {
   endGame,
   resetDeckCounter,
 };
+// wallet na $startbj
+// wallet na restarting game...

@@ -497,7 +497,7 @@ client.on("messageCreate", async (message) => {
           infoAboutPlayer.cardTheyGot
         }**, their sum is **${infoAboutPlayer.theirSum}**.${
           infoAboutPlayer.aceSave
-            ? `They've got an ace, so their 11 is now counted as a 1.`
+            ? `They've got an **ACE**, so their 11 is now counted as a 1.`
             : ``
         } **$hit** , or **$stand** ?`
       );
@@ -525,6 +525,18 @@ client.on("messageCreate", async (message) => {
   }
   if (message.content.toLowerCase().startsWith("pusi ga")) {
     message.reply(`That's not very nice!`);
+  }
+  if (message.content.toLowerCase().startsWith("fuckyou")) {
+    if (wallet.getCoins(userId) > 10) {
+      message.reply(`The DEALER has taken 10 coins from <@${userId}>'s wallet`);
+      wallet.removeCoins(userId, 10);
+      return;
+    } else {
+      message.reply(
+        `The DEALER tried to take 10 coins from <@${userId}>'s wallet, but realized that <@${userId}> didn't have 10 coins to take.`
+      );
+      return;
+    }
   }
   if (message.content.toLowerCase().startsWith("$bj")) {
     generateBlackjackButtons(message.channel);
@@ -1066,7 +1078,7 @@ client.on("interactionCreate", async (interaction) => {
           interaction.channel
         );
         await interaction.update({
-          content: `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`,
+          content: `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**. Their turn has been skipped.`,
           components: [],
         });
 
@@ -1090,7 +1102,7 @@ client.on("interactionCreate", async (interaction) => {
             infoAboutPlayer.cardTheyGot
           }**, their sum is **${infoAboutPlayer.theirSum}**.${
             infoAboutPlayer.aceSave
-              ? `They've got an ace, so their 11 is now counted as a 1.`
+              ? `They've got an **ACE**, so their 11 is now counted as a 1.`
               : ``
           }`,
           components: [],

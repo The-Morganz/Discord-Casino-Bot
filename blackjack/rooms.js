@@ -62,6 +62,7 @@ function makeRoom(userId, channelId) {
         turn: false,
         lost: false,
         buttonCounter: 0,
+        natBlackjack: false,
       },
     ],
     playing: false,
@@ -71,7 +72,13 @@ function makeRoom(userId, channelId) {
     resetDeck: 0,
     bettingStartTime: null,
     games: 0,
-    dealer: { sum: 0, cards: [], profits: 0 },
+    dealer: {
+      sum: 0,
+      cards: [],
+      profits: 0,
+      checkFailed: false,
+      natBlackjack: false,
+    },
   });
   return `You have made a room, and joined it.`;
 }
@@ -122,10 +129,13 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
     e.played = false;
     e.turn = false;
     e.lost = false;
+    e.natBlackjack = false;
   });
   thatRoom.games++;
   thatRoom.dealer.sum = 0;
   thatRoom.dealer.cards = [];
+  thatRoom.dealer.checkFailed = false;
+  thatRoom.dealer.natBlackjack = false;
   changeGameState(channelId, "playing", false);
   console.log(thatRoom);
   eventEmitter.emit(`startBettingPhase`, channelToSendTo);
@@ -168,6 +178,7 @@ function joinRoom(userId, channelId) {
         turn: false,
         lost: false,
         buttonCounter: 0,
+        natBlackjack: false,
       });
       joined = true;
     }
