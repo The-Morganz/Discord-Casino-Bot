@@ -57,7 +57,7 @@ function levelUp(userId) {
   xpData[userId].level++;
   xpData[userId].multiplier += 0.5;
   xpData[userId].nextLevelXpReq = Math.round(
-    xpData[userId].nextLevelXpReq * 1.1
+    xpData[userId].nextLevelXpReq * 1.3
   );
   // Write the updated data back to the file
   writeXpData(xpData);
@@ -66,6 +66,9 @@ function levelUp(userId) {
 }
 function xpOverview(userId) {
   const xpData = readXpData();
+  if (!xpData[userId]) {
+    xpData[userId] = { xp: 0, level: 1, multiplier: 1, nextLevelXpReq: 100 };
+  }
   const levelOfPlayer = xpData[userId].level;
   const xpOfPlayer = xpData[userId].xp;
   const xpNeeded = xpData[userId].nextLevelXpReq;

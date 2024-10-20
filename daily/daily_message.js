@@ -1,4 +1,5 @@
 const wallet = require("../wallet");
+const xpSystem = require("../xp/xp");
 
 // Generate a random message requirement between 20 and 40
 function generateRandomMessageRequirement() {

@@ -363,7 +363,8 @@ client.on("messageCreate", async (message) => {
         wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
 
         // Perform the roll and capture the result
-        await roll.roll(userId, betAmount, message); // No need to use result here, as it's handled in roll.js
+        const result = await roll.roll(userId, betAmount, message); // No need to use result here, as it's handled in roll.js
+        generateRollPreviousButton(message.channel, result.betAmount);
       } else {
         await message.reply("You don't have enough coins to place this bet.");
       }
@@ -864,7 +865,16 @@ function generateBlackjackButtons(channel) {
     components: [row],
   });
 }
-
+function generateRollPreviousButton(channel, betAmount) {
+  const rollPrev = new ButtonBuilder()
+    .setCustomId(`roll_prev_${betAmount}`)
+    .setLabel(`Roll Previous Amount (${betAmount})`)
+    .setStyle(ButtonStyle.Success);
+  const row = new ActionRowBuilder().addComponents(rollPrev);
+  channel.send({
+    components: [row],
+  });
+}
 // Handle button interaction
 
 client.on("interactionCreate", async (interaction) => {
@@ -941,6 +951,59 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
   if (!interaction.isButton()) return;
+
+  if (interaction.customId.startsWith("roll")) {
+    let match = interaction.customId.match(/\d+/); // Use regex to find digits
+    let betAmount;
+    if (match) {
+      betAmount = parseInt(match[0], 10); // Convert the match to an integer
+      console.log(betAmount); // Output: 1
+    } else {
+      interaction.reply({
+        content: `Can't find previous roll amount!`,
+        ephemeral: true,
+      });
+      console.log(`Can't find bet amount!`);
+    }
+    const userId = interaction.user.id;
+    const channelId = interaction.channel.id;
+    // const args = message.content.split(" ");
+
+    // const betAmount = parseInt(args[1]);
+
+    // Debugging logs
+    console.log(`Received $roll command with bet amount: ${betAmount}`);
+
+    // Check if bet amount is valid
+    if (!isNaN(betAmount) && betAmount > 0) {
+      const coins = wallet.getCoins(userId);
+      console.log(`User's balance before betting: ${coins}`); // Log the user's balance
+
+      // Check if user has enough coins to bet
+      if (coins >= betAmount) {
+        // User has enough coins
+        console.log(
+          `User has enough coins. Attempting to remove ${betAmount} coins...`
+        );
+        wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
+
+        // Perform the roll and capture the result
+        const result = await roll.roll(userId, betAmount, interaction, true); // No need to use result here, as it's handled in roll.js
+        generateRollPreviousButton(interaction.channel, result.betAmount); // No need to use result here, as it's handled in roll.js
+      } else {
+        await interaction.reply({
+          content: "You don't have enough coins to place this bet.",
+          ephemeral: true,
+        });
+      }
+    } else {
+      await interaction.reply({
+        content: "Please provide a valid bet amount.",
+        ephemeral: true,
+      });
+    }
+    return;
+  }
 
   if (interaction.customId.startsWith("bj_")) {
     // Extract the userId and action from the customId

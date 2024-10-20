@@ -1,6 +1,6 @@
 const wallet = require("./wallet");
 const xpSystem = require("./xp/xp");
-
+const normalXpGain = 5;
 // Define emoji set with rarity, payout, and multiplier for betting
 const emojiSet = [
   { emoji: "🍋", rarity: 25, multiplier: 2 },
@@ -63,7 +63,7 @@ function skipAnimChange(state) {
   skipAnim = state;
 }
 // Function to handle a roll with betting
-async function roll(userId, betAmount, message) {
+async function roll(userId, betAmount, message, button = false) {
   const frames = 3;
   const delay = 200; // 0.2 seconds
 
@@ -75,9 +75,13 @@ async function roll(userId, betAmount, message) {
 
   let interimResult;
   let sentMessage;
+  if (button) {
+    skipAnim = true;
+  }
   // Send the initial message with the first frame
   if (!skipAnim) {
     sentMessage = await message.reply("🎰 Rolling...");
+
     for (let i = 0; i < frames; i++) {
       interimResult = [
         [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
@@ -90,6 +94,7 @@ async function roll(userId, betAmount, message) {
         .join("\n");
 
       // Edit the message with the interim result
+
       await sentMessage.edit(`🎰 Rolling...\n${interimDisplay}`);
 
       // Wait for 0.5 seconds before showing the next frame
@@ -122,7 +127,7 @@ async function roll(userId, betAmount, message) {
   }
 
   // Create the final message string
-  const finalMessage = `🎰 You rolled:\n${finalRollResult}\n${
+  const finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
     payout > 0
       ? `You won **${payout}** coins! 🎉${
           coinMessage !== `` ? `\n*${coinMessage}*` : ``
@@ -131,12 +136,20 @@ async function roll(userId, betAmount, message) {
   }`;
 
   // Edit the same message to show the final result
-  if (!skipAnim) {
-    await sentMessage.edit(finalMessage);
+  if (!skipAnim || button) {
+    if (!button) {
+      await sentMessage.edit(finalMessage);
+    } else {
+      await message.update({ content: finalMessage, components: [] });
+    }
   } else {
-    message.reply(finalMessage);
+    if (!button) {
+      message.reply(finalMessage);
+    } else {
+      await message.update({ content: finalMessage, components: [] });
+    }
   }
-  const xpGain = xpSystem.calculateXpGain(payout, 10);
+  const xpGain = xpSystem.calculateXpGain(betAmount, normalXpGain);
   console.log(xpGain);
   xpSystem.addXp(userId, xpGain);
 
@@ -144,7 +157,8 @@ async function roll(userId, betAmount, message) {
   return {
     result: finalRollResult,
     payout: payout,
-    finalMessage: finalMessage, // Final message returned (if needed in index.js)
+    finalMessage: finalMessage,
+    betAmount: betAmount, // Final message returned (if needed in index.js)
   };
 }
 

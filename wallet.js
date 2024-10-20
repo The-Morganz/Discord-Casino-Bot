@@ -38,8 +38,10 @@ function addDebt(userId, amount) {
   if (!wallets[userId]) {
     wallets[userId] = { coins: 0, debt: 0 }; // Initialize if not present
   }
-  const addAmount = amount + amount * 0.05;
-  wallets[userId].debt += Math.round(addAmount); // Update balance
+  let addAmount = amount + amount * 0.05;
+  addAmount = Math.round(addAmount);
+  addAmount = Math.trunc(addAmount);
+  wallets[userId].debt += addAmount; // Update balance
   console.log(
     `Added ${amount} debt to user ${userId}. New balance: ${wallets[userId].debt}`
   );
@@ -51,7 +53,9 @@ function payDebt(userId, amount) {
     console.log(`Attempting to remove ${amount} coins from user ${userId}.`);
 
     if (wallets[userId].debt > 0) {
-      wallets[userId].debt -= Math.round(amount);
+      let removeAmount = Math.round(amount);
+      removeAmount = Math.trunc(amount);
+      wallets[userId].debt -= removeAmount;
       console.log(
         `Paid ${amount} coins to debt payoff from user ${userId}. New balance: ${wallets[userId].coins}`
       );
