@@ -76,8 +76,8 @@ client.on("messageCreate", async (message) => {
     await message.reply(leaderboardMessage);
   }
 
-  // Command to generate the grid with an amount of coins
-  if (message.content.toLowerCase().startsWith("$grid")) {
+   // Command to generate the grid with an amount of coins
+   if (message.content.toLowerCase().startsWith("$grid")) {
     const args = message.content.split(" ");
     const amount = parseInt(args[1]); // Get the coin amount from the command
 
@@ -95,14 +95,8 @@ client.on("messageCreate", async (message) => {
     }
 
     // Check if the user already has an active grid
-    if (
-      Object.values(gridOwners).some(
-        (grid) => grid.userId === userId && !grid.isComplete
-      )
-    ) {
-      return message.reply(
-        "You already have an active grid! Complete it before creating a new one."
-      );
+    if (Object.values(gridOwners).some((grid) => grid.userId === userId && !grid.isComplete)) {
+      return message.reply("You already have an active grid! Complete it before creating a new one.");
     }
 
     // Deduct the coins from the user's wallet
@@ -116,11 +110,12 @@ client.on("messageCreate", async (message) => {
       components: buttonGrid, // Attach the button grid to the message
     });
 
-    // Store the message ID, user ID, and completion status of the grid
+    // Initialize the grid in gridOwners and include revealedMultipliers as an empty array
     gridOwners[sentMessage.id] = {
       userId: message.author.id,
       isComplete: false,
       betAmount: amount,
+      revealedMultipliers: [], // Initialize an empty array for multipliers
     };
   }
 
@@ -1412,43 +1407,88 @@ client.on("interactionCreate", async (interaction) => {
 
     return; // Exit since the blackjack logic is done
   }
-
   const gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
+
+  // Check if the grid data exists before proceeding
+  if (!gridData) {
+    console.error(`No grid data found for message ID: ${interaction.message.id}`);
+    return interaction.reply({ content: "Something went wrong with the grid data.", ephemeral: true });
+  }
 
   // Check if the user who clicked the button is the same as the one who created the grid
   if (interaction.user.id !== gridData.userId) {
-    // Only reply once, with an ephemeral message
     if (!interaction.replied) {
-      await interaction.reply({
-        content: "You are not allowed to interact with this grid.",
-        ephemeral: true,
-      });
+      await interaction.reply({ content: "You are not allowed to interact with this grid.", ephemeral: true });
     }
     return;
   }
 
-  // Reveal the multiplier for the clicked button
-  const multiplier = grid.revealMultiplier(interaction.component);
+  // Prevent further interactions if the game is already complete
+  if (gridData.isComplete) {
+    return interaction.reply({ content: "This game has already ended.", ephemeral: true });
+  }
 
-  // Ensure the button has a valid label for the multiplier
-  let label = `x${multiplier}`; // Set a valid label for the button
+  // Handle the "End Game" button
+  if (interaction.customId === 'end_game') {
+    if (gridData.isComplete) {
+      return interaction.reply({ content: "The game has already ended.", ephemeral: true });
+    }
 
-  // If the multiplier is 0, end the game and remove the grid
-  if (multiplier === 0) {
-    gridData.isComplete = true;
-    label = "x0"; // Set the label to 'x0'
-    await interaction.reply("Game over! You revealed the x0 multiplier.");
+    // Calculate the payout based on the revealed multipliers
+    const totalMultiplier = gridData.revealedMultipliers.reduce((sum, multiplier) => sum + multiplier, 0);
+    const payout = gridData.betAmount * totalMultiplier;
+
+    // Add the payout to the user's wallet
+    wallet.addCoins(gridData.userId, payout);
+    gridData.isComplete = true; // Mark the grid as complete
+
+    await interaction.reply(`Game ended! You earned ${payout} coins.`);
     await interaction.message.delete(); // Remove the grid message
     return;
   }
 
+  // Reveal the multiplier for the clicked button
+  const multiplier = grid.revealMultiplier(interaction.customId);
+
+  // If the multiplier is 0, end the game, display the "X", and change the button to red
+  if (multiplier === 0) {
+    gridData.isComplete = true;
+    gridData.revealedMultipliers = []; // Reset multipliers
+
+    // Update the clicked button to show "X" and change its style to red
+    const updatedButton = ButtonBuilder.from(interaction.component)
+      .setLabel("X")
+      .setStyle(ButtonStyle.Danger) // Change the button style to Danger (red)
+      .setDisabled(true); // Disable the button
+
+    await interaction.update({
+      components: interaction.message.components.map((row) =>
+        new ActionRowBuilder().addComponents(
+          row.components.map((button) =>
+            button.customId === interaction.customId ? updatedButton : button
+          )
+        )
+      ),
+    });
+
+    // End the game with no payout
+    setTimeout(async () => {
+      await interaction.followUp("Game over! You lost everything!");
+      await interaction.message.delete(); // Remove the grid message after the delay
+    }, 1500);
+    return;
+  }
+
+  // Add the multiplier to the list of revealed multipliers if it's not 0
+  gridData.revealedMultipliers.push(multiplier);
+
   // Update the button with the revealed multiplier
   const updatedButton = ButtonBuilder.from(interaction.component)
-    .setLabel(label) // Always set a valid label for the button
-    .setStyle(ButtonStyle.Success) // Change the button style to "Success" (green)
-    .setDisabled(true); // Disable the button
+    .setLabel(`x${multiplier}`)
+    .setStyle(ButtonStyle.Success)
+    .setDisabled(true);
 
-  // Edit the original message with the updated button
+  // Update the grid message with the updated button
   await interaction.update({
     components: interaction.message.components.map((row) =>
       new ActionRowBuilder().addComponents(
