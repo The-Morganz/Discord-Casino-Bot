@@ -87,9 +87,13 @@ function addCoins(userId, amount, debtFree = false) {
   }
   let message = ``;
   if (wallets[userId].debt > 0 && !debtFree) {
-    const tenPercentOffWinnings = amount * 0.1;
+    let tenPercentOffWinnings = amount * 0.1;
+    tenPercentOffWinnings = Math.round(tenPercentOffWinnings);
+    tenPercentOffWinnings = Math.trunc(tenPercentOffWinnings);
     payDebt(userId, tenPercentOffWinnings);
     amount = amount * 0.9;
+    amount = Math.round(amount);
+    amount = Math.trunc(amount);
     console.log(`The bank has taken their fair share...`);
     message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
     if (wallets[userId].debt <= 0) {

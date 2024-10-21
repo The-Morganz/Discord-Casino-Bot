@@ -1,10 +1,10 @@
 {
   "237903516234940416": {
-    "date": "2024-10-17",
-    "completed": false,
+    "date": "2024-10-20",
+    "completed": true,
     "challengeType": "message",
-    "messages": 1,
-    "requiredMessages": 11
+    "messages": 10,
+    "requiredMessages": 10
   },
   "294522326182002710": {
     "date": "2024-10-20",

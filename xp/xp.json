@@ -1,9 +1,9 @@
 {
     "294522326182002710": {
-        "xp": 105,
-        "level": 5,
-        "multiplier": 3,
-        "nextLevelXpReq": 173
+        "xp": 82,
+        "level": 7,
+        "multiplier": 4,
+        "nextLevelXpReq": 293
     },
     "706935671960633427": {
         "xp": 25,
@@ -12,10 +12,10 @@
         "nextLevelXpReq": 100
     },
     "576371583787073556": {
-        "xp": 65,
-        "level": 1,
-        "multiplier": 1,
-        "nextLevelXpReq": 100
+        "xp": 27,
+        "level": 4,
+        "multiplier": 2.5,
+        "nextLevelXpReq": 220
     },
     "832954422732259348": {
         "xp": 5,
@@ -25,6 +25,12 @@
     },
     "685620500797718726": {
         "xp": 6,
+        "level": 4,
+        "multiplier": 2.5,
+        "nextLevelXpReq": 220
+    },
+    "237903516234940416": {
+        "xp": 0,
         "level": 4,
         "multiplier": 2.5,
         "nextLevelXpReq": 220

@@ -333,7 +333,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
   for (let i = 0; i < thatRoom.players.length; i++) {
     const player = thatRoom.players[i];
     if (player.natBlackjack && thatRoom.dealer.natBlackjack) {
-      message = `:rightwards_pushing_hand: <@${player.userId}> has gotten a NATURAL **BLACKJACK**, but the DEALER also got a NATURAL **BLACKJACK**, resulting in a push. You notice that the DEALER smiles at you. :rightwards_pushing_hand:`;
+      message = `:rightwards_pushing_hand: <@${player.userId}> has gotten a NATURAL **BLACKJACK**, but the DEALER also got a NATURAL **BLACKJACK**, resulting in a push. *You notice that the DEALER smiles at you.* :rightwards_pushing_hand:`;
       wallet.addCoins(player.userId, player.betAmount, true);
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
