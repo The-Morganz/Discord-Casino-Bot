@@ -26,10 +26,12 @@ function incrementMessageCount(userChallenge, userId) {
       userChallenge.completed = true;
       const theirXP = xpSystem.getXpData(userId);
       const gain = gainFromChallenge * theirXP.multiplier;
-      wallet.addCoins(userId, gain); // Reward the user with 100 coins
+      const coinMessage = wallet.addCoins(userId, gain); // Reward the user with 100 coins
 
       console.log(
-        `User ${userId} has completed the message challenge and earned ${gain} coins.`
+        `User ${userId} has completed the message challenge and earned ${gain} coins.${
+          coinMessage !== `` ? `\n*${coinMessage}*` : ``
+        }`
       );
     }
   }

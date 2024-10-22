@@ -64,7 +64,7 @@ function levelUp(userId) {
 
   console.log(`${userId} has leveled up!`);
 }
-function xpOverview(userId) {
+function xpOverview(userId, value = false) {
   const xpData = readXpData();
   if (!xpData[userId]) {
     xpData[userId] = { xp: 0, level: 1, multiplier: 1, nextLevelXpReq: 100 };
@@ -76,9 +76,13 @@ function xpOverview(userId) {
   let message = `<@${userId}> is level **${levelOfPlayer}**. They have **${xpOfPlayer}xp**, and need ${
     xpNeeded - xpOfPlayer
   }xp to level up. `;
+  if (value) {
+    return xpData[userId];
+  }
   return message;
 }
 function getXpData(userId) {
+  // ovo je identicno kao xpOverview(userId,true)..... mao sam se zajebo
   let xpData = readXpData(); // Read the current data
 
   // If the user doesn't exist in the file, initialize their XP
