@@ -86,18 +86,28 @@ client.on("messageCreate", async (message) => {
   // Command to generate the grid with an amount of coins
   if (message.content.toLowerCase().startsWith("$grid")) {
     const args = message.content.split(" ");
-    
+
     // Ensure both bet amount and mines amount are provided
     if (args.length < 3) {
-        return message.reply("Please provide both the bet amount and the number of mines. Usage: $grid [bet amount] [mines amount]");
+      return message.reply(
+        "Please provide both the bet amount and the number of mines. Usage: $grid [bet amount] [mines amount]"
+      );
     }
-    
+
     const amount = parseInt(args[1]); // Get the coin amount
     const mineCount = parseInt(args[2]); // Get the mine count
 
     // Validate the bet amount and mine count
-    if (isNaN(amount) || amount <= 0 || isNaN(mineCount) || mineCount < 4 || mineCount > 15) {
-        return message.reply("Please provide a valid amount of coins and a number of mines between 4 and 15.");
+    if (
+      isNaN(amount) ||
+      amount <= 0 ||
+      isNaN(mineCount) ||
+      mineCount < 4 ||
+      mineCount > 15
+    ) {
+      return message.reply(
+        "Please provide a valid amount of coins and a number of mines between 4 and 15."
+      );
     }
 
     const userId = message.author.id;
@@ -105,7 +115,7 @@ client.on("messageCreate", async (message) => {
 
     // Check if the user has enough coins
     if (userCoins < amount) {
-        return message.reply("You don't have enough coins to start the grid.");
+      return message.reply("You don't have enough coins to start the grid.");
     }
 
     // Deduct the coins from the user's wallet
@@ -114,17 +124,17 @@ client.on("messageCreate", async (message) => {
     const buttonGrid = grid.createButtonGrid(mineCount); // Pass the mine count to createButtonGrid
 
     const sentMessage = await message.reply({
-        content: `You have started a grid game with **${amount}** coins and **${mineCount}** mines! Click a button to unlock!`,
-        components: buttonGrid,
+      content: `You have started a grid game with **${amount}** coins and **${mineCount}** mines! Click a button to unlock!`,
+      components: buttonGrid,
     });
 
     gridOwners[sentMessage.id] = {
-        userId: message.author.id,
-        isComplete: false,
-        betAmount: amount,
-        mineCount: mineCount, // Store the mine count
-        revealedMultipliers: [],
-        fromButton: false,
+      userId: message.author.id,
+      isComplete: false,
+      betAmount: amount,
+      mineCount: mineCount, // Store the mine count
+      revealedMultipliers: [],
+      fromButton: false,
     };
   }
 
@@ -1640,7 +1650,10 @@ client.on("interactionCreate", async (interaction) => {
 
   if (interaction.customId.startsWith("grid_")) {
     // Extract the userId and action from the customId
-    let [action, betAmount] = interaction.customId.split("_").slice(1); // bj_hit_userId or bj_stand_userId
+    let [action, betAmount, mineCount] = interaction.customId
+      .split("_")
+      .slice(1); // bj_hit_userId or bj_stand_userId
+    console.log(mineCount);
     if (action === `play`) {
       // Check if the amount is a valid number
       if (isNaN(betAmount) || betAmount <= 0) {
@@ -1671,7 +1684,10 @@ client.on("interactionCreate", async (interaction) => {
       // Deduct the coins from the user's wallet
       wallet.removeCoins(userId, betAmount);
 
-      const buttonGrid = grid.createButtonGrid(gridData.mineCount, interaction.id); // Use the createButtonGrid function from grid.js
+      const buttonGrid = grid.createButtonGrid(
+        Number(mineCount),
+        interaction.id
+      ); // Use the createButtonGrid function from grid.js
 
       // Send the grid of buttons as a message
       const sentMessage = await interaction.update({
@@ -1684,7 +1700,7 @@ client.on("interactionCreate", async (interaction) => {
         userId: interaction.user.id,
         isComplete: false,
         betAmount: betAmount,
-        mineCount: gridData.mineCount,  // Add mineCount here
+        mineCount: Number(mineCount), // Add mineCount here
         revealedMultipliers: [],
         fromButton: true,
       };
@@ -1773,8 +1789,10 @@ client.on("interactionCreate", async (interaction) => {
     // wallet.addCoins(gridData.userId, payout);
     gridData.isComplete = true; // Mark the grid as complete
     const prevButton = new ButtonBuilder()
-      .setCustomId(`grid_play_${gridData.betAmount}`) // Custom ID for button interaction
-      .setLabel(`Bet Previous (${gridData.betAmount})`) // The text on the button
+      .setCustomId(`grid_play_${gridData.betAmount}_${gridData.mineCount}`) // Custom ID for button interaction
+      .setLabel(
+        `Bet Previous (${gridData.betAmount} bet with ${gridData.mineCount} mines)`
+      ) // The text on the button
       .setStyle(ButtonStyle.Success);
     const walletButton = generateWalletButton();
     const row = new ActionRowBuilder().addComponents(prevButton, walletButton);
@@ -1789,6 +1807,7 @@ client.on("interactionCreate", async (interaction) => {
   }
   let multiplier;
   // Reveal the multiplier for the clicked button
+  console.log(interaction.customId);
   if (gridData.fromButton) {
     multiplier = grid.revealMultiplier(interaction.customId, true);
   } else {
@@ -1816,8 +1835,10 @@ client.on("interactionCreate", async (interaction) => {
       ),
     });
     const prevButton = new ButtonBuilder()
-      .setCustomId(`grid_play_${gridData.betAmount}`) // Custom ID for button interaction
-      .setLabel(`Bet Previous (${gridData.betAmount})`) // The text on the button
+      .setCustomId(`grid_play_${gridData.betAmount}_${gridData.mineCount}`) // Custom ID for button interaction
+      .setLabel(
+        `Bet Previous (${gridData.betAmount} bet with ${gridData.mineCount} mines)`
+      ) // The text on the button
       .setStyle(ButtonStyle.Success);
     const walletButton = generateWalletButton();
     const row = new ActionRowBuilder().addComponents(prevButton, walletButton);
