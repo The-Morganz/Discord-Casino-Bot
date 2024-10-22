@@ -1,16 +1,16 @@
 {
   "237903516234940416": {
-    "date": "2024-10-21",
+    "date": "2024-10-22",
     "completed": true,
     "challengeType": "message",
-    "messages": 13,
-    "requiredMessages": 13
+    "messages": 14,
+    "requiredMessages": 14
   },
   "294522326182002710": {
-    "date": "2024-10-21",
-    "completed": true,
+    "date": "2024-10-22",
+    "completed": false,
     "challengeType": "image",
-    "imagesSent": 1,
+    "imagesSent": 0,
     "requiredImages": 1
   },
   "466610484766834690": {
@@ -35,11 +35,11 @@
     "requiredMessages": 10
   },
   "188354104664260608": {
-    "date": "2024-10-17",
+    "date": "2024-10-22",
     "completed": false,
     "challengeType": "message",
-    "messages": 1,
-    "requiredMessages": 11
+    "messages": 5,
+    "requiredMessages": 8
   },
   "377172045303382016": {
     "date": "2024-10-13",
@@ -56,17 +56,17 @@
     "requiredImages": 1
   },
   "832954422732259348": {
-    "date": "2024-10-19",
-    "completed": true,
-    "challengeType": "image",
-    "imagesSent": 1,
-    "requiredImages": 1
-  },
-  "706935671960633427": {
-    "date": "2024-10-17",
+    "date": "2024-10-22",
     "completed": false,
     "challengeType": "image",
     "imagesSent": 0,
     "requiredImages": 1
+  },
+  "706935671960633427": {
+    "date": "2024-10-22",
+    "completed": false,
+    "challengeType": "message",
+    "messages": 8,
+    "requiredMessages": 9
   }
 }

@@ -24,8 +24,11 @@ const grid = require("./grid");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const xpSystem = require("./xp/xp");
+const { totalmem, userInfo } = require("os");
 const eventEmitter = new EventEmitter();
 let toggleAnimState = false;
+let gridXpGainHuge = 20;
+let gridXpGainSmall = 7;
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -54,7 +57,7 @@ client.on("messageCreate", async (message) => {
   wallet.initializeWallet(userId);
 
   if (message.content.toLowerCase() === "$help") {
-    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n**"$startbj"**- Used to start a game of Blackjack.\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?\n\n**"$level"**- Shows your level, how much xp you have,and need for the next level.\nWhen you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.\nYou can gain xp by playing our various games!\n\n**"$paydebt"**- Pay off all of your debt, if you have the coins for it.`;
+    const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n**"$startbj"**- Used to start a game of Blackjack.\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?\n\n**"$grid [amount of coins]"**- Start a game of grid slots!\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"$level"**- Shows your level, how much xp you have,and need for the next level.\nWhen you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.\nYou can gain xp by playing our various games!\n\n**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.\n**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.\nThe max limit is at level 21, where your limit is 100000 coins.\n**"$paydebt"**- Pay off all of your debt, if you have the coins for it.`;
     message.author.send(theHelpMessage);
   }
 
@@ -63,21 +66,25 @@ client.on("messageCreate", async (message) => {
     message.content.toLowerCase() === "$lb"
   ) {
     const topUsers = await wallet.getTopUsers(message); // Pass 'message' to get the top 5 users with display names
-
+    console.log(topUsers);
     // Build the leaderboard message
     let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
     topUsers.forEach((user, index) => {
-      leaderboardMessage += `${index + 1}. ${user.displayName} - **${
-        user.coins
-      }** coins\n`;
+      const theirDebt = wallet.getDebt(user.userId);
+      const theirLevel = xpSystem.xpOverview(user.userId, true);
+      leaderboardMessage += `${index + 1}. ${user.displayName} (${
+        theirLevel.level
+      }) - **${user.coins}** coins. ${
+        theirDebt ? `${theirDebt} coins in debt.` : ``
+      }\n`;
     });
 
     // Send the leaderboard message
     await message.reply(leaderboardMessage);
   }
 
-   // Command to generate the grid with an amount of coins
-   if (message.content.toLowerCase().startsWith("$grid")) {
+  // Command to generate the grid with an amount of coins
+  if (message.content.toLowerCase().startsWith("$grid")) {
     const args = message.content.split(" ");
     const amount = parseInt(args[1]); // Get the coin amount from the command
 
@@ -95,8 +102,14 @@ client.on("messageCreate", async (message) => {
     }
 
     // Check if the user already has an active grid
-    if (Object.values(gridOwners).some((grid) => grid.userId === userId && !grid.isComplete)) {
-      return message.reply("You already have an active grid! Complete it before creating a new one.");
+    if (
+      Object.values(gridOwners).some(
+        (grid) => grid.userId === userId && !grid.isComplete
+      )
+    ) {
+      return message.reply(
+        "You already have an active grid! Complete it before creating a new one."
+      );
     }
 
     // Deduct the coins from the user's wallet
@@ -115,7 +128,8 @@ client.on("messageCreate", async (message) => {
       userId: message.author.id,
       isComplete: false,
       betAmount: amount,
-      revealedMultipliers: [], // Initialize an empty array for multipliers
+      revealedMultipliers: [],
+      fromButton: false, // Initialize an empty array for multipliers
     };
   }
 
@@ -165,7 +179,6 @@ client.on("messageCreate", async (message) => {
   ) {
     const choice = message.content.toLowerCase().substring(1); // Get 'heads' or 'tails'
     const choiceMessage = await coinflip.pickChoice(userId, choice, `flip`);
-    console.log(choiceMessage);
     message.reply(choiceMessage);
     const resultMessage = await coinflip.pickChoice(userId, choice);
     return message.reply(resultMessage);
@@ -207,7 +220,6 @@ client.on("messageCreate", async (message) => {
     );
   }
   if (message.content.toLowerCase().startsWith("$cleardebt")) {
-    console.log(`uhh hello?`);
     if (message.author.id !== ownerId && message.author.id !== ownerId2) {
       return message.reply("You don't have permission to use this command.");
     }
@@ -264,6 +276,47 @@ client.on("messageCreate", async (message) => {
       `You have added **${amount}** coins to **${
         mentionedUser.username
       }'s** wallet. Their debt: ${wallet.getDebt(targetUserId)}`
+    );
+  }
+  if (message.content.toLowerCase().startsWith("$loan")) {
+    const args = message.content.split(" ");
+    const amount = parseInt(args[1]);
+    if (message.content.toLowerCase() === `$loan`) {
+      generateLoanButtons(message.channel, userId);
+      return;
+    }
+    // Check if the amount is valid
+    if (isNaN(amount) || amount <= 0) {
+      return message.reply("Please provide a valid amount of coins to add.");
+    }
+
+    // Extract the user ID of the mentioned user
+    const targetUserId = userId;
+    let limit = 0;
+    const xpDataForUser = xpSystem.xpOverview(userId, true);
+    if (xpDataForUser.level < 3) {
+      return message.reply(
+        `You can't get loans until you are level 3 or above!`
+      );
+    }
+    if (wallet.getDebt(targetUserId) > 0) {
+      return message.reply(
+        `You haven't paid off your debt! You can't get a loan if you have a debt!`
+      );
+    }
+    limit = findLoanLimit(userId);
+
+    if (amount > limit) {
+      return message.reply(
+        `You can't get that much coins. Your limit is ${limit} coins.`
+      );
+    }
+    wallet.addCoins(targetUserId, amount, true);
+    wallet.addDebt(targetUserId, amount);
+    await message.reply(
+      `You have added **${amount}** coins to your wallet. Your debt: ${wallet.getDebt(
+        targetUserId
+      )}.You can pay off your debt fully with "$paydebt".`
     );
   }
   if (message.content.toLowerCase().startsWith("$paydebt")) {
@@ -397,8 +450,6 @@ client.on("messageCreate", async (message) => {
     message.channel.send(whatDoItSay);
   }
   if (message.content.toLowerCase().startsWith("$betbj")) {
-    console.log(userId);
-
     if (!blackjackRooms.checkIfAlreadyInRoom(userId)) {
       message.reply(`You aren't in a room!`);
       return;
@@ -473,7 +524,6 @@ client.on("messageCreate", async (message) => {
     message.reply(`Removing you from the room...`);
     const thatRoom = blackjackRooms.findRoom(channelId);
     blackjackRooms.removePersonFromRoom(userId, channelId);
-    console.log(thatRoom.players.length);
     if (thatRoom.players.length === 0) {
       blackjackRooms.deleteRoom(channelId);
       return;
@@ -663,7 +713,6 @@ eventEmitter.on("upNext", (messageThatWasSent, channelToSendTo, occasion) => {
       theirSum = e.sum;
     }
   });
-  console.log(messageThatWasSent);
   // channelToSendTo.send(
   //   `:stopwatch: <@${messageThatWasSent}>, your turn. Your sum is **${theirSum}** :stopwatch:`
   // );
@@ -785,6 +834,52 @@ function sendPlayerTurnButtons(userId, channel, theirSum) {
     components: [row],
   });
 }
+function generateLoanButtons(channel, userId) {
+  const requestAmountButton = new ButtonBuilder()
+    .setCustomId(`loan_place`)
+    .setLabel("Request Amount")
+    .setStyle(ButtonStyle.Success);
+  const payDebtButton = new ButtonBuilder()
+    .setCustomId(`loan_pay`)
+    .setLabel("Pay off debt")
+    .setStyle(ButtonStyle.Secondary);
+  const walletButton = generateWalletButton();
+  const xpForPlayer = xpSystem.getXpData(userId);
+  if (wallet.getDebt(userId) > 0) {
+    const row = new ActionRowBuilder().addComponents(
+      requestAmountButton,
+      payDebtButton,
+      walletButton
+    );
+
+    channel.send({
+      content: `Welcome to the *bank*! If you came here for a loan, you most likely won't be able to get one, because you haven't paid off your debt. You can do so with "$paydebt" or typing "$loan" again.`,
+      components: [row],
+    });
+  } else {
+    const row = new ActionRowBuilder().addComponents(
+      requestAmountButton,
+      walletButton
+    );
+    if (xpForPlayer.level < 3) {
+      channel.send({
+        content: `Welcome to the *bank*! You seem like you're too low of a level to be here. Come back when you're level 3 or above.`,
+        components: [],
+      });
+      return;
+    }
+    channel.send({
+      content: `Welcome to the *bank*! How many coins would you like to loan from us? Remember, *you have to pay your debts*, and we have a 5% interest rate.`,
+      components: [row],
+    });
+  }
+}
+function generateWalletButton() {
+  return new ButtonBuilder()
+    .setCustomId(`bj_wallet`)
+    .setLabel(`Wallet`)
+    .setStyle(ButtonStyle.Primary);
+}
 
 function generateBetButtons(channel, start = false) {
   const betPrevButton = new ButtonBuilder()
@@ -870,6 +965,44 @@ function generateRollPreviousButton(channel, betAmount) {
     components: [row],
   });
 }
+function findLoanLimit(userId) {
+  let limit = 0;
+  const xpDataForUser = xpSystem.xpOverview(userId, true);
+
+  if (xpDataForUser.level >= 3) {
+    if (xpDataForUser.level >= 3) {
+      limit = 5000;
+    }
+    if (xpDataForUser.level >= 5) {
+      limit = 10000;
+    }
+    if (xpDataForUser.level >= 7) {
+      limit = 15000;
+    }
+    if (xpDataForUser.level >= 9) {
+      limit = 20000;
+    }
+    if (xpDataForUser.level >= 11) {
+      limit = 25000;
+    }
+    if (xpDataForUser.level >= 13) {
+      limit = 30000;
+    }
+    if (xpDataForUser.level >= 15) {
+      limit = 40000;
+    }
+    if (xpDataForUser.level >= 17) {
+      limit = 50000;
+    }
+    if (xpDataForUser.level >= 19) {
+      limit = 75000;
+    }
+    if (xpDataForUser.level >= 21) {
+      limit = 100000;
+    }
+  }
+  return limit;
+}
 // Handle button interaction
 
 client.on("interactionCreate", async (interaction) => {
@@ -943,6 +1076,50 @@ client.on("interactionCreate", async (interaction) => {
       return;
 
       // Add custom logic to handle bet (e.g., store bet amount, etc.)
+    }
+    if (interaction.customId === "custom_loan") {
+      const inputAmount =
+        interaction.fields.getTextInputValue("custom_loan_input");
+      const userId = interaction.user.id;
+      const channelId = interaction.channel.id;
+      // Validate the input to ensure it's a valid number
+      const amount = parseInt(inputAmount, 10);
+      // Check if the amount is valid
+      if (isNaN(amount) || amount <= 0) {
+        return interaction.reply(
+          "Please provide a valid amount of coins to add."
+        );
+      }
+      const xpDataForUser = xpSystem.xpOverview(userId, true);
+      // Extract the user ID of the mentioned user
+      const limit = findLoanLimit(userId);
+      if (xpDataForUser.level < 3) {
+        return interaction.reply({
+          content: `You can't get loans until you are level 3 or above!`,
+          ephemeral: true,
+        });
+      }
+      if (wallet.getDebt(userId) > 0) {
+        return interaction.reply({
+          content: `You haven't paid off your debt! You can't get a loan if you have a debt!`,
+          ephemeral: true,
+        });
+      }
+      if (amount > limit) {
+        return interaction.reply({
+          content: `You can't get that many coins. Your limit is ${limit} coins.`,
+          ephemeral: true,
+        });
+      }
+      wallet.addCoins(userId, amount, true);
+      wallet.addDebt(userId, amount);
+      const row = new ActionRowBuilder().addComponents(generateWalletButton());
+      await interaction.reply({
+        content: `You have added **${amount}** coins to your wallet. Your debt: ${wallet.getDebt(
+          userId
+        )}.You can pay off your debt fully with "$paydebt" or "$loan".`,
+        components: [row],
+      });
     }
   }
   if (!interaction.isButton()) return;
@@ -1031,8 +1208,11 @@ client.on("interactionCreate", async (interaction) => {
     }
     if (action === `wallet`) {
       const coins = wallet.getCoins(userId); // Get the user's balance
+      const debt = wallet.getDebt(userId);
       await interaction.reply({
-        content: `You have **${coins}** coins in your wallet.`,
+        content: `You have **${coins}** coins in your wallet.${
+          debt > 0 ? `\nYour debt: ${debt}` : ``
+        }`,
         ephemeral: true,
       });
       return;
@@ -1201,7 +1381,6 @@ client.on("interactionCreate", async (interaction) => {
       const thatRoom = blackjackRooms.findRoom(channelId);
       blackjackRooms.removePersonFromRoom(userId, channelId);
 
-      console.log(thatRoom.players.length);
       if (thatRoom.players.length === 0) {
         await interaction.reply(`Removing <@${userId}> from the room...`);
 
@@ -1407,48 +1586,218 @@ client.on("interactionCreate", async (interaction) => {
 
     return; // Exit since the blackjack logic is done
   }
-  const gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
+  if (interaction.customId.startsWith("loan_")) {
+    let [action] = interaction.customId.split("_").slice(1);
+    if (action === "place") {
+      const modal = new ModalBuilder()
+        .setCustomId("custom_loan")
+        .setTitle("Enter your loan amount");
+
+      // Add a text input field to the modal
+      const loanInput = new TextInputBuilder()
+        .setCustomId("custom_loan_input")
+        .setLabel(
+          `Your Loan Amount: (Your limit is:${findLoanLimit(
+            interaction.user.id
+          )} coins)`
+        )
+        .setStyle(TextInputStyle.Short) // A short text input
+        .setRequired(true);
+
+      const actionRow = new ActionRowBuilder().addComponents(loanInput);
+      modal.addComponents(actionRow);
+
+      // Show the modal to the user
+      await interaction.showModal(modal);
+      return;
+    }
+    if (action === "pay") {
+      const userId = interaction.user.id;
+      const playerCoins = wallet.getCoins(userId);
+      const playerDebt = wallet.getDebt(userId);
+      if (playerDebt <= 0) {
+        await interaction.reply({
+          content: `You don't have any debt!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      if (playerDebt > playerCoins) {
+        await interaction.reply({
+          content: `You don't have enough coins to pay off your debt!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const row = new ActionRowBuilder().addComponents(generateWalletButton());
+      if (playerCoins >= playerDebt) {
+        wallet.removeCoins(userId, playerDebt);
+        wallet.payDebt(userId, playerDebt);
+        await interaction.reply({
+          content: `You have paid off your debt!`,
+          components: [row],
+        });
+        return;
+      }
+      return;
+    }
+  }
+
+  if (interaction.customId.startsWith("grid_")) {
+    // Extract the userId and action from the customId
+    let [action, betAmount] = interaction.customId.split("_").slice(1); // bj_hit_userId or bj_stand_userId
+    if (action === `play`) {
+      // Check if the amount is a valid number
+      if (isNaN(betAmount) || betAmount <= 0) {
+        return interaction.reply("Please provide a valid amount of coins.");
+      }
+
+      const userId = interaction.user.id;
+      const userCoins = wallet.getCoins(userId); // Get the user's coin balance
+
+      // Check if the user has enough coins
+      if (userCoins < betAmount) {
+        return interaction.reply(
+          "You don't have enough coins to start the grid."
+        );
+      }
+
+      // Check if the user already has an active grid
+      if (
+        Object.values(gridOwners).some(
+          (grid) => grid.userId === userId && !grid.isComplete
+        )
+      ) {
+        return interaction.reply(
+          "You already have an active grid! Complete it before creating a new one."
+        );
+      }
+
+      // Deduct the coins from the user's wallet
+      wallet.removeCoins(userId, betAmount);
+
+      const buttonGrid = grid.createButtonGrid(interaction.id); // Use the createButtonGrid function from grid.js
+
+      // Send the grid of buttons as a message
+      const sentMessage = await interaction.update({
+        content: `<@${userId}> have started a grid game with **${betAmount}** coins! Click a button to unlock!`,
+        components: buttonGrid, // Attach the button grid to the message
+      });
+
+      // Initialize the grid in gridOwners and include revealedMultipliers as an empty array
+      gridOwners[interaction.id] = {
+        userId: interaction.user.id,
+        isComplete: false,
+        betAmount: betAmount,
+        revealedMultipliers: [],
+        fromButton: true, // Initialize an empty array for multipliers
+      };
+    }
+    return;
+  }
+  let gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
+
+  if (!gridData) {
+    let [action, somebullshit, pustime, customIdType] = interaction.customId
+      .split("_")
+      .slice(1);
+    gridData = gridOwners[customIdType];
+  }
+  if (!gridData) {
+    let [action, customIdTypeShit] = interaction.customId.split("_").slice(1);
+
+    gridData = gridOwners[customIdTypeShit];
+  }
 
   // Check if the grid data exists before proceeding
   if (!gridData) {
-    console.error(`No grid data found for message ID: ${interaction.message.id}`);
-    return interaction.reply({ content: "Something went wrong with the grid data.", ephemeral: true });
+    console.error(
+      `No grid data found for message ID: ${interaction.message.id}`
+    );
+    return interaction.reply({
+      content: "Something went wrong with the grid data.",
+      ephemeral: true,
+    });
   }
 
   // Check if the user who clicked the button is the same as the one who created the grid
   if (interaction.user.id !== gridData.userId) {
     if (!interaction.replied) {
-      await interaction.reply({ content: "You are not allowed to interact with this grid.", ephemeral: true });
+      await interaction.reply({
+        content: "You are not allowed to interact with this grid.",
+        ephemeral: true,
+      });
     }
     return;
   }
 
   // Prevent further interactions if the game is already complete
   if (gridData.isComplete) {
-    return interaction.reply({ content: "This game has already ended.", ephemeral: true });
+    return interaction.reply({
+      content: "This game has already ended.",
+      ephemeral: true,
+    });
   }
 
   // Handle the "End Game" button
-  if (interaction.customId === 'end_game') {
+  if (
+    interaction.customId === "end_game" ||
+    interaction.customId.startsWith(`end_game`)
+  ) {
     if (gridData.isComplete) {
-      return interaction.reply({ content: "The game has already ended.", ephemeral: true });
+      return interaction.reply({
+        content: "The game has already ended.",
+        ephemeral: true,
+      });
     }
 
     // Calculate the payout based on the revealed multipliers
-    const totalMultiplier = gridData.revealedMultipliers.reduce((sum, multiplier) => sum + multiplier, 0);
+    const totalMultiplier = gridData.revealedMultipliers.reduce(
+      (sum, multiplier) => sum + multiplier,
+      0
+    );
     const payout = gridData.betAmount * totalMultiplier;
 
-    // Add the payout to the user's wallet
-    wallet.addCoins(gridData.userId, payout);
-    gridData.isComplete = true; // Mark the grid as complete
+    if (totalMultiplier >= 4) {
+      const xpGainForHugeWin = xpSystem.calculateXpGain(
+        gridData.betAmount,
+        gridXpGainHuge
+      );
+      xpSystem.addXp(gridData.userId, xpGainForHugeWin);
+    } else if (totalMultiplier > 1) {
+      const xpGainForSmallWin = xpSystem.calculateXpGain(
+        gridData.betAmount,
+        gridXpGainSmall
+      );
+      xpSystem.addXp(gridData.userId, xpGainForSmallWin);
+    }
+    const coinMessage = wallet.addCoins(gridData.userId, payout);
 
-    await interaction.reply(`Game ended! You earned ${payout} coins.`);
+    // Add the payout to the user's wallet
+    // wallet.addCoins(gridData.userId, payout);
+    gridData.isComplete = true; // Mark the grid as complete
+    const prevButton = new ButtonBuilder()
+      .setCustomId(`grid_play_${gridData.betAmount}`) // Custom ID for button interaction
+      .setLabel(`Bet Previous (${gridData.betAmount})`) // The text on the button
+      .setStyle(ButtonStyle.Success);
+    const walletButton = generateWalletButton();
+    const row = new ActionRowBuilder().addComponents(prevButton, walletButton);
+    await interaction.reply({
+      content: `Game ended! <@${interaction.user.id}> earned ${payout} coins.${
+        coinMessage !== `` ? `\n*${coinMessage}*` : ``
+      }`,
+      components: [row],
+    });
     await interaction.message.delete(); // Remove the grid message
     return;
   }
-
+  let multiplier;
   // Reveal the multiplier for the clicked button
-  const multiplier = grid.revealMultiplier(interaction.customId);
+  if (gridData.fromButton) {
+    multiplier = grid.revealMultiplier(interaction.customId, true);
+  } else {
+    multiplier = grid.revealMultiplier(interaction.customId);
+  }
 
   // If the multiplier is 0, end the game, display the "X", and change the button to red
   if (multiplier === 0) {
@@ -1470,10 +1819,19 @@ client.on("interactionCreate", async (interaction) => {
         )
       ),
     });
+    const prevButton = new ButtonBuilder()
+      .setCustomId(`grid_play_${gridData.betAmount}`) // Custom ID for button interaction
+      .setLabel(`Bet Previous (${gridData.betAmount})`) // The text on the button
+      .setStyle(ButtonStyle.Success);
+    const walletButton = generateWalletButton();
+    const row = new ActionRowBuilder().addComponents(prevButton, walletButton);
 
     // End the game with no payout
     setTimeout(async () => {
-      await interaction.followUp("Game over! You lost everything!");
+      await interaction.followUp({
+        content: `Game over! <@${interaction.user.id}> lost everything!`,
+        components: [row],
+      });
       await interaction.message.delete(); // Remove the grid message after the delay
     }, 1500);
     return;

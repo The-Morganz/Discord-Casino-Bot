@@ -149,7 +149,7 @@ async function getTopUsers(message) {
       try {
         const member = await message.guild.members.fetch(userId); // Fetch member to get display name
         const displayName = member ? member.displayName : "Unknown User";
-        return { displayName, coins: wallet.coins };
+        return { displayName, coins: wallet.coins, userId: userId };
       } catch (err) {
         console.error(`Error fetching member for userId: ${userId}`, err);
         return { displayName: "Unknown User", coins: wallet.coins }; // In case of error, fallback to 'Unknown User'
