@@ -49,11 +49,11 @@
     "requiredMessages": 14
   },
   "576371583787073556": {
-    "date": "2024-10-21",
+    "date": "2024-10-22",
     "completed": true,
-    "challengeType": "image",
-    "imagesSent": 1,
-    "requiredImages": 1
+    "challengeType": "message",
+    "messages": 12,
+    "requiredMessages": 12
   },
   "832954422732259348": {
     "date": "2024-10-22",
