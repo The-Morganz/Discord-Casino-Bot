@@ -1,64 +1,73 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 // Function to create the 4x4 grid of buttons with multipliers assigned
-function createButtonGrid(customId = ``) {
-  const multipliers = assignMultipliers(); // Get the randomly assigned multipliers
+function createButtonGrid(mineCount, customId = ``) {
+  const multipliers = assignMultipliers(mineCount); // Now using mineCount for multipliers
   const rows = [];
-
-  let multiplierIndex = 0; // To assign multipliers in order
-
+  let multiplierIndex = 0;
+  console.log(multipliers);
   // Create 4 rows, each with 4 buttons
   for (let i = 0; i < 4; i++) {
     const row = new ActionRowBuilder();
-
     for (let j = 0; j < 4; j++) {
-      const multiplier = multipliers[multiplierIndex++]; // Get the current multiplier
+      const multiplier = multipliers[multiplierIndex++];
 
       const button = new ButtonBuilder()
         .setCustomId(
           `button_${i}_${j}_${multiplier}${
             customId !== `` ? `_${customId}` : ``
           }`
-        ) // Store the multiplier in the customId
-        .setLabel("🔒") // Lock emoji as the initial label
-        .setStyle(ButtonStyle.Primary); // Button style
+        )
+        .setLabel("🔒")
+        .setStyle(ButtonStyle.Primary);
 
       row.addComponents(button);
     }
-
-    rows.push(row); // Add the row of buttons to the rows array
+    rows.push(row);
   }
 
-  // Add an additional row for the "End Game" button
+  // Add "End Game" button
   const endGameRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`end_game${customId !== `` ? `_${customId}` : ``}`) // Custom ID for the "End Game" button
-      .setLabel("End Game") // Label for the button
-      .setStyle(ButtonStyle.Danger) // Use Danger style (red)
+      .setCustomId(`end_game${customId !== `` ? `_${customId}` : ``}`)
+      .setLabel("End Game")
+      .setStyle(ButtonStyle.Danger)
   );
 
-  rows.push(endGameRow); // Add the "End Game" button row to the rows array
-
+  rows.push(endGameRow);
   return rows;
 }
 
-// Function to randomly assign multipliers to the grid
-function assignMultipliers() {
-  const multipliers = [
-    ...Array(7).fill(0.5),
-    ...Array(2).fill(2),
-    ...Array(1).fill(4),
-    ...Array(1).fill(5),
-    ...Array(5).fill(0),
-  ];
+// Function to assign multipliers based on the number of mines
+function assignMultipliers(mineCount) {
+  console.log(mineCount);
+  const multiplierMap = {
+    4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.5x
+    5: [...Array(11).fill(1.5)], // 5 mines => remaining cells are 1.5x
+    6: [...Array(10).fill(1.5)],
+    7: [...Array(9).fill(2)], // 7-8 mines => 2x multipliers
+    8: [...Array(8).fill(2)],
+    9: [...Array(7).fill(4)], // 9-10 mines => 4x multipliers
+    10: [...Array(6).fill(4)],
+    11: [...Array(5).fill(8)], // 11-12 mines => 8x multipliers
+    12: [...Array(4).fill(8)],
+    13: [...Array(3).fill(10)], // 13-14 mines => 10x multipliers
+    14: [...Array(2).fill(10)],
+    15: [...Array(1).fill(16)], // 15 mines => 1 cell with 16x multiplier
+  };
 
-  // Shuffle the multipliers array
-  for (let i = multipliers.length - 1; i > 0; i--) {
+  const multipliers = multiplierMap[mineCount] || multiplierMap[4]; // Default to 4 mines if invalid
+  const mines = Array(mineCount).fill(0); // Create mine cells (0x multiplier)
+
+  const fullGrid = [...multipliers, ...mines]; // Combine multipliers and mines
+
+  // Shuffle the grid so that mines and multipliers are randomized
+  for (let i = fullGrid.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [multipliers[i], multipliers[j]] = [multipliers[j], multipliers[i]];
+    [fullGrid[i], fullGrid[j]] = [fullGrid[j], fullGrid[i]];
   }
 
-  return multipliers; // Return the shuffled multipliers
+  return fullGrid;
 }
 
 // Function to reveal the multiplier on a clicked button
