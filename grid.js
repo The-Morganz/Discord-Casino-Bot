@@ -44,7 +44,7 @@ function assignMultipliers(mineCount) {
   const multiplierMap = {
     4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.5x
     5: [...Array(11).fill(0.75)], // 5 mines => remaining cells are 1.5x
-    6: [...Array(10).fill(1)],      // 6 mines
+    6: [...Array(10).fill(1)], 
     7: [...Array(9).fill(1.5)], // 7-8 mines => 2x multipliers
     8: [...Array(8).fill(2)],
     9: [...Array(7).fill(3)], // 9-10 mines => 4x multipliers

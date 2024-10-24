@@ -26,6 +26,8 @@ const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const xpSystem = require("./xp/xp");
 const { totalmem, userInfo } = require("os");
 const eventEmitter = new EventEmitter();
+const express = require("express");
+const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
 let gridXpGainSmall = 7;
@@ -43,6 +45,17 @@ const ownerId = "237903516234940416";
 const ownerId2 = "294522326182002710";
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
+});
+
+// Simple web server for UptimeRobot to ping
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
+});
+
+// Set the server to listen on a port
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
 });
 
 let gridOwners = {}; // Object to store the grid owner by message ID

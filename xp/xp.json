@@ -30,15 +30,21 @@
         "nextLevelXpReq": 220
     },
     "237903516234940416": {
-        "xp": 77,
+        "xp": 157,
         "level": 5,
         "multiplier": 3,
         "nextLevelXpReq": 286
     },
     "188354104664260608": {
-        "xp": 20,
+        "xp": 95,
         "level": 1,
         "multiplier": 1,
         "nextLevelXpReq": 100
+    },
+    "190857887852003328": {
+        "xp": 56,
+        "level": 3,
+        "multiplier": 2,
+        "nextLevelXpReq": 169
     }
 }
