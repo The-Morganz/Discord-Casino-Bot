@@ -69,6 +69,7 @@ client.on("messageCreate", async (message) => {
   // Initialize the user's wallet if it doesn't exist
   wallet.initializeWallet(userId);
 
+  // 
   if (message.content.toLowerCase() === "$help") {
     const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n**"$startbj"**- Used to start a game of Blackjack.\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?\n\n**"$grid [amount of coins]"**- Start a game of grid slots!\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"$level"**- Shows your level, how much xp you have,and need for the next level.\nWhen you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.\nYou can gain xp by playing our various games!\n\n**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.\n**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.\nThe max limit is at level 21, where your limit is 100000 coins.\n**"$paydebt"**- Pay off all of your debt, if you have the coins for it.`;
     message.author.send(theHelpMessage);
@@ -1730,7 +1731,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       // Deduct the coins from the user's wallet
-      wallet.removeCoins(userId, betAmount);
+      wallet.removeCoins(userId, Number(betAmount));
 
       const buttonGrid = grid.createButtonGrid(
         Number(mineCount),
@@ -1755,6 +1756,7 @@ client.on("interactionCreate", async (interaction) => {
     }
     return;
   }
+
   let gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
 
   if (!gridData) {

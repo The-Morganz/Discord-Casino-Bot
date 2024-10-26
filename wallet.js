@@ -99,17 +99,20 @@ function addCoins(userId, amount, debtFree = false) {
   }
 }
 
-// Remove coins from a user's wallet
-function removeCoins(userId, amount) {
-  initializeWallet(userId);
-  if (typeof amount === "number" && amount > 0 && wallets[userId].coins >= amount) {
-    wallets[userId].coins -= amount;
-    console.log(`Removed ${amount} coins from user ${userId}. New balance: ${wallets[userId].coins}`);
-    saveWallets();
-  } else {
-    console.error(`Invalid amount or insufficient balance: ${amount}`);
+  // Remove coins from a user's wallet
+  function removeCoins(userId, amount) {
+    initializeWallet(userId);
+    console.log(amount)
+    console.log(typeof amount);
+    console.log(wallets[userId].coins);
+    if (typeof amount === "number" && amount > 0 && wallets[userId].coins >= amount) {
+      wallets[userId].coins -= amount;
+      console.log(`Removed ${amount} coins from user ${userId}. New balance: ${wallets[userId].coins}`);
+      saveWallets();
+    } else {
+      console.error(`Invalid amount or insufficient balance: ${amount}`);
+    }
   }
-}
 
 // Get the number of free spins a user has
 function getFreeSpins(userId) {
