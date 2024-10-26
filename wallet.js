@@ -78,6 +78,9 @@ function clearDebt(userId) {
 // Add coins to a user's wallet
 function addCoins(userId, amount, debtFree = false) {
   initializeWallet(userId);
+  console.log(typeof amount);
+  console.log(wallets[userId].coins);
+  console.log(amount);
   if (typeof amount === "number" && amount > 0) {
     let message = "";
     if (wallets[userId].debt > 0 && !debtFree) {

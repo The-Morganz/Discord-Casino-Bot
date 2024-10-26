@@ -1,9 +1,9 @@
 {
     "294522326182002710": {
-        "xp": 86,
-        "level": 9,
-        "multiplier": 5,
-        "nextLevelXpReq": 495
+        "xp": 496,
+        "level": 10,
+        "multiplier": 5.5,
+        "nextLevelXpReq": 644
     },
     "706935671960633427": {
         "xp": 25,
@@ -24,13 +24,13 @@
         "nextLevelXpReq": 169
     },
     "685620500797718726": {
-        "xp": 6,
+        "xp": 136,
         "level": 4,
         "multiplier": 2.5,
         "nextLevelXpReq": 220
     },
     "237903516234940416": {
-        "xp": 276,
+        "xp": 281,
         "level": 5,
         "multiplier": 3,
         "nextLevelXpReq": 286
