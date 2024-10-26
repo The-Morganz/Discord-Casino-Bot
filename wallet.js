@@ -22,142 +22,154 @@ function saveWallets() {
 // Initialize a user's wallet
 function initializeWallet(userId) {
   if (!wallets[userId]) {
-    wallets[userId] = { coins: 0, debt: 0 };
+    wallets[userId] = { coins: 0, debt: 0, freeSpins: 0, freeSpinsBetAmount: 0 };
     saveWallets();
   }
 }
 
 // Get the balance of a user
 function getCoins(userId) {
-  return wallets[userId] ? wallets[userId].coins : 0;
+  initializeWallet(userId);
+  return wallets[userId].coins || 0;
 }
+
+// Get debt of a user
 function getDebt(userId) {
-  return wallets[userId] ? wallets[userId].debt : 0;
+  initializeWallet(userId);
+  return wallets[userId].debt || 0;
 }
+
+// Add debt to a user
 function addDebt(userId, amount) {
-  if (!wallets[userId]) {
-    wallets[userId] = { coins: 0, debt: 0 }; // Initialize if not present
-  }
-  let addAmount = amount + amount * 0.05;
-  addAmount = Math.round(addAmount);
-  addAmount = Math.trunc(addAmount);
-  wallets[userId].debt += addAmount; // Update balance
-  console.log(
-    `Added ${amount} debt to user ${userId}. New balance: ${wallets[userId].debt}`
-  );
-  saveWallets(); // Save changes to JSON file
-}
-
-function payDebt(userId, amount) {
-  if (wallets[userId]) {
-    console.log(`Attempting to remove ${amount} coins from user ${userId}.`);
-
-    if (wallets[userId].debt > 0) {
-      let removeAmount = Math.round(amount);
-      removeAmount = Math.trunc(amount);
-      wallets[userId].debt -= removeAmount;
-      console.log(
-        `Paid ${amount} coins to debt payoff from user ${userId}. New balance: ${wallets[userId].coins}`
-      );
-      saveWallets(); // Save changes to the JSON file
-    } else {
-      console.log(
-        `Failed to remove coins: User ${userId} doesn't have enough coins.`
-      );
-    }
+  initializeWallet(userId);
+  if (typeof amount === "number" && amount > 0) {
+    let addAmount = Math.round(amount + amount * 0.05);
+    wallets[userId].debt += addAmount;
+    console.log(`Added ${amount} debt to user ${userId}. New debt balance: ${wallets[userId].debt}`);
+    saveWallets();
   } else {
-    console.log(`Failed to remove coins: User ${userId} doesn't exist.`);
+    console.error(`Invalid debt amount: ${amount}`);
   }
 }
 
+// Pay off part of the user's debt
+function payDebt(userId, amount) {
+  if (wallets[userId] && wallets[userId].debt > 0) {
+    let removeAmount = Math.round(amount);
+    wallets[userId].debt -= removeAmount;
+    console.log(`Paid ${amount} coins to debt payoff for user ${userId}. New debt balance: ${wallets[userId].debt}`);
+    saveWallets();
+  } else {
+    console.log(`Failed to pay debt: User ${userId} has insufficient debt.`);
+  }
+}
+
+// Clear a user's debt
 function clearDebt(userId) {
   if (wallets[userId]) {
     wallets[userId].debt = 0;
     console.log(`Cleared ${userId}'s debt.`);
-    saveWallets(); // Save changes to the JSON file
+    saveWallets();
   } else {
-    console.log(`Failed to remove coins: User ${userId} doesn't exist.`);
+    console.log(`Failed to clear debt: User ${userId} does not exist.`);
   }
 }
 
 // Add coins to a user's wallet
 function addCoins(userId, amount, debtFree = false) {
-  if (!wallets[userId]) {
-    wallets[userId] = { coins: 0, debt: 0 }; // Initialize if not present
-  }
-  let message = ``;
-  if (wallets[userId].debt > 0 && !debtFree) {
-    let tenPercentOffWinnings = amount * 0.1;
-    tenPercentOffWinnings = Math.round(tenPercentOffWinnings);
-    tenPercentOffWinnings = Math.trunc(tenPercentOffWinnings);
-    payDebt(userId, tenPercentOffWinnings);
-    amount = amount * 0.9;
-    amount = Math.round(amount);
-    amount = Math.trunc(amount);
-    console.log(`The bank has taken their fair share...`);
-    message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
-    if (wallets[userId].debt <= 0) {
-      message += `\nYou're debt free!`;
+  initializeWallet(userId);
+  if (typeof amount === "number" && amount > 0) {
+    let message = "";
+    if (wallets[userId].debt > 0 && !debtFree) {
+      let tenPercentOffWinnings = Math.round(amount * 0.1);
+      payDebt(userId, tenPercentOffWinnings);
+      amount = Math.round(amount * 0.9);
+      message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
+      if (wallets[userId].debt <= 0) {
+        message += `\nYou're debt free!`;
+      }
     }
+    wallets[userId].coins += amount;
+    console.log(`Added ${amount} coins to user ${userId}. New balance: ${wallets[userId].coins}`);
+    saveWallets();
+    return message;
+  } else {
+    console.error(`Invalid coin amount: ${amount}`);
+    return "Invalid coin amount.";
   }
-  wallets[userId].coins += Math.round(amount); // Update balance
-  console.log(
-    `Added ${amount} coins to user ${userId}. New balance: ${wallets[userId].coins}`
-  );
-
-  saveWallets(); // Save changes to JSON file
-  return message;
 }
 
 // Remove coins from a user's wallet
 function removeCoins(userId, amount) {
-  if (wallets[userId]) {
-    console.log(`Attempting to remove ${amount} coins from user ${userId}.`);
-
-    if (wallets[userId].coins >= amount) {
-      wallets[userId].coins -= amount; // Deduct the amount
-      console.log(
-        `Removed ${amount} coins from user ${userId}. New balance: ${wallets[userId].coins}`
-      );
-      saveWallets(); // Save changes to the JSON file
-    } else {
-      console.log(
-        `Failed to remove coins: User ${userId} doesn't have enough coins.`
-      );
-    }
+  initializeWallet(userId);
+  if (typeof amount === "number" && amount > 0 && wallets[userId].coins >= amount) {
+    wallets[userId].coins -= amount;
+    console.log(`Removed ${amount} coins from user ${userId}. New balance: ${wallets[userId].coins}`);
+    saveWallets();
   } else {
-    console.log(`Failed to remove coins: User ${userId} doesn't exist.`);
+    console.error(`Invalid amount or insufficient balance: ${amount}`);
   }
 }
 
-// Function to get the top 5 users by coin balance
-// function getTopUsers() {
-//   const users = Object.entries(wallets); // Convert wallets object to array of [userId, wallet] pairs
-//   const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins); // Sort by coin balance, descending
-//   // Get the top 5 users
-//   const topUsers = sortedUsers.slice(0, 5);
+// Get the number of free spins a user has
+function getFreeSpins(userId) {
+  initializeWallet(userId);
+  return wallets[userId].freeSpins || 0;
+}
 
-//   return topUsers.map(([userId, wallet]) => ({ userId, coins: wallet.coins })); // Return array of top 5 users with coins
-// }
+// Add free spins to a user's account with a specific bet amount
+function addFreeSpins(userId, spins, betAmount) {
+  initializeWallet(userId);
+  if (typeof spins === "number" && spins > 0 && typeof betAmount === "number" && betAmount > 0) {
+    wallets[userId].freeSpins = (wallets[userId].freeSpins || 0) + spins;
+    wallets[userId].freeSpinsBetAmount = betAmount;
+    console.log(`Added ${spins} free spins with bet amount ${betAmount} to user ${userId}.`);
+    saveWallets();
+  } else {
+    console.error(`Invalid spins or bet amount: spins=${spins}, betAmount=${betAmount}`);
+  }
+}
+
+function getFreeSpinBetAmount(userId) {
+  initializeWallet(userId);
+  return wallets[userId].freeSpins > 0 ? wallets[userId].freeSpinsBetAmount : null;
+}
+
+// Use a free spin if available and return the bet amount
+function useFreeSpin(userId) {
+  initializeWallet(userId);
+  if (wallets[userId].freeSpins > 0) {
+    wallets[userId].freeSpins -= 1;
+    const betAmount = wallets[userId].freeSpinsBetAmount || 0;
+    if (wallets[userId].freeSpins === 0) {
+      delete wallets[userId].freeSpinsBetAmount;
+    }
+    saveWallets();
+    return betAmount;
+  }
+  return null;
+}
+
+// Function to get the top 5 users by coin balance
 async function getTopUsers(message) {
-  const users = Object.entries(wallets); // Convert wallets object to array of [userId, wallet] pairs
-  const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins); // Sort by coin balance, descending
-  const topUsers = sortedUsers.slice(0, 5); // Get the top 5 users
+  const users = Object.entries(wallets);
+  const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins);
+  const topUsers = sortedUsers.slice(0, 5);
 
   const leaderboard = await Promise.all(
     topUsers.map(async ([userId, wallet]) => {
       try {
-        const member = await message.guild.members.fetch(userId); // Fetch member to get display name
+        const member = await message.guild.members.fetch(userId);
         const displayName = member ? member.displayName : "Unknown User";
         return { displayName, coins: wallet.coins, userId: userId };
       } catch (err) {
         console.error(`Error fetching member for userId: ${userId}`, err);
-        return { displayName: "Unknown User", coins: wallet.coins }; // In case of error, fallback to 'Unknown User'
+        return { displayName: "Unknown User", coins: wallet.coins };
       }
     })
   );
 
-  return leaderboard; // Return array of top 5 users with display names and coins
+  return leaderboard;
 }
 
 // Load wallets on startup
@@ -174,4 +186,8 @@ module.exports = {
   clearDebt,
   removeCoins,
   getTopUsers,
+  addFreeSpins,
+  useFreeSpin,
+  getFreeSpins,
+  getFreeSpinBetAmount
 };

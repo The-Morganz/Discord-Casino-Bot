@@ -233,10 +233,23 @@ client.on("messageCreate", async (message) => {
     const debt = wallet.getDebt(userId);
     await message.reply(
       `You have **${coins}** coins in your wallet. ${
-        debt > 0 ? `\nTheir debt: ${debt}` : ``
+        debt > 0 ? `\nYour debt: ${debt}` : ``
       }`
     );
   }
+
+  // Command to check free spins balance
+  if (
+    message.content.toLowerCase() === "$freespins" ||
+    message.content.toLowerCase() === "$fs"
+  ) {
+    const coins = wallet.getFreeSpins(userId); // Get the user's balance
+    const debt = wallet.getFreeSpins(userId);
+    await message.reply(
+      `You have **${coins}** free spins remaining.`
+    );
+  }
+
   if (message.content.toLowerCase().startsWith("$cleardebt")) {
     if (message.author.id !== ownerId && message.author.id !== ownerId2) {
       return message.reply("You don't have permission to use this command.");
@@ -407,29 +420,37 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // Command to roll with betting
+  // $ROLL
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
-    const betAmount = parseInt(args[1]);
-
-    // Debugging logs
+    let betAmount = parseInt(args[1]);
+  
     console.log(`Received $roll command with bet amount: ${betAmount}`);
-
-    // Check if bet amount is valid
+  
     if (!isNaN(betAmount) && betAmount > 0) {
       const coins = wallet.getCoins(userId);
-      console.log(`User's balance before betting: ${coins}`); // Log the user's balance
-
-      // Check if user has enough coins to bet
-      if (coins >= betAmount) {
-        // User has enough coins
-        console.log(
-          `User has enough coins. Attempting to remove ${betAmount} coins...`
-        );
-        wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
-
-        // Perform the roll and capture the result
-        const result = await roll.roll(userId, betAmount, message); // No need to use result here, as it's handled in roll.js
+      const freeSpinBetAmount = wallet.getFreeSpins(userId) > 0 ? wallet.getFreeSpinBetAmount(userId) : null;
+  
+      console.log(`User's balance before betting: ${coins}`);
+      console.log(`Free spins available with bet amount: ${freeSpinBetAmount}`);
+  
+      // Restrict roll if user has free spins and the bet amount doesn’t match the free spin's bet amount
+      if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
+        await message.reply(`You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`);
+        return;
+      }
+  
+      if (coins >= betAmount || freeSpinBetAmount !== null) {
+        if (freeSpinBetAmount !== null) {
+          betAmount = freeSpinBetAmount;
+          await message.reply(`Using a free spin with a bet of ${betAmount}! 🎁`);
+          wallet.useFreeSpin(userId); // Only consume one free spin here
+        } else {
+          console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
+          wallet.removeCoins(userId, betAmount);
+        }
+  
+        const result = await roll.roll(userId, betAmount, message);
         generateRollPreviousButton(message.channel, result.betAmount);
       } else {
         await message.reply("You don't have enough coins to place this bet.");
@@ -438,6 +459,8 @@ client.on("messageCreate", async (message) => {
       await message.reply("Please provide a valid bet amount.");
     }
   }
+
+  // $LEVEL
   if (message.content.toLowerCase().startsWith("$level")) {
     return message.reply(xpSystem.xpOverview(userId));
   }
@@ -1142,44 +1165,55 @@ client.on("interactionCreate", async (interaction) => {
   }
   if (!interaction.isButton()) return;
 
+  
   if (interaction.customId.startsWith("roll")) {
-    let match = interaction.customId.match(/\d+/); // Use regex to find digits
+    let match = interaction.customId.match(/\d+/);
     let betAmount;
+  
     if (match) {
-      betAmount = parseInt(match[0], 10); // Convert the match to an integer
-      console.log(betAmount); // Output: 1
+      betAmount = parseInt(match[0], 10);
+      console.log(`Button roll with bet amount: ${betAmount}`);
     } else {
-      interaction.reply({
+      await interaction.reply({
         content: `Can't find previous roll amount!`,
         ephemeral: true,
       });
       console.log(`Can't find bet amount!`);
+      return;
     }
+  
     const userId = interaction.user.id;
-    const channelId = interaction.channel.id;
-    // const args = message.content.split(" ");
-
-    // const betAmount = parseInt(args[1]);
-
-    // Debugging logs
-    console.log(`Received $roll command with bet amount: ${betAmount}`);
-
-    // Check if bet amount is valid
+  
     if (!isNaN(betAmount) && betAmount > 0) {
       const coins = wallet.getCoins(userId);
-      console.log(`User's balance before betting: ${coins}`); // Log the user's balance
-
-      // Check if user has enough coins to bet
-      if (coins >= betAmount) {
-        // User has enough coins
-        console.log(
-          `User has enough coins. Attempting to remove ${betAmount} coins...`
-        );
-        wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
-
-        // Perform the roll and capture the result
-        const result = await roll.roll(userId, betAmount, interaction, true); // No need to use result here, as it's handled in roll.js
-        generateRollPreviousButton(interaction.channel, result.betAmount); // No need to use result here, as it's handled in roll.js
+      const freeSpinBetAmount = wallet.getFreeSpins(userId) > 0 ? wallet.getFreeSpinBetAmount(userId) : null;
+  
+      console.log(`User's balance before betting: ${coins}`);
+      console.log(`Free spins available with bet amount: ${freeSpinBetAmount}`);
+  
+      if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
+        //await interaction.reply({
+        //  content: `You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`,
+        //  ephemeral: true,
+        //});
+        return;
+      }
+  
+      if (coins >= betAmount || freeSpinBetAmount !== null) {
+        if (freeSpinBetAmount !== null) {
+          betAmount = freeSpinBetAmount;
+          //await interaction.reply({
+          //  content: `Using a free spin with a bet of ${betAmount}! 🎁`,
+          //  ephemeral: true,
+          //});
+          wallet.useFreeSpin(userId); // Only consume one free spin here
+        } else {
+          console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
+          wallet.removeCoins(userId, betAmount);
+        }
+  
+        const result = await roll.roll(userId, betAmount, interaction, true);
+        generateRollPreviousButton(interaction.channel, result.betAmount);
       } else {
         await interaction.reply({
           content: "You don't have enough coins to place this bet.",
@@ -1194,6 +1228,7 @@ client.on("interactionCreate", async (interaction) => {
     }
     return;
   }
+  
 
   if (interaction.customId.startsWith("bj_")) {
     // Extract the userId and action from the customId
