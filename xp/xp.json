@@ -1,54 +1,6 @@
 {
-  "294522326182002710": {
-    "xp": 531,
-    "level": 10,
-    "multiplier": 5.5,
-    "nextLevelXpReq": 644
-  },
-  "706935671960633427": {
-    "xp": 25,
-    "level": 1,
-    "multiplier": 1,
-    "nextLevelXpReq": 100
-  },
-  "576371583787073556": {
-    "xp": 345,
-    "level": 8,
-    "multiplier": 4.5,
-    "nextLevelXpReq": 629
-  },
-  "832954422732259348": {
-    "xp": 57,
-    "level": 3,
-    "multiplier": 2,
-    "nextLevelXpReq": 169
-  },
-  "685620500797718726": {
-    "xp": 136,
-    "level": 4,
-    "multiplier": 2.5,
-    "nextLevelXpReq": 220
-  },
-  "237903516234940416": {
-    "xp": 281,
-    "level": 5,
-    "multiplier": 3,
-    "nextLevelXpReq": 286
-  },
-  "188354104664260608": {
-    "xp": 95,
-    "level": 1,
-    "multiplier": 1,
-    "nextLevelXpReq": 100
-  },
-  "190857887852003328": {
-    "xp": 56,
-    "level": 3,
-    "multiplier": 2,
-    "nextLevelXpReq": 169
-  }
     "294522326182002710": {
-        "xp": 531,
+        "xp": 619,
         "level": 10,
         "multiplier": 5.5,
         "nextLevelXpReq": 644
