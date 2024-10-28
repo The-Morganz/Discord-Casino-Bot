@@ -62,11 +62,16 @@ app.listen(PORT, () => {
 });
 
 // List of files to back up
-const filesToBackup = ['data.json', 'daily.json', 'package.json', 'package-lock.json'];
+const filesToBackup = [
+  'data.json', 
+  'daily/daily.json',
+  'package.json', 
+  'package-lock.json'
+];
 
 // Initialize the S3 client
 const s3 = new S3Client({
-    region: 'eu-central-1', // e.g., 'us-west-2'
+    region: 'eu-central-1',
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
