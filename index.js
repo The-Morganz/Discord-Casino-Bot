@@ -66,7 +66,7 @@ const filesToBackup = ['data.json', 'daily.json', 'package.json', 'package-lock.
 
 // Initialize the S3 client
 const s3 = new S3Client({
-    region: 'your-region', // e.g., 'us-west-2'
+    region: 'eu-central-1', // e.g., 'us-west-2'
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
