@@ -79,23 +79,16 @@ const s3 = new S3Client({
     },
 });
 
+// Backup Function: Uploads files to S3
 async function backupFiles() {
   for (const file of filesToBackup) {
       try {
           const fileContent = fs.readFileSync(path.join('./', file));
 
-          // Save with timestamped key
-          const timestampedParams = {
-              Bucket: process.env.S3_BUCKET_NAME,
-              Key: `backups/${file.replace('.json', '')}_${new Date().toISOString()}.json`,
-              Body: fileContent,
-          };
-          await s3.send(new PutObjectCommand(timestampedParams));
-
           // Save without timestamp for the latest version
           const latestParams = {
               Bucket: process.env.S3_BUCKET_NAME,
-              Key: `backups/${file}`,
+              Key: `backups/${file}`,  // Use the original filename
               Body: fileContent,
           };
           await s3.send(new PutObjectCommand(latestParams));
@@ -112,16 +105,14 @@ async function backupFiles() {
 async function downloadBackup(fileName) {
   const params = {
       Bucket: process.env.S3_BUCKET_NAME,
-      Key: `backups/${fileName}`, // Ensure path matches S3 key
+      Key: `backups/${fileName}`, // Use non-timestamped file names
   };
 
   try {
       const command = new GetObjectCommand(params);
       const data = await s3.send(command);
-
       const writeStream = fs.createWriteStream(path.join('./', fileName));
       data.Body.pipe(writeStream);
-
       console.log(`${fileName} downloaded from S3.`);
   } catch (error) {
       console.error(`Error downloading ${fileName}:`, error);
