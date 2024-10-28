@@ -27,6 +27,7 @@ const xpSystem = require("./xp/xp");
 const { totalmem, userInfo } = require("os");
 const AWS = require('aws-sdk');
 const fs = require('fs');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const eventEmitter = new EventEmitter();
 const express = require("express");
 const app = express();
@@ -49,10 +50,28 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
+// Simple web server for UptimeRobot to ping
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
+});
+
+// Set the server to listen on a port
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
+
+// List of files to back up
 const filesToBackup = ['data.json', 'daily.json', 'package.json', 'package-lock.json'];
 
 // Initialize the S3 client
-const s3 = new AWS.S3();
+const s3 = new S3Client({
+    region: 'your-region', // e.g., 'us-west-2'
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
 
 async function backupFiles() {
     for (const file of filesToBackup) {
@@ -67,7 +86,8 @@ async function backupFiles() {
             };
 
             // Upload file to S3
-            await s3.upload(params).promise();
+            const command = new PutObjectCommand(params);
+            await s3.send(command);
             console.log(`Backup for ${file} uploaded to S3.`);
         } catch (error) {
             console.error(`Error uploading ${file}:`, error);
@@ -75,6 +95,7 @@ async function backupFiles() {
     }
 }
 
+// Set interval to back up files every hour (or adjust as needed)
 setInterval(backupFiles, 60000);
 
 let gridOwners = {}; // Object to store the grid owner by message ID
