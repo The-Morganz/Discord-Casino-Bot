@@ -106,6 +106,7 @@ async function backupFiles() {
       }
   }
 }
+ //testing
 
 // Restore Function: Downloads latest backup files from S3
 async function downloadBackup(fileName) {
