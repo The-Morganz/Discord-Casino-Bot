@@ -80,25 +80,31 @@ const s3 = new S3Client({
 });
 
 async function backupFiles() {
-    for (const file of filesToBackup) {
-        try {
-            // Read file content
-            const fileContent = fs.readFileSync(`./${file}`);
-            // Configure S3 upload parameters
-            const params = {
-                Bucket: process.env.S3_BUCKET_NAME,
-                Key: `backups/${file.replace('.json', '')}_${new Date().toISOString()}.json`, // Add timestamp to filename
-                Body: fileContent,
-            };
+  for (const file of filesToBackup) {
+      try {
+          const fileContent = fs.readFileSync(path.join('./', file));
 
-            // Upload file to S3
-            const command = new PutObjectCommand(params);
-            await s3.send(command);
-            console.log(`Backup for ${file} uploaded to S3.`);
-        } catch (error) {
-            console.error(`Error uploading ${file}:`, error);
-        }
-    }
+          // Save with timestamped key
+          const timestampedParams = {
+              Bucket: process.env.S3_BUCKET_NAME,
+              Key: `backups/${file.replace('.json', '')}_${new Date().toISOString()}.json`,
+              Body: fileContent,
+          };
+          await s3.send(new PutObjectCommand(timestampedParams));
+
+          // Save without timestamp for the latest version
+          const latestParams = {
+              Bucket: process.env.S3_BUCKET_NAME,
+              Key: `backups/${file}`,
+              Body: fileContent,
+          };
+          await s3.send(new PutObjectCommand(latestParams));
+
+          console.log(`Backup for ${file} uploaded to S3.`);
+      } catch (error) {
+          console.error(`Error uploading ${file}:`, error);
+      }
+  }
 }
 
 // Restore Function: Downloads latest backup files from S3
