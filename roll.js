@@ -3,27 +3,31 @@ const xpSystem = require("./xp/xp");
 const normalXpGain = 5;
 // Define emoji set with rarity, payout, and multiplier for betting
 const emojiSet = [
-  { emoji: "🍋", rarity: 25, multiplier: 2 },
-  { emoji: "🍊", rarity: 22, multiplier: 3 },
-  { emoji: "🍒", rarity: 17, multiplier: 5 },
-  { emoji: "🍉", rarity: 15, multiplier: 10 },
-  { emoji: "🍀", rarity: 12, multiplier: 20 },
-  { emoji: "7️⃣", rarity: 6, multiplier: 50 },
-  { emoji: "💎", rarity: 3, multiplier: 200 },
+  { emoji: "🍋", rarity: 25, multiplier: 2, freeSpins: 3 },
+  { emoji: "🍊", rarity: 22, multiplier: 3, freeSpins: 5 },
+  { emoji: "🍒", rarity: 17, multiplier: 5, freeSpins: 7 },
+  { emoji: "🍉", rarity: 15, multiplier: 10, freeSpins: 10 },
+  { emoji: "🍀", rarity: 12, multiplier: 20, freeSpins: 15 },
+  { emoji: "7️⃣", rarity: 6, multiplier: 50, freeSpins: 25 },
+  { emoji: "💎", rarity: 3, multiplier: 200, freeSpins: 50 },
 ];
 
-// Function to get a random emoji based on rarity
+// Function to get a random emoji with a 10% chance for 
 function getRandomEmoji() {
-  const rand = Math.random() * 100; // Generate a random number between 0 and 100
+  const isGift = Math.random() < 0.05; // 10% chance for 🎁
+  if (isGift) {
+    return { emoji: "🎁", multiplier: 0 }; // No payout, only special effect
+  }
+
+  const rand = Math.random() * 100;
   let cumulativeChance = 0;
 
   for (const item of emojiSet) {
     cumulativeChance += item.rarity;
     if (rand < cumulativeChance) {
-      return item; // Return the emoji object (with emoji, rarity, and multiplier)
+      return item;
     }
   }
-
   return emojiSet[0]; // Fallback to least rare emoji
 }
 
@@ -31,53 +35,68 @@ function getRandomEmoji() {
 function checkForMatch(matrix) {
   const matchCount = {};
 
-  // Check rows for 3-in-a-row matches
   matrix.forEach((row) => {
     const emoji = row[0].emoji;
     if (row.every((item) => item.emoji === emoji)) {
-      matchCount[emoji] = (matchCount[emoji] || 0) + 1; // Count the matches
+      matchCount[emoji] = (matchCount[emoji] || 0) + 1;
     }
   });
 
-  // Check diagonals for matches
   const diag1Emoji = matrix[0][0].emoji;
   const diag2Emoji = matrix[0][2].emoji;
   if (
     matrix[0][0].emoji === matrix[1][1].emoji &&
     matrix[1][1].emoji === matrix[2][2].emoji
   ) {
-    matchCount[diag1Emoji] = (matchCount[diag1Emoji] || 0) + 1; // Count the diagonal matches
+    matchCount[diag1Emoji] = (matchCount[diag1Emoji] || 0) + 1;
   }
   if (
     matrix[0][2].emoji === matrix[1][1].emoji &&
     matrix[1][1].emoji === matrix[2][0].emoji
   ) {
-    matchCount[diag2Emoji] = (matchCount[diag2Emoji] || 0) + 1; // Count the diagonal matches
+    matchCount[diag2Emoji] = (matchCount[diag2Emoji] || 0) + 1;
   }
 
   return matchCount;
 }
+
 let skipAnim = false;
 
 function skipAnimChange(state) {
   skipAnim = state;
 }
+
 // Function to handle a roll with betting
 async function roll(userId, betAmount, message, button = false) {
   const frames = 3;
   const delay = 200; // 0.2 seconds
 
-  const rollResult = [
+  let rollResult = [
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
   ];
+
+  // Check if 🎁 is present and only allow one 🎁
+  let giftPresent = false;
+  rollResult.forEach((row) => {
+    row.forEach((cell, index) => {
+      if (cell.emoji === "🎁") {
+        if (giftPresent) {
+          row[index] = getRandomEmoji(); // Replace extra 🎁
+        } else {
+          giftPresent = true;
+        }
+      }
+    });
+  });
 
   let interimResult;
   let sentMessage;
   if (button) {
     skipAnim = true;
   }
+
   // Send the initial message with the first frame
   if (!skipAnim) {
     sentMessage = await message.reply("🎰 Rolling...");
@@ -109,13 +128,14 @@ async function roll(userId, betAmount, message, button = false) {
 
   const matches = checkForMatch(rollResult);
   let totalMultiplier = 0;
-
-  // Calculate the total multiplier based on matches
+  let totalFreeSpins = 0;
+  
   for (const emoji in matches) {
-    if (matches.hasOwnProperty(emoji)) {
-      const matchCount = matches[emoji];
-      const emojiInfo = emojiSet.find((item) => item.emoji === emoji);
-      totalMultiplier += matchCount * (emojiInfo ? emojiInfo.multiplier : 0);
+    const matchCount = matches[emoji];
+    const emojiInfo = emojiSet.find((item) => item.emoji === emoji);
+    if (emojiInfo) {
+      totalMultiplier += matchCount * emojiInfo.multiplier;
+      totalFreeSpins += matchCount * emojiInfo.freeSpins; // Accumulate free spins
     }
   }
 
@@ -127,13 +147,19 @@ async function roll(userId, betAmount, message, button = false) {
   }
 
   // Create the final message string
-  const finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
+  let finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
     payout > 0
       ? `You won **${payout}** coins! 🎉${
           coinMessage !== `` ? `\n*${coinMessage}*` : ``
         }`
       : "Better luck next time."
   }`;
+
+  if (giftPresent && totalMultiplier > 0) {
+    console.log(`Awarding free spins. Bet amount is: ${betAmount}`); // Debugging to check betAmount
+    wallet.addFreeSpins(userId, totalFreeSpins, betAmount);
+    finalMessage += `\n🎁 You won ${totalFreeSpins} free spins! Use $fs to display your free spins 🎁`;
+}
 
   // Edit the same message to show the final result
   if (!skipAnim || button) {
@@ -149,6 +175,7 @@ async function roll(userId, betAmount, message, button = false) {
       await message.update({ content: finalMessage, components: [] });
     }
   }
+
   const xpGain = xpSystem.calculateXpGain(betAmount, normalXpGain);
   console.log(xpGain);
   xpSystem.addXp(userId, xpGain);

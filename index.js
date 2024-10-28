@@ -25,7 +25,13 @@ const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const xpSystem = require("./xp/xp");
 const { totalmem, userInfo } = require("os");
+const AWS = require('aws-sdk');
+const fs = require('fs');
+const path = require('path');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const eventEmitter = new EventEmitter();
+const express = require("express");
+const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
 let gridXpGainSmall = 7;
@@ -45,7 +51,88 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-let gridOwners = {}; // Object to store the grid owner by message ID
+// Simple web server for UptimeRobot to ping
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
+});
+
+// Set the server to listen on a port
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
+
+// List of files to back up
+const filesToBackup = [
+  'data.json', 
+  'daily/daily.json',
+  'package.json', 
+  'package-lock.json'
+];
+
+// Initialize the S3 client
+const s3 = new S3Client({
+    region: 'eu-central-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
+
+// Backup Function: Uploads files to S3
+async function backupFiles() {
+  for (const file of filesToBackup) {
+      try {
+          const fileContent = fs.readFileSync(path.join('./', file));
+
+          // Save without timestamp for the latest version
+          const latestParams = {
+              Bucket: process.env.S3_BUCKET_NAME,
+              Key: `backups/${file}`,  // Use the original filename
+              Body: fileContent,
+          };
+          await s3.send(new PutObjectCommand(latestParams));
+
+          console.log(`Backup for ${file} uploaded to S3.`);
+      } catch (error) {
+          console.error(`Error uploading ${file}:`, error);
+      }
+  }
+}
+ //testing
+
+// Restore Function: Downloads latest backup files from S3
+async function downloadBackup(fileName) {
+  const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: `backups/${fileName}`, // Use non-timestamped file names
+  };
+
+  try {
+      const command = new GetObjectCommand(params);
+      const data = await s3.send(command);
+      const writeStream = fs.createWriteStream(path.join('./', fileName));
+      data.Body.pipe(writeStream);
+      console.log(`${fileName} downloaded from S3.`);
+  } catch (error) {
+      console.error(`Error downloading ${fileName}:`, error);
+  }
+}
+
+// Restores all backup files at startup
+async function restoreBackups() {
+  for (const file of filesToBackup) {
+      await downloadBackup(file);
+  }
+  console.log("All backups restored.");
+}
+
+// Start restoring backups and initializing the bot
+restoreBackups().then(() => {
+  console.log("Backups restored. Starting bot...");
+
+  // Initialize and start your bot here, e.g.,
+  let gridOwners = {}; // Object to store the grid owner by message ID
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return; // Ignore bot messages
@@ -56,6 +143,7 @@ client.on("messageCreate", async (message) => {
   // Initialize the user's wallet if it doesn't exist
   wallet.initializeWallet(userId);
 
+  // 
   if (message.content.toLowerCase() === "$help") {
     const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n**"$startbj"**- Used to start a game of Blackjack.\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?\n\n**"$grid [amount of coins]"**- Start a game of grid slots!\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"$level"**- Shows your level, how much xp you have,and need for the next level.\nWhen you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.\nYou can gain xp by playing our various games!\n\n**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.\n**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.\nThe max limit is at level 21, where your limit is 100000 coins.\n**"$paydebt"**- Pay off all of your debt, if you have the coins for it.`;
     message.author.send(theHelpMessage);
@@ -83,6 +171,7 @@ client.on("messageCreate", async (message) => {
     await message.reply(leaderboardMessage);
   }
 
+  // $GRID
   // Command to generate the grid with an amount of coins
   if (message.content.toLowerCase().startsWith("$grid")) {
     const args = message.content.split(" ");
@@ -220,10 +309,23 @@ client.on("messageCreate", async (message) => {
     const debt = wallet.getDebt(userId);
     await message.reply(
       `You have **${coins}** coins in your wallet. ${
-        debt > 0 ? `\nTheir debt: ${debt}` : ``
+        debt > 0 ? `\nYour debt: ${debt}` : ``
       }`
     );
   }
+
+  // Command to check free spins balance
+  if (
+    message.content.toLowerCase() === "$freespins" ||
+    message.content.toLowerCase() === "$fs"
+  ) {
+    const coins = wallet.getFreeSpins(userId); // Get the user's balance
+    const debt = wallet.getFreeSpins(userId);
+    await message.reply(
+      `You have **${coins}** free spins remaining.`
+    );
+  }
+
   if (message.content.toLowerCase().startsWith("$cleardebt")) {
     if (message.author.id !== ownerId && message.author.id !== ownerId2) {
       return message.reply("You don't have permission to use this command.");
@@ -394,29 +496,37 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // Command to roll with betting
+  // $ROLL
   if (message.content.toLowerCase().startsWith("$roll")) {
     const args = message.content.split(" ");
-    const betAmount = parseInt(args[1]);
-
-    // Debugging logs
+    let betAmount = parseInt(args[1]);
+  
     console.log(`Received $roll command with bet amount: ${betAmount}`);
-
-    // Check if bet amount is valid
+  
     if (!isNaN(betAmount) && betAmount > 0) {
       const coins = wallet.getCoins(userId);
-      console.log(`User's balance before betting: ${coins}`); // Log the user's balance
-
-      // Check if user has enough coins to bet
-      if (coins >= betAmount) {
-        // User has enough coins
-        console.log(
-          `User has enough coins. Attempting to remove ${betAmount} coins...`
-        );
-        wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
-
-        // Perform the roll and capture the result
-        const result = await roll.roll(userId, betAmount, message); // No need to use result here, as it's handled in roll.js
+      const freeSpinBetAmount = wallet.getFreeSpins(userId) > 0 ? wallet.getFreeSpinBetAmount(userId) : null;
+  
+      console.log(`User's balance before betting: ${coins}`);
+      console.log(`Free spins available with bet amount: ${freeSpinBetAmount}`);
+  
+      // Restrict roll if user has free spins and the bet amount doesn’t match the free spin's bet amount
+      if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
+        await message.reply(`You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`);
+        return;
+      }
+  
+      if (coins >= betAmount || freeSpinBetAmount !== null) {
+        if (freeSpinBetAmount !== null) {
+          betAmount = freeSpinBetAmount;
+          await message.reply(`Using a free spin with a bet of ${betAmount}! 🎁`);
+          wallet.useFreeSpin(userId); // Only consume one free spin here
+        } else {
+          console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
+          wallet.removeCoins(userId, betAmount);
+        }
+  
+        const result = await roll.roll(userId, betAmount, message);
         generateRollPreviousButton(message.channel, result.betAmount);
       } else {
         await message.reply("You don't have enough coins to place this bet.");
@@ -425,6 +535,8 @@ client.on("messageCreate", async (message) => {
       await message.reply("Please provide a valid bet amount.");
     }
   }
+
+  // $LEVEL
   if (message.content.toLowerCase().startsWith("$level")) {
     return message.reply(xpSystem.xpOverview(userId));
   }
@@ -1129,44 +1241,55 @@ client.on("interactionCreate", async (interaction) => {
   }
   if (!interaction.isButton()) return;
 
+  
   if (interaction.customId.startsWith("roll")) {
-    let match = interaction.customId.match(/\d+/); // Use regex to find digits
+    let match = interaction.customId.match(/\d+/);
     let betAmount;
+  
     if (match) {
-      betAmount = parseInt(match[0], 10); // Convert the match to an integer
-      console.log(betAmount); // Output: 1
+      betAmount = parseInt(match[0], 10);
+      console.log(`Button roll with bet amount: ${betAmount}`);
     } else {
-      interaction.reply({
+      await interaction.reply({
         content: `Can't find previous roll amount!`,
         ephemeral: true,
       });
       console.log(`Can't find bet amount!`);
+      return;
     }
+  
     const userId = interaction.user.id;
-    const channelId = interaction.channel.id;
-    // const args = message.content.split(" ");
-
-    // const betAmount = parseInt(args[1]);
-
-    // Debugging logs
-    console.log(`Received $roll command with bet amount: ${betAmount}`);
-
-    // Check if bet amount is valid
+  
     if (!isNaN(betAmount) && betAmount > 0) {
       const coins = wallet.getCoins(userId);
-      console.log(`User's balance before betting: ${coins}`); // Log the user's balance
-
-      // Check if user has enough coins to bet
-      if (coins >= betAmount) {
-        // User has enough coins
-        console.log(
-          `User has enough coins. Attempting to remove ${betAmount} coins...`
-        );
-        wallet.removeCoins(userId, betAmount); // Remove the bet amount from the user's wallet
-
-        // Perform the roll and capture the result
-        const result = await roll.roll(userId, betAmount, interaction, true); // No need to use result here, as it's handled in roll.js
-        generateRollPreviousButton(interaction.channel, result.betAmount); // No need to use result here, as it's handled in roll.js
+      const freeSpinBetAmount = wallet.getFreeSpins(userId) > 0 ? wallet.getFreeSpinBetAmount(userId) : null;
+  
+      console.log(`User's balance before betting: ${coins}`);
+      console.log(`Free spins available with bet amount: ${freeSpinBetAmount}`);
+  
+      if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
+        //await interaction.reply({
+        //  content: `You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`,
+        //  ephemeral: true,
+        //});
+        return;
+      }
+  
+      if (coins >= betAmount || freeSpinBetAmount !== null) {
+        if (freeSpinBetAmount !== null) {
+          betAmount = freeSpinBetAmount;
+          //await interaction.reply({
+          //  content: `Using a free spin with a bet of ${betAmount}! 🎁`,
+          //  ephemeral: true,
+          //});
+          wallet.useFreeSpin(userId); // Only consume one free spin here
+        } else {
+          console.log(`User has enough coins. Attempting to remove ${betAmount} coins...`);
+          wallet.removeCoins(userId, betAmount);
+        }
+  
+        const result = await roll.roll(userId, betAmount, interaction, true);
+        generateRollPreviousButton(interaction.channel, result.betAmount);
       } else {
         await interaction.reply({
           content: "You don't have enough coins to place this bet.",
@@ -1181,6 +1304,7 @@ client.on("interactionCreate", async (interaction) => {
     }
     return;
   }
+  
 
   if (interaction.customId.startsWith("bj_")) {
     // Extract the userId and action from the customId
@@ -1682,7 +1806,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       // Deduct the coins from the user's wallet
-      wallet.removeCoins(userId, betAmount);
+      wallet.removeCoins(userId, Number(betAmount));
 
       const buttonGrid = grid.createButtonGrid(
         Number(mineCount),
@@ -1707,6 +1831,7 @@ client.on("interactionCreate", async (interaction) => {
     }
     return;
   }
+
   let gridData = gridOwners[interaction.message.id]; // Get the grid data for this message
 
   if (!gridData) {
@@ -1881,3 +2006,10 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+});
+
+
+// Set interval to back up files every hour (or adjust as needed)
+setInterval(backupFiles, 60000);
+
+

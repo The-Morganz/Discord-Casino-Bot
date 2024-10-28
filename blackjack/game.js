@@ -225,6 +225,7 @@ function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
     if (thatRoom.deckOfCards.length <= 6) {
       thatRoom.deckOfCards = makeDeck();
     }
+    wallet.removeCoins(thePlayer.userId, thePlayer.betAmount)
     thePlayer.betAmount *= 2;
     if (thePlayer.sum > 21) {
       if (aceSave(thePlayer.cards, thePlayer.sum)) {
