@@ -27,7 +27,8 @@ const xpSystem = require("./xp/xp");
 const { totalmem, userInfo } = require("os");
 const AWS = require('aws-sdk');
 const fs = require('fs');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const path = require('path');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const eventEmitter = new EventEmitter();
 const express = require("express");
 const app = express();
@@ -100,10 +101,40 @@ async function backupFiles() {
     }
 }
 
-// Set interval to back up files every hour (or adjust as needed)
-setInterval(backupFiles, 60000);
+// Restore Function: Downloads latest backup files from S3
+async function downloadBackup(fileName) {
+  const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: `backups/${fileName}`, // Ensure path matches S3 key
+  };
 
-let gridOwners = {}; // Object to store the grid owner by message ID
+  try {
+      const command = new GetObjectCommand(params);
+      const data = await s3.send(command);
+
+      const writeStream = fs.createWriteStream(path.join('./', fileName));
+      data.Body.pipe(writeStream);
+
+      console.log(`${fileName} downloaded from S3.`);
+  } catch (error) {
+      console.error(`Error downloading ${fileName}:`, error);
+  }
+}
+
+// Restores all backup files at startup
+async function restoreBackups() {
+  for (const file of filesToBackup) {
+      await downloadBackup(file);
+  }
+  console.log("All backups restored.");
+}
+
+// Start restoring backups and initializing the bot
+restoreBackups().then(() => {
+  console.log("Backups restored. Starting bot...");
+
+  // Initialize and start your bot here, e.g.,
+  let gridOwners = {}; // Object to store the grid owner by message ID
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return; // Ignore bot messages
@@ -1977,3 +2008,10 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+});
+
+
+// Set interval to back up files every hour (or adjust as needed)
+setInterval(backupFiles, 60000);
+
+
