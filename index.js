@@ -25,6 +25,8 @@ const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const xpSystem = require("./xp/xp");
 const { totalmem, userInfo } = require("os");
+const AWS = require('aws-sdk');
+const fs = require('fs');
 const eventEmitter = new EventEmitter();
 const express = require("express");
 const app = express();
@@ -47,16 +49,33 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-// Simple web server for UptimeRobot to ping
-app.get("/", (req, res) => {
-  res.send("Bot is running!");
-});
+const filesToBackup = ['data.json', 'daily.json', 'package.json', 'package-lock.json'];
 
-// Set the server to listen on a port
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
+// Initialize the S3 client
+const s3 = new AWS.S3();
+
+async function backupFiles() {
+    for (const file of filesToBackup) {
+        try {
+            // Read file content
+            const fileContent = fs.readFileSync(`./${file}`);
+            // Configure S3 upload parameters
+            const params = {
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: `backups/${file.replace('.json', '')}_${new Date().toISOString()}.json`, // Add timestamp to filename
+                Body: fileContent,
+            };
+
+            // Upload file to S3
+            await s3.upload(params).promise();
+            console.log(`Backup for ${file} uploaded to S3.`);
+        } catch (error) {
+            console.error(`Error uploading ${file}:`, error);
+        }
+    }
+}
+
+setInterval(backupFiles, 60000);
 
 let gridOwners = {}; // Object to store the grid owner by message ID
 
@@ -97,6 +116,7 @@ client.on("messageCreate", async (message) => {
     await message.reply(leaderboardMessage);
   }
 
+  // $GRID
   // Command to generate the grid with an amount of coins
   if (message.content.toLowerCase().startsWith("$grid")) {
     const args = message.content.split(" ");
