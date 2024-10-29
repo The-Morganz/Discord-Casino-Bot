@@ -12,7 +12,7 @@ const emojiSet = [
   { emoji: "💎", rarity: 3, multiplier: 200, freeSpins: 50 },
 ];
 
-// Function to get a random emoji with a 10% chance for 
+// Function to get a random emoji with a 10% chance for
 function getRandomEmoji() {
   const isGift = Math.random() < 0.05; // 10% chance for 🎁
   if (isGift) {
@@ -129,7 +129,7 @@ async function roll(userId, betAmount, message, button = false) {
   const matches = checkForMatch(rollResult);
   let totalMultiplier = 0;
   let totalFreeSpins = 0;
-  
+
   for (const emoji in matches) {
     const matchCount = matches[emoji];
     const emojiInfo = emojiSet.find((item) => item.emoji === emoji);
@@ -145,21 +145,26 @@ async function roll(userId, betAmount, message, button = false) {
     payout = Math.round(betAmount * totalMultiplier);
     coinMessage = wallet.addCoins(userId, payout);
   }
+  const freeSpinAmount = wallet.getFreeSpins(userId);
 
   // Create the final message string
   let finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
     payout > 0
       ? `You won **${payout}** coins! 🎉${
           coinMessage !== `` ? `\n*${coinMessage}*` : ``
+        } ${
+          freeSpinAmount ? `You have ${freeSpinAmount} free spins left.` : ``
         }`
-      : "Better luck next time."
+      : `Better luck next time. ${
+          freeSpinAmount ? `You have ${freeSpinAmount} free spins left.` : ``
+        }`
   }`;
 
   if (giftPresent && totalMultiplier > 0) {
     console.log(`Awarding free spins. Bet amount is: ${betAmount}`); // Debugging to check betAmount
     wallet.addFreeSpins(userId, totalFreeSpins, betAmount);
     finalMessage += `\n🎁 You won ${totalFreeSpins} free spins! Use $fs to display your free spins 🎁`;
-}
+  }
 
   // Edit the same message to show the final result
   if (!skipAnim || button) {

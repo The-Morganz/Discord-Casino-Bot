@@ -205,14 +205,18 @@ restoreBackups().then(() => {
 
       const userId = message.author.id;
       const userCoins = wallet.getCoins(userId);
-
+      const bettingLimit = 100000;
       // Check if the user has enough coins
       if (userCoins < amount) {
         return message.reply("You don't have enough coins to start the grid.");
       }
-
+      if (amount > 100000) {
+        return message.reply(
+          `You've hit the betting limit! The limit is ${bettingLimit}.`
+        );
+      }
       // Deduct the coins from the user's wallet
-      wallet.removeCoins(userId, amount);
+      wallet.removeCoins(userId, Number(amount));
 
       const buttonGrid = grid.createButtonGrid(mineCount); // Pass the mine count to createButtonGrid
 
@@ -545,6 +549,7 @@ restoreBackups().then(() => {
 
           const result = await roll.roll(userId, betAmount, message);
           generateRollPreviousButton(message.channel, result.betAmount);
+          generateWalletButton();
         } else {
           await message.reply("You don't have enough coins to place this bet.");
         }
@@ -1104,7 +1109,8 @@ restoreBackups().then(() => {
       .setCustomId(`roll_prev_${betAmount}`)
       .setLabel(`Roll Previous Amount (${betAmount})`)
       .setStyle(ButtonStyle.Success);
-    const row = new ActionRowBuilder().addComponents(rollPrev);
+    const walletButton = generateWalletButton();
+    const row = new ActionRowBuilder().addComponents(rollPrev, walletButton);
     channel.send({
       components: [row],
     });
@@ -1145,6 +1151,7 @@ restoreBackups().then(() => {
         limit = 100000;
       }
     }
+    //yandere dev
     return limit;
   }
   // Handle button interaction
@@ -1193,7 +1200,7 @@ restoreBackups().then(() => {
           });
           return;
         }
-        wallet.removeCoins(userId, betAmount);
+        wallet.removeCoins(userId, Number(betAmount));
         const whatDoItSay = await blackjackBets.addBet(
           userId,
           channelId,
@@ -1325,6 +1332,7 @@ restoreBackups().then(() => {
 
           const result = await roll.roll(userId, betAmount, interaction, true);
           generateRollPreviousButton(interaction.channel, result.betAmount);
+          generateWalletButton();
         } else {
           await interaction.reply({
             content: "You don't have enough coins to place this bet.",
@@ -1813,10 +1821,12 @@ restoreBackups().then(() => {
 
     if (interaction.customId.startsWith("grid_")) {
       // Extract the userId and action from the customId
-      let [action, betAmount, mineCount] = interaction.customId
+      let [action, betAmount, mineCount, userThatStarted] = interaction.customId
         .split("_")
         .slice(1); // bj_hit_userId or bj_stand_userId
-      console.log(mineCount);
+      console.log(userThatStarted);
+      console.log(interaction.customId);
+
       if (action === `play`) {
         // Check if the amount is a valid number
         if (isNaN(betAmount) || betAmount <= 0) {
@@ -1824,6 +1834,14 @@ restoreBackups().then(() => {
         }
 
         const userId = interaction.user.id;
+        // console.log(userThatStarted);
+        // console.log(userId);
+        if (userId !== userThatStarted) {
+          return interaction.reply({
+            content: `You can't interact with buttons created by others!`,
+            ephemeral: true,
+          });
+        }
         const userCoins = wallet.getCoins(userId); // Get the user's coin balance
 
         // Check if the user has enough coins
@@ -1843,7 +1861,9 @@ restoreBackups().then(() => {
             "You already have an active grid! Complete it before creating a new one."
           );
         }
-
+        console.log(betAmount);
+        console.log(`type shit`);
+        wallet.removeCoins(userId, Number(betAmount));
         const buttonGrid = grid.createButtonGrid(
           Number(mineCount),
           interaction.id
@@ -1956,7 +1976,9 @@ restoreBackups().then(() => {
       gridData.isComplete = true; // Mark the grid as complete
 
       const prevButton = new ButtonBuilder()
-        .setCustomId(`grid_play_${gridData.betAmount}_${gridData.mineCount}`) // Custom ID for button interaction
+        .setCustomId(
+          `grid_play_${gridData.betAmount}_${gridData.mineCount}_${gridData.userId}`
+        ) // Custom ID for button interaction
         .setLabel(
           `Bet Previous (${gridData.betAmount} bet with ${gridData.mineCount} mines)`
         ) // The text on the button
@@ -2009,7 +2031,9 @@ restoreBackups().then(() => {
         ),
       });
       const prevButton = new ButtonBuilder()
-        .setCustomId(`grid_play_${gridData.betAmount}_${gridData.mineCount}`) // Custom ID for button interaction
+        .setCustomId(
+          `grid_play_${gridData.betAmount}_${gridData.mineCount}_${gridData.userId}`
+        ) // Custom ID for button interaction
         .setLabel(
           `Bet Previous (${gridData.betAmount} bet with ${gridData.mineCount} mines)`
         ) // The text on the button
@@ -2027,7 +2051,7 @@ restoreBackups().then(() => {
           components: [row],
         });
         await interaction.message.delete(); // Remove the grid message after the delay
-      }, 1500);
+      }, 0);
       return;
     }
 
