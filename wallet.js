@@ -1,187 +1,154 @@
 const fs = require("fs");
 const path = require("path");
+const User = require('./models/User'); // Import Mongoose User model
 
-const walletFilePath = path.join(__dirname, "data.json");
-let wallets = {};
-
-// Load wallets from the JSON file
-function loadWallets() {
-  try {
-    const data = fs.readFileSync(walletFilePath, "utf8");
-    wallets = JSON.parse(data);
-  } catch (err) {
-    console.error("Error loading wallets:", err);
-  }
-}
-
-// Save wallets to the JSON file
-function saveWallets() {
-  fs.writeFileSync(walletFilePath, JSON.stringify(wallets, null, 2), "utf8");
-}
-
-// Initialize a user's wallet
-function initializeWallet(userId) {
-  if (!wallets[userId]) {
-    wallets[userId] = { coins: 0, debt: 0, freeSpins: 0, freeSpinsBetAmount: 0 };
-    saveWallets();
-  }
+// Get or initialize user's wallet in MongoDB
+async function initializeWallet(userId) {
+    let user = await User.findOne({ userId });
+    if (!user) {
+        user = new User({ userId, coins: 0, debt: 0, freeSpins: 0, freeSpinsBetAmount: 0 });
+        await user.save();
+    }
+    return user;
 }
 
 // Get the balance of a user
-function getCoins(userId) {
-  initializeWallet(userId);
-  return wallets[userId].coins || 0;
+async function getCoins(userId) {
+    const user = await initializeWallet(userId);
+    return user.coins;
 }
 
 // Get debt of a user
-function getDebt(userId) {
-  initializeWallet(userId);
-  return wallets[userId].debt || 0;
+async function getDebt(userId) {
+    const user = await initializeWallet(userId);
+    return user.debt;
 }
 
 // Add debt to a user
-function addDebt(userId, amount) {
-  initializeWallet(userId);
-  if (typeof amount === "number" && amount > 0) {
-    let addAmount = Math.round(amount + amount * 0.05);
-    wallets[userId].debt += addAmount;
-    console.log(`Added ${amount} debt to user ${userId}. New debt balance: ${wallets[userId].debt}`);
-    saveWallets();
-  } else {
-    console.error(`Invalid debt amount: ${amount}`);
-  }
+async function addDebt(userId, amount) {
+    const user = await initializeWallet(userId);
+    if (typeof amount === "number" && amount > 0) {
+        user.debt += Math.round(amount + amount * 0.05);
+        await user.save();
+    } else {
+        console.error(`Invalid debt amount: ${amount}`);
+    }
 }
 
 // Pay off part of the user's debt
-function payDebt(userId, amount) {
-  if (wallets[userId] && wallets[userId].debt > 0) {
-    let removeAmount = Math.round(amount);
-    wallets[userId].debt -= removeAmount;
-    console.log(`Paid ${amount} coins to debt payoff for user ${userId}. New debt balance: ${wallets[userId].debt}`);
-    saveWallets();
-  } else {
-    console.log(`Failed to pay debt: User ${userId} has insufficient debt.`);
-  }
+async function payDebt(userId, amount) {
+    const user = await initializeWallet(userId);
+    if (user.debt > 0) {
+        user.debt -= Math.round(amount);
+        await user.save();
+    } else {
+        console.log(`User ${userId} has insufficient debt.`);
+    }
 }
 
 // Clear a user's debt
-function clearDebt(userId) {
-  if (wallets[userId]) {
-    wallets[userId].debt = 0;
-    console.log(`Cleared ${userId}'s debt.`);
-    saveWallets();
-  } else {
-    console.log(`Failed to clear debt: User ${userId} does not exist.`);
-  }
+async function clearDebt(userId) {
+    const user = await initializeWallet(userId);
+    user.debt = 0;
+    await user.save();
 }
 
 // Add coins to a user's wallet
-function addCoins(userId, amount, debtFree = false) {
-  initializeWallet(userId);
-  console.log(typeof amount);
-  console.log(wallets[userId].coins);
-  console.log(amount);
-  if (typeof amount === "number" && amount > 0) {
-    let message = "";
-    if (wallets[userId].debt > 0 && !debtFree) {
-      let tenPercentOffWinnings = Math.round(amount * 0.1);
-      payDebt(userId, tenPercentOffWinnings);
-      amount = Math.round(amount * 0.9);
-      message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
-      if (wallets[userId].debt <= 0) {
-        message += `\nYou're debt free!`;
-      }
+async function addCoins(userId, amount, debtFree = false) {
+    const user = await initializeWallet(userId);
+    if (typeof amount === "number" && amount > 0) {
+        if (user.debt > 0 && !debtFree) {
+            const tenPercentOffWinnings = Math.round(amount * 0.1);
+            await payDebt(userId, tenPercentOffWinnings);
+            amount = Math.round(amount * 0.9);
+        }
+        user.coins += amount;
+        await user.save();
+    } else {
+        console.error(`Invalid coin amount: ${amount}`);
     }
-    wallets[userId].coins += amount;
-    console.log(`Added ${amount} coins to user ${userId}. New balance: ${wallets[userId].coins}`);
-    saveWallets();
-    return message;
-  } else {
-    console.error(`Invalid coin amount: ${amount}`);
-    return "Invalid coin amount.";
-  }
 }
 
-  // Remove coins from a user's wallet
-  function removeCoins(userId, amount) {
-    initializeWallet(userId);
-    console.log(amount)
-    console.log(typeof amount);
-    console.log(wallets[userId].coins);
-    if (typeof amount === "number" && amount > 0 && wallets[userId].coins >= amount) {
-      wallets[userId].coins -= amount;
-      console.log(`Removed ${amount} coins from user ${userId}. New balance: ${wallets[userId].coins}`);
-      saveWallets();
+// Remove coins from a user's wallet
+async function removeCoins(userId, amount) {
+    const user = await initializeWallet(userId);
+    if (typeof amount === "number" && amount > 0 && user.coins >= amount) {
+        user.coins -= amount;
+        await user.save();
     } else {
-      console.error(`Invalid amount or insufficient balance: ${amount}`);
+        console.error(`Invalid amount or insufficient balance: ${amount}`);
     }
-  }
+}
 
 // Get the number of free spins a user has
-function getFreeSpins(userId) {
-  initializeWallet(userId);
-  return wallets[userId].freeSpins || 0;
+async function getFreeSpins(userId) {
+    const user = await initializeWallet(userId);
+    return user.freeSpins;
 }
 
 // Add free spins to a user's account with a specific bet amount
-function addFreeSpins(userId, spins, betAmount) {
-  initializeWallet(userId);
-  if (typeof spins === "number" && spins > 0 && typeof betAmount === "number" && betAmount > 0) {
-    wallets[userId].freeSpins = (wallets[userId].freeSpins || 0) + spins;
-    wallets[userId].freeSpinsBetAmount = betAmount;
-    console.log(`Added ${spins} free spins with bet amount ${betAmount} to user ${userId}.`);
-    saveWallets();
-  } else {
-    console.error(`Invalid spins or bet amount: spins=${spins}, betAmount=${betAmount}`);
-  }
+async function addFreeSpins(userId, spins, betAmount) {
+    const user = await initializeWallet(userId);
+    if (typeof spins === "number" && spins > 0 && typeof betAmount === "number" && betAmount > 0) {
+        user.freeSpins += spins;
+        user.freeSpinsBetAmount = betAmount;
+        await user.save();
+    } else {
+        console.error(`Invalid spins or bet amount: spins=${spins}, betAmount=${betAmount}`);
+    }
 }
 
-function getFreeSpinBetAmount(userId) {
-  initializeWallet(userId);
-  return wallets[userId].freeSpins > 0 ? wallets[userId].freeSpinsBetAmount : null;
+// Get the bet amount for the user's free spin, if available
+async function getFreeSpinBetAmount(userId) {
+  const user = await initializeWallet(userId); // Ensure the user exists in MongoDB
+
+  // Return freeSpinsBetAmount if there are free spins available, otherwise return null
+  return user.freeSpins > 0 ? user.freeSpinsBetAmount : null;
 }
+
 
 // Use a free spin if available and return the bet amount
-function useFreeSpin(userId) {
-  initializeWallet(userId);
-  if (wallets[userId].freeSpins > 0) {
-    wallets[userId].freeSpins -= 1;
-    const betAmount = wallets[userId].freeSpinsBetAmount || 0;
-    if (wallets[userId].freeSpins === 0) {
-      delete wallets[userId].freeSpinsBetAmount;
+async function useFreeSpin(userId) {
+    const user = await initializeWallet(userId);
+    if (user.freeSpins > 0) {
+        user.freeSpins -= 1;
+        const betAmount = user.freeSpinsBetAmount || 0;
+        if (user.freeSpins === 0) {
+            user.freeSpinsBetAmount = 0;
+        }
+        await user.save();
+        return betAmount;
     }
-    saveWallets();
-    return betAmount;
-  }
-  return null;
+    return null;
 }
 
-// Function to get the top 5 users by coin balance
+// Get the top 5 users by coin balance
 async function getTopUsers(message) {
-  const users = Object.entries(wallets);
-  const sortedUsers = users.sort((a, b) => b[1].coins - a[1].coins);
-  const topUsers = sortedUsers.slice(0, 5);
+  try {
+      // Query MongoDB for top 5 users based on coins, sorted in descending order
+      const topUsers = await User.find().sort({ coins: -1 }).limit(5);
 
-  const leaderboard = await Promise.all(
-    topUsers.map(async ([userId, wallet]) => {
-      try {
-        const member = await message.guild.members.fetch(userId);
-        const displayName = member ? member.displayName : "Unknown User";
-        return { displayName, coins: wallet.coins, userId: userId };
-      } catch (err) {
-        console.error(`Error fetching member for userId: ${userId}`, err);
-        return { displayName: "Unknown User", coins: wallet.coins };
-      }
-    })
-  );
+      // Retrieve the display names from Discord for each user
+      const leaderboard = await Promise.all(
+          topUsers.map(async (user) => {
+              try {
+                  const member = await message.guild.members.fetch(user.userId);
+                  const displayName = member ? member.displayName : "Unknown User";
+                  return { displayName, coins: user.coins, userId: user.userId };
+              } catch (err) {
+                  console.error(`Error fetching member for userId: ${user.userId}`, err);
+                  return { displayName: "Unknown User", coins: user.coins, userId: user.userId };
+              }
+          })
+      );
 
-  return leaderboard;
+      return leaderboard;
+  } catch (error) {
+      console.error('Error fetching top users:', error);
+      return [];
+  }
 }
 
-// Load wallets on startup
-loadWallets();
-
-// Export the wallet functions
 module.exports = {
   initializeWallet,
   getCoins,

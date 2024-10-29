@@ -24,17 +24,13 @@ const grid = require("./grid");
 const { info } = require("console");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const xpSystem = require("./xp/xp");
-const { totalmem, userInfo } = require("os");
-const AWS = require("aws-sdk");
-const fs = require("fs");
+const { totalmem, userInfo } = require("os");;
 const path = require("path");
-const {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-} = require("@aws-sdk/client-s3");
 const eventEmitter = new EventEmitter();
 const express = require("express");
+const mongoose = require('mongoose');
+const fs = require('fs');
+const User = require('./models/User');
 const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
@@ -66,10 +62,72 @@ app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
 });
 
-// Initialize and start your bot here, e.g.,
+// Define connectToDatabase
+async function connectToDatabase() {
+  try {
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log('Connected to MongoDB');
+  } catch (error) {
+      console.error('Error connecting to MongoDB:', error);
+      process.exit(1);
+  }
+}
+
+// Modified migrateData with connection check
+async function migrateData() {
+  // Wait until mongoose is fully connected
+  if (mongoose.connection.readyState !== 1) {
+      console.log("Waiting for MongoDB connection...");
+      await new Promise(resolve => mongoose.connection.once('connected', resolve));
+  }
+
+  console.log("Running migration...");
+  const data = JSON.parse(fs.readFileSync('./data.json', 'utf8'));
+
+  for (const userId in data) {
+      if (userId === 'undefined') continue;
+
+      const { coins = 0, debt = 0, freeSpins = 0, freeSpinsBetAmount = 0 } = data[userId];
+
+      try {
+          // Check if the user already exists
+          let user = await User.findOne({ userId });
+          
+          if (!user) {
+              // Create a new User document if they don't exist
+              user = new User({
+                  userId,
+                  coins,
+                  debt,
+                  freeSpins,
+                  freeSpinsBetAmount,
+              });
+              await user.save();
+              console.log(`Saved user ${userId} to MongoDB.`);
+          } else {
+              // Update existing user's data if they already exist
+              user.coins = coins;
+              user.debt = debt;
+              user.freeSpins = freeSpins;
+              user.freeSpinsBetAmount = freeSpinsBetAmount;
+              await user.save();
+              console.log(`Updated user ${userId} in MongoDB.`);
+          }
+      } catch (error) {
+          console.error(`Error saving user ${userId}:`, error);
+      }
+  }
+  console.log("Migration completed.");
+}
+
 let gridOwners = {}; // Object to store the grid owner by message ID
 
-client.on("messageCreate", async (message) => {
+function startBot() {
+  client.once('ready', () => {
+    console.log('Bot is ready!');
+  });
+
+  client.on("messageCreate", async (message) => {
   if (message.author.bot) return; // Ignore bot messages
 
   const userId = message.author.id;
@@ -87,24 +145,26 @@ client.on("messageCreate", async (message) => {
   if (
     message.content.toLowerCase() === "$leaderboard" ||
     message.content.toLowerCase() === "$lb"
-  ) {
-    const topUsers = await wallet.getTopUsers(message); // Pass 'message' to get the top 5 users with display names
+) {
+    const topUsers = await wallet.getTopUsers(message); // Get top 5 users with display names
     console.log(topUsers);
+
     // Build the leaderboard message
     let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
-    topUsers.forEach((user, index) => {
-      const theirDebt = wallet.getDebt(user.userId);
-      const theirLevel = xpSystem.xpOverview(user.userId, true);
-      leaderboardMessage += `${index + 1}. ${user.displayName} (${
-        theirLevel.level
-      }) - **${user.coins}** coins. ${
-        theirDebt ? `${theirDebt} coins in debt.` : ``
-      }\n`;
-    });
+    
+    // Iterate over each top user and build the message
+    for (const [index, user] of topUsers.entries()) {
+        const theirDebt = await wallet.getDebt(user.userId); // Await debt retrieval
+        const theirLevel = await xpSystem.xpOverview(user.userId, true); // Ensure this is async if needed
+        
+        leaderboardMessage += `${index + 1}. ${user.displayName} (${theirLevel.level}) - **${user.coins}** coins. ${
+            theirDebt ? `${theirDebt} coins in debt.` : ``
+        }\n`;
+    }
 
     // Send the leaderboard message
     await message.reply(leaderboardMessage);
-  }
+}
 
   // $GRID
   // Command to generate the grid with an amount of coins
@@ -240,18 +300,24 @@ client.on("messageCreate", async (message) => {
   }
 
   // Command to check wallet balance
-  if (
-    message.content.toLowerCase() === "$wallet" ||
-    message.content.toLowerCase() === "$w"
-  ) {
-    const coins = wallet.getCoins(userId); // Get the user's balance
-    const debt = wallet.getDebt(userId);
-    await message.reply(
-      `You have **${coins}** coins in your wallet. ${
-        debt > 0 ? `\nYour debt: ${debt}` : ``
-      }`
-    );
-  }
+  if (message.content === '$w') {
+    const userId = message.author.id;
+    
+    try {
+        // Make sure to await the database query
+        const user = await User.findOne({ userId });
+        
+        if (user) {
+            // Send the user's coins and free spins as a response
+            message.channel.send(`You have **${user.coins}** coins in your wallet 💰.`);
+        } else {
+            message.channel.send("You don't have a wallet yet.");
+        }
+    } catch (error) {
+        console.error('Error fetching wallet:', error);
+        message.channel.send('There was an error retrieving your wallet.');
+    }
+}
 
   // Command to check free spins balance
   if (
@@ -285,10 +351,10 @@ client.on("messageCreate", async (message) => {
     );
   }
 
-  // Command to add coins (restricted to bot owner)
+  // ADD COINS
   if (message.content.toLowerCase().startsWith("$add")) {
     if (message.author.id !== ownerId && message.author.id !== ownerId2) {
-      return message.reply("You don't have permission to use this command.");
+        return message.reply("You don't have permission to use this command.");
     }
 
     const args = message.content.split(" ");
@@ -296,7 +362,7 @@ client.on("messageCreate", async (message) => {
 
     // Check if the amount is valid
     if (isNaN(amount) || amount <= 0) {
-      return message.reply("Please provide a valid amount of coins to add.");
+        return message.reply("Please provide a valid amount of coins to add.");
     }
 
     // Get the tagged user from the message (the second argument)
@@ -304,9 +370,9 @@ client.on("messageCreate", async (message) => {
 
     // Check if a user is tagged
     if (!mentionedUser) {
-      return message.reply(
-        "Please mention a valid user to add coins to their wallet."
-      );
+        return message.reply(
+            "Please mention a valid user to add coins to their wallet."
+        );
     }
 
     // Extract the user ID of the mentioned user
@@ -314,16 +380,21 @@ client.on("messageCreate", async (message) => {
     const debtFreeAdd = args[3];
 
     // Add coins to the mentioned user's wallet
-    wallet.addCoins(targetUserId, amount, true);
+    await wallet.addCoins(targetUserId, amount, true); // Ensure addCoins is awaited if async
     if (debtFreeAdd !== "debtFree") {
-      wallet.addDebt(targetUserId, amount);
+        await wallet.addDebt(targetUserId, amount); // Ensure addDebt is awaited if async
     }
+    
+    // Fetch and await the debt amount for the mentioned user
+    const userDebt = await wallet.getDebt(targetUserId); // Await getDebt to get actual value
+
+    // Send a confirmation message
     await message.reply(
-      `You have added **${amount}** coins to **${
-        mentionedUser.username
-      }'s** wallet. Their debt: ${wallet.getDebt(targetUserId)}`
+        `You have added **${amount}** coins to **${mentionedUser.username}**'s wallet. Their debt: ${userDebt}`
     );
-  }
+}
+
+  // LOAN
   if (message.content.toLowerCase().startsWith("$loan")) {
     const args = message.content.split(" ");
     const amount = parseInt(args[1]);
@@ -2013,4 +2084,13 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+}
+
+async function initializeBot() {
+  await connectToDatabase(); // Wait until connection is established
+  //await migrateData();       // Run migration after connecting
+  startBot();                // Start bot after migration completes
+}
+
+initializeBot();
 
