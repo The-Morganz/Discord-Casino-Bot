@@ -63,11 +63,11 @@
     "requiredImages": 1
   },
   "706935671960633427": {
-    "date": "2024-10-22",
+    "date": "2024-10-29",
     "completed": false,
-    "challengeType": "message",
-    "messages": 8,
-    "requiredMessages": 9
+    "challengeType": "image",
+    "imagesSent": 0,
+    "requiredImages": 1
   },
   "190857887852003328": {
     "date": "2024-10-22",

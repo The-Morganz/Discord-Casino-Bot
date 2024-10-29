@@ -202,7 +202,7 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
     };
   }
 }
-function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
+async function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
   const thatRoom = rooms.findRoom(channelId);
   let thePlayer;
   try {
@@ -219,13 +219,14 @@ function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
     );
     const randomCard = thatRoom.deckOfCards[randomNumberFromDeck];
     const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
+    console.log(unoRandomNumero);
     thatRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     thePlayer.sum += unoRandomNumero;
     thePlayer.cards.push(unoRandomNumero);
     if (thatRoom.deckOfCards.length <= 6) {
       thatRoom.deckOfCards = makeDeck();
     }
-    wallet.removeCoins(thePlayer.userId, thePlayer.betAmount)
+    await wallet.removeCoins(thePlayer.userId, thePlayer.betAmount);
     thePlayer.betAmount *= 2;
     if (thePlayer.sum > 21) {
       if (aceSave(thePlayer.cards, thePlayer.sum)) {
@@ -335,13 +336,16 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     const player = thatRoom.players[i];
     if (player.natBlackjack && thatRoom.dealer.natBlackjack) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has gotten a NATURAL **BLACKJACK**, but the DEALER also got a NATURAL **BLACKJACK**, resulting in a push. *You notice that the DEALER smiles at you.* :rightwards_pushing_hand:`;
-      wallet.addCoins(player.userId, player.betAmount, true);
+      await wallet.addCoins(player.userId, player.betAmount, true);
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
     if (player.natBlackjack) {
-      const coinMessage = wallet.addCoins(player.userId, player.betAmount * 3);
+      const coinMessage = await wallet.addCoins(
+        player.userId,
+        player.betAmount * 3
+      );
 
       message = `:fireworks: <@${
         player.userId
@@ -353,7 +357,10 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       continue;
     }
     if (player.sum > thatRoom.dealer.sum && player.sum <= 21) {
-      const coinMessage = wallet.addCoins(player.userId, player.betAmount * 2);
+      const coinMessage = await wallet.addCoins(
+        player.userId,
+        player.betAmount * 2
+      );
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
@@ -376,7 +383,10 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       // wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > 21 && player.sum <= 21) {
-      const coinMessage = wallet.addCoins(player.userId, player.betAmount * 2);
+      const coinMessage = await wallet.addCoins(
+        player.userId,
+        player.betAmount * 2
+      );
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
       } :gem:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
@@ -386,7 +396,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     }
     if (thatRoom.dealer.sum === player.sum && player.sum <= 21) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
-      wallet.addCoins(player.userId, player.betAmount, true);
+      await wallet.addCoins(player.userId, player.betAmount, true);
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;

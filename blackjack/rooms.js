@@ -83,11 +83,11 @@ function makeRoom(userId, channelId) {
   return `You have made a room, and joined it.`;
 }
 
-function jusGivMeMyMooony(channelId) {
+async function jusGivMeMyMooony(channelId) {
   const room = findRoom(channelId);
-  room.players.forEach((e) => {
-    wallet.addCoins(e.userId, e.betAmount);
-  });
+  for (let i = 0; i < room.players.length; i++) {
+    await wallet.addCoins(room.players[i].userId, room.players[i].betAmount);
+  }
 }
 function checkBettingPhase(channelId) {
   const room = findRoom(channelId);

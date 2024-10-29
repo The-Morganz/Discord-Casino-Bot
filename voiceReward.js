@@ -32,12 +32,12 @@ function userLeftVoice(userId) {
   }
 }
 // Reward the user with 10 coins for staying in voice
-function rewardUserForVoice(userId) {
+async function rewardUserForVoice(userId) {
   if (!userVoiceTimes.has(userId)) return;
   const theirXP = xpSystem.getXpData(userId);
   const gain = passiveIncomeGain * theirXP.multiplier;
 
-  wallet.addCoins(userId, gain); // Reward 10 coins
+  await wallet.addCoins(userId, gain); // Reward 10 coins
   console.log(
     `User ${userId} has been rewarded ${gain} coins for being in voice.`
   );

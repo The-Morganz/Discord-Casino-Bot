@@ -143,9 +143,9 @@ async function roll(userId, betAmount, message, button = false) {
   let coinMessage = ``;
   if (totalMultiplier > 0) {
     payout = Math.round(betAmount * totalMultiplier);
-    coinMessage = wallet.addCoins(userId, payout);
+    coinMessage = await wallet.addCoins(userId, payout);
   }
-  const freeSpinAmount = wallet.getFreeSpins(userId);
+  const freeSpinAmount = await wallet.getFreeSpins(userId);
 
   // Create the final message string
   let finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
@@ -162,7 +162,7 @@ async function roll(userId, betAmount, message, button = false) {
 
   if (giftPresent && totalMultiplier > 0) {
     console.log(`Awarding free spins. Bet amount is: ${betAmount}`); // Debugging to check betAmount
-    wallet.addFreeSpins(userId, totalFreeSpins, betAmount);
+    await wallet.addFreeSpins(userId, totalFreeSpins, betAmount);
     finalMessage += `\n🎁 You won ${totalFreeSpins} free spins! Use $fs to display your free spins 🎁`;
   }
 

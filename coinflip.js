@@ -38,16 +38,17 @@ function startFlipChallenge(challengerId, targetId, amount, message) {
   return `🪙 <@${challengerId}> has challenged <@${targetId}> to a coinflip for **${amount}** coins! <@${targetId}>, type **$confirm** to accept or **$deny** to reject. 🪙`;
 }
 
-function confirmChallenge(userId) {
+async function confirmChallenge(userId) {
   const challenge = pendingChallenges[userId];
 
   if (!challenge) {
     return "Nothing to confirm";
   }
-
+  const challengerCoins = await wallet.getCoins(userId);
+  const challengeeCoins = await wallet.getCoins(challenge.challengerId);
   if (
-    wallet.getCoins(userId) < challenge.amount ||
-    wallet.getCoins(challenge.challengerId) < challenge.amount
+    challengeeCoins < challenge.amount ||
+    challengeeCoins < challenge.amount
   ) {
     delete pendingChallenges[userId];
     return "Someone is broke.";
@@ -97,8 +98,7 @@ async function pickChoice(userId, choice, action) {
   // Flip the coin and return the result
   return flipCoin(userId);
 }
-
-function flipCoin(userId) {
+async function flipCoin(userId) {
   const challenge = pendingChallenges[userId];
   if (!challenge || !challenge.choice) {
     return "No valid coinflip to execute.";
@@ -115,12 +115,12 @@ function flipCoin(userId) {
   }
 
   // Deduct coins from both users
-  wallet.removeCoins(userId, challenge.amount);
-  wallet.removeCoins(challenge.challengerId, challenge.amount);
+  await wallet.removeCoins(userId, challenge.amount);
+  await wallet.removeCoins(challenge.challengerId, challenge.amount);
 
   // Add double the amount to the winner
-  const coinMessage = wallet.addCoins(winnerId, challenge.amount * 2);
-
+  const coinMessage = await wallet.addCoins(winnerId, challenge.amount * 2);
+  console.log(coinMessage);
   const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${
     challenge.amount * 2
   }** coins! 🪙 ${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
