@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const filePath = path.join(__dirname, "xp.json");
+const UserXP = require('../models/UserXP');
+
 // Helper function to read the current XP data
 function readXpData() {
   if (!fs.existsSync(filePath)) {
@@ -19,84 +21,68 @@ function writeXpData(data) {
 }
 
 // Function to add XP to a user
-function addXp(userId, amount) {
-  let xpData = readXpData(); // Read the current data
-  console.log(xpData[userId]);
-  // If the user doesn't exist in the file, initialize their XP
-  if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, multiplier: 1, nextLevelXpReq: 100 };
+async function addXp(userId, amount) {
+  let userXP = await UserXP.findOne({ userId });
+  if (!userXP) {
+      userXP = new UserXP({ userId });
   }
 
-  // Add the XP to the user's current XP
-  xpData[userId].xp += Math.round(amount);
-  console.log(xpData[userId]);
-  if (xpData[userId].xp >= xpData[userId].nextLevelXpReq) {
-    writeXpData(xpData);
-    levelUp(userId);
-    return;
-  }
-  // Write the updated data back to the file
-  writeXpData(xpData);
+  userXP.xp += Math.round(amount);
 
-  console.log(
-    `Added ${amount} XP to user ${userId}. They now have ${xpData[userId].xp} XP.`
-  );
+  // Level up if XP meets or exceeds the requirement
+  if (userXP.xp >= userXP.nextLevelXpReq) {
+      await levelUp(userId, userXP);
+  } else {
+      await userXP.save();
+  }
+
+  console.log(`Added ${amount} XP to user ${userId}. They now have ${userXP.xp} XP.`);
 }
 
-function levelUp(userId) {
-  let xpData = readXpData(); // Read the current data
+// Function to handle leveling up
+async function levelUp(userId, userXP) {
+  userXP.xp = userXP.xp - userXP.nextLevelXpReq;
+  userXP.level += 1;
+  userXP.multiplier += 0.5;
+  userXP.nextLevelXpReq = Math.round(userXP.nextLevelXpReq * 1.3);
+  await userXP.save();
 
-  // If the user doesn't exist in the file, initialize their XP
-  if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, multiplier: 1, nextLevelXpReq: 100 };
-    return;
-  }
-
-  // Add the XP to the user's current XP
-  xpData[userId].xp = xpData[userId].xp - xpData[userId].nextLevelXpReq;
-  xpData[userId].level++;
-  xpData[userId].multiplier += 0.5;
-  xpData[userId].nextLevelXpReq = Math.round(
-    xpData[userId].nextLevelXpReq * 1.3
-  );
-  // Write the updated data back to the file
-  writeXpData(xpData);
-
-  console.log(`${userId} has leveled up!`);
+  console.log(`${userId} has leveled up to level ${userXP.level}!`);
 }
-function xpOverview(userId, value = false) {
-  const xpData = readXpData();
-  if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, multiplier: 1, nextLevelXpReq: 100 };
-  }
-  const levelOfPlayer = xpData[userId].level;
-  const xpOfPlayer = xpData[userId].xp;
-  const xpNeeded = xpData[userId].nextLevelXpReq;
 
-  let message = `<@${userId}> is level **${levelOfPlayer}**. They have **${xpOfPlayer}xp**, and need ${
-    xpNeeded - xpOfPlayer
-  }xp to level up. `;
-  if (value) {
-    return xpData[userId];
+// Function to get XP overview for a user
+async function xpOverview(userId, value = false) {
+  let userXP = await UserXP.findOne({ userId });
+  if (!userXP) {
+      userXP = new UserXP({ userId });
+      await userXP.save();
   }
-  return message;
-}
-function getXpData(userId) {
-  // ovo je identicno kao xpOverview(userId,true)..... mao sam se zajebo
-  let xpData = readXpData(); // Read the current data
 
-  // If the user doesn't exist in the file, initialize their XP
-  if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, multiplier: 1, nextLevelXpReq: 100 };
-  }
-  return xpData[userId];
+  const levelOfPlayer = userXP.level;
+  const xpOfPlayer = userXP.xp;
+  const xpNeeded = userXP.nextLevelXpReq;
+
+  let message = `<@${userId}> is level **${levelOfPlayer}**. They have **${xpOfPlayer} XP**, and need ${
+      xpNeeded - xpOfPlayer
+  } XP to level up.`;
+
+  return value ? userXP : message;
 }
+
+// Function to get XP data directly
+async function getXpData(userId) {
+  let userXP = await UserXP.findOne({ userId });
+  if (!userXP) {
+      userXP = new UserXP({ userId });
+      await userXP.save();
+  }
+  return userXP;
+}
+
 // Function to calculate XP based on bet amount
 function calculateXpGain(betAmount, normalXpGain) {
-  // Calculate the percentage based on bet
   const percentage = Math.min(betAmount, 100); // Cap at 100 coins for 100%
-  const xpGain = (percentage / 100) * normalXpGain; // Adjust XP based on percentage
-  return xpGain;
+  return (percentage / 100) * normalXpGain;
 }
 
-module.exports = { addXp, getXpData, xpOverview, calculateXpGain };
+module.exports = { addXp, getXpData, xpOverview, calculateXpGain, readXpData, writeXpData };

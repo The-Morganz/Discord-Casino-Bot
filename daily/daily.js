@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const DailyChallenge = require('../models/DailyChallenge');
 const messageChallenge = require("./daily_message");
 const imageChallenge = require("./daily_image");
 const xpSystem = require("../xp/xp");
@@ -42,59 +43,76 @@ function assignRandomChallenge() {
   return challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
 }
 
-// Initialize a daily challenge for a user if they don't have one for the day or reset if it's a new day
-function initializeDailyChallenge(userId) {
+// Initialize or update a daily challenge for a user
+async function initializeDailyChallenge(userId) {
   const today = getTodayDate();
 
-  if (!dailyChallenges[userId] || dailyChallenges[userId].date !== today) {
-    const challengeType = assignRandomChallenge();
-    let challengeData = { date: today, completed: false };
+  let userChallenge = await DailyChallenge.findOne({ userId, date: today });
 
-    if (challengeType === "message") {
-      challengeData = {
-        ...challengeData,
-        ...messageChallenge.initializeMessageChallenge(userId),
+  if (!userChallenge) {
+      const challengeType = assignRandomChallenge();
+      let challengeData = {
+          userId,
+          date: today,
+          completed: false,
+          challengeType
       };
-    } else if (challengeType === "image") {
-      challengeData = {
-        ...challengeData,
-        ...imageChallenge.initializeImageChallenge(userId),
-      };
-    }
 
-    dailyChallenges[userId] = challengeData;
-    saveDailyChallenges();
+      if (challengeType === 'message') {
+          challengeData = {
+              ...challengeData,
+              ...messageChallenge.initializeMessageChallenge(userId)
+          };
+      } else if (challengeType === 'image') {
+          challengeData = {
+              ...challengeData,
+              ...imageChallenge.initializeImageChallenge(userId)
+          };
+      }
+
+      userChallenge = new DailyChallenge(challengeData);
+      await userChallenge.save();
   }
+
+  return userChallenge;
 }
 
 // Increment based on challenge type
-function incrementChallenge(userId, isImage = false) {
-  initializeDailyChallenge(userId);
-  let userChallenge = dailyChallenges[userId];
+async function incrementChallenge(userId, isImage = false) {
+  const userChallenge = await initializeDailyChallenge(userId);
 
-  if (userChallenge.challengeType === "message" && !isImage) {
-    userChallenge = messageChallenge.incrementMessageCount(
-      userChallenge,
-      userId
-    );
-  } else if (userChallenge.challengeType === "image" && isImage) {
-    userChallenge = imageChallenge.incrementImageCount(userChallenge, userId);
+  if (userChallenge.challengeType === 'message' && !isImage) {
+      const completed = await messageChallenge.incrementMessageCount(userChallenge, userId);
+      if (completed) {
+          await xpSystem.addXp(userId, 100); // Reward 100 XP for completing the message challenge
+      }
+  } else if (userChallenge.challengeType === 'image' && isImage) {
+      const completed = await imageChallenge.incrementImageCount(userChallenge, userId);
+      if (completed) {
+          await xpSystem.addXp(userId, 100); // Reward 100 XP for completing the image challenge
+      }
   }
 
-  dailyChallenges[userId] = userChallenge;
-  saveDailyChallenges();
+  await userChallenge.save();
 }
 
-// Get daily status
-function getDailyStatus(userId) {
-  initializeDailyChallenge(userId);
-  const userChallenge = dailyChallenges[userId];
 
-  if (userChallenge.challengeType === "message") {
-    return messageChallenge.getMessageStatus(userChallenge, userId);
-  } else if (userChallenge.challengeType === "image") {
-    return imageChallenge.getImageStatus(userChallenge, userId);
+// DAILY STATUS
+async function getDailyStatus(userId) {
+  const userChallenge = await initializeDailyChallenge(userId);
+
+  let statusMessage = '';
+  if (userChallenge.challengeType === 'message') {
+      statusMessage = await messageChallenge.getMessageStatus(userChallenge, userId);
+  } else if (userChallenge.challengeType === 'image') {
+      statusMessage = await imageChallenge.getImageStatus(userChallenge, userId);
   }
+
+  // Get XP data for the user and include it in the message
+  const userXP = await xpSystem.getXpData(userId);
+  statusMessage += `\nYou currently have ${userXP.xp} XP and are at level ${userXP.level}.`;
+
+  return statusMessage;
 }
 
 loadDailyChallenges();

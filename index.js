@@ -31,6 +31,9 @@ const express = require("express");
 const mongoose = require("mongoose");
 const fs = require("fs");
 const User = require("./models/User");
+const DailyChallenge = require("./models/DailyChallenge");
+const UserXP = require('./models/UserXP');
+const { format } = require("date-fns");
 const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
@@ -125,6 +128,98 @@ async function migrateData() {
     }
   }
   console.log("Migration completed.");
+}
+
+async function migrateDailyChallenges() {
+  if (mongoose.connection.readyState !== 1) {
+    console.log("Waiting for MongoDB connection...");
+    await new Promise((resolve) => mongoose.connection.once("connected", resolve));
+  }
+
+  console.log("Migrating daily challenges...");
+
+  // Check if the daily.json file exists
+  const dailyDataPath = "./daily/daily.json";
+  if (!fs.existsSync(dailyDataPath)) {
+    console.log("daily.json file not found. Skipping daily challenge migration.");
+    return;
+  }
+
+  // Read and parse daily.json data
+  const dailyData = JSON.parse(fs.readFileSync(dailyDataPath, "utf8"));
+  const today = format(new Date(), "yyyy-MM-dd"); // Format date as "YYYY-MM-DD"
+
+  for (const userId in dailyData) {
+    try {
+      const {
+        completed = false,
+        challengeType = "message",
+        messages = 0,
+        requiredMessages = 0,
+        imagesSent = 0,
+        requiredImages = 0,
+      } = dailyData[userId];
+
+      // Check if a daily challenge already exists for the user and today’s date
+      const existingChallenge = await DailyChallenge.findOne({ userId, date: today });
+      if (!existingChallenge) {
+        // Create a new DailyChallenge document if none exists
+        const newChallenge = new DailyChallenge({
+          userId,
+          date: today,
+          completed,
+          challengeType,
+          messages: challengeType === "message" ? messages : 0,
+          requiredMessages: challengeType === "message" ? requiredMessages : 0,
+          imagesSent: challengeType === "image" ? imagesSent : 0,
+          requiredImages: challengeType === "image" ? requiredImages : 0,
+        });
+        await newChallenge.save();
+        console.log(`Saved daily challenge for user ${userId} to MongoDB.`);
+      } else {
+        console.log(`Daily challenge for user ${userId} on ${today} already exists.`);
+      }
+    } catch (error) {
+      console.error(`Error migrating daily challenge for user ${userId}:`, error);
+    }
+  }
+  console.log("Daily challenges migration completed.");
+}
+
+async function migrateXpData() {
+  if (mongoose.connection.readyState !== 1) {
+      console.log("Waiting for MongoDB connection...");
+      await new Promise((resolve) => mongoose.connection.once("connected", resolve));
+  }
+
+  console.log("Migrating XP data...");
+
+  const xpDataPath = './xp/xp.json';
+  if (!fs.existsSync(xpDataPath)) {
+      console.log("xp.json file not found. Skipping XP data migration.");
+      return;
+  }
+
+  const xpData = JSON.parse(fs.readFileSync(xpDataPath, 'utf8'));
+
+  for (const userId in xpData) {
+      const { xp = 0, level = 1, multiplier = 1, nextLevelXpReq = 100 } = xpData[userId];
+
+      try {
+          let userXP = await UserXP.findOne({ userId });
+          if (!userXP) {
+              userXP = new UserXP({ userId, xp, level, multiplier, nextLevelXpReq });
+              await userXP.save();
+              console.log(`Saved XP data for user ${userId} to MongoDB.`);
+          } else {
+              console.log(`XP data for user ${userId} already exists.`);
+          }
+      } catch (error) {
+          console.error(`Error migrating XP data for user ${userId}:`, error);
+      }
+  }
+
+  console.log("XP data migration completed.");
 }
 
 let gridOwners = {}; // Object to store the grid owner by message ID
@@ -287,26 +382,27 @@ function startBot() {
     }
 
     // Track messages for the daily message challenge
-    daily.incrementChallenge(userId, false);
+    await daily.incrementChallenge(userId, false);
 
     // Track image posts for the daily image challenge
     if (message.attachments.size > 0) {
-      message.attachments.forEach((attachment) => {
+      for (const attachment of message.attachments.values()) {
         if (
           attachment.contentType &&
           attachment.contentType.startsWith("image/")
         ) {
-          daily.incrementChallenge(userId, true);
-          // message.reply("Your image counts towards today's challenge!");
+          await daily.incrementChallenge(userId, true);
+          // Optionally, send a reply message
+          // await message.reply("Your image counts towards today's challenge!");
         }
-      });
+      }
     }
 
-    // Command to check daily challenge progress
-    if (message.content.toLowerCase() === "$daily") {
-      const status = daily.getDailyStatus(userId);
-      await message.reply(status);
-    }
+// Command to check daily challenge progress
+if (message.content.toLowerCase() === "$daily") {
+  const status = await daily.getDailyStatus(userId); // Ensure to await the async call
+  await message.reply(status);
+}
 
     // Command to check wallet balance
     if (message.content === "$w") {
@@ -2116,6 +2212,8 @@ function startBot() {
 
 async function initializeBot() {
   await connectToDatabase(); // Wait until connection is established
+  //await migrateXpData();
+  //await migrateDailyChallenges();
   //await migrateData();       // Run migration after connecting
   startBot(); // Start bot after migration completes
 }
