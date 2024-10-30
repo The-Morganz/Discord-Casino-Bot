@@ -32,7 +32,7 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const User = require("./models/User");
 const DailyChallenge = require("./models/DailyChallenge");
-const UserXP = require('./models/UserXP');
+const UserXP = require("./models/UserXP");
 const { format } = require("date-fns");
 const app = express();
 let toggleAnimState = false;
@@ -133,7 +133,9 @@ async function migrateData() {
 async function migrateDailyChallenges() {
   if (mongoose.connection.readyState !== 1) {
     console.log("Waiting for MongoDB connection...");
-    await new Promise((resolve) => mongoose.connection.once("connected", resolve));
+    await new Promise((resolve) =>
+      mongoose.connection.once("connected", resolve)
+    );
   }
 
   console.log("Migrating daily challenges...");
@@ -141,7 +143,9 @@ async function migrateDailyChallenges() {
   // Check if the daily.json file exists
   const dailyDataPath = "./daily/daily.json";
   if (!fs.existsSync(dailyDataPath)) {
-    console.log("daily.json file not found. Skipping daily challenge migration.");
+    console.log(
+      "daily.json file not found. Skipping daily challenge migration."
+    );
     return;
   }
 
@@ -161,7 +165,10 @@ async function migrateDailyChallenges() {
       } = dailyData[userId];
 
       // Check if a daily challenge already exists for the user and today’s date
-      const existingChallenge = await DailyChallenge.findOne({ userId, date: today });
+      const existingChallenge = await DailyChallenge.findOne({
+        userId,
+        date: today,
+      });
       if (!existingChallenge) {
         // Create a new DailyChallenge document if none exists
         const newChallenge = new DailyChallenge({
@@ -177,10 +184,15 @@ async function migrateDailyChallenges() {
         await newChallenge.save();
         console.log(`Saved daily challenge for user ${userId} to MongoDB.`);
       } else {
-        console.log(`Daily challenge for user ${userId} on ${today} already exists.`);
+        console.log(
+          `Daily challenge for user ${userId} on ${today} already exists.`
+        );
       }
     } catch (error) {
-      console.error(`Error migrating daily challenge for user ${userId}:`, error);
+      console.error(
+        `Error migrating daily challenge for user ${userId}:`,
+        error
+      );
     }
   }
   console.log("Daily challenges migration completed.");
@@ -188,35 +200,42 @@ async function migrateDailyChallenges() {
 
 async function migrateXpData() {
   if (mongoose.connection.readyState !== 1) {
-      console.log("Waiting for MongoDB connection...");
-      await new Promise((resolve) => mongoose.connection.once("connected", resolve));
+    console.log("Waiting for MongoDB connection...");
+    await new Promise((resolve) =>
+      mongoose.connection.once("connected", resolve)
+    );
   }
 
   console.log("Migrating XP data...");
 
-  const xpDataPath = './xp/xp.json';
+  const xpDataPath = "./xp/xp.json";
   if (!fs.existsSync(xpDataPath)) {
-      console.log("xp.json file not found. Skipping XP data migration.");
-      return;
+    console.log("xp.json file not found. Skipping XP data migration.");
+    return;
   }
 
-  const xpData = JSON.parse(fs.readFileSync(xpDataPath, 'utf8'));
+  const xpData = JSON.parse(fs.readFileSync(xpDataPath, "utf8"));
 
   for (const userId in xpData) {
-      const { xp = 0, level = 1, multiplier = 1, nextLevelXpReq = 100 } = xpData[userId];
+    const {
+      xp = 0,
+      level = 1,
+      multiplier = 1,
+      nextLevelXpReq = 100,
+    } = xpData[userId];
 
-      try {
-          let userXP = await UserXP.findOne({ userId });
-          if (!userXP) {
-              userXP = new UserXP({ userId, xp, level, multiplier, nextLevelXpReq });
-              await userXP.save();
-              console.log(`Saved XP data for user ${userId} to MongoDB.`);
-          } else {
-              console.log(`XP data for user ${userId} already exists.`);
-          }
-      } catch (error) {
-          console.error(`Error migrating XP data for user ${userId}:`, error);
+    try {
+      let userXP = await UserXP.findOne({ userId });
+      if (!userXP) {
+        userXP = new UserXP({ userId, xp, level, multiplier, nextLevelXpReq });
+        await userXP.save();
+        console.log(`Saved XP data for user ${userId} to MongoDB.`);
+      } else {
+        console.log(`XP data for user ${userId} already exists.`);
       }
+    } catch (error) {
+      console.error(`Error migrating XP data for user ${userId}:`, error);
+    }
   }
 
   console.log("XP data migration completed.");
@@ -240,7 +259,7 @@ function startBot() {
 
     //
     if (message.content.toLowerCase() === "$help") {
-      const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n**"$wallet", or "$w"**- Check your wallet.\n\n**"$daily"**- Get assigned a daily challenge for some quick coins.\n\nYou can gain coins by being in a voice chat, each minute is equal to 10 coins.\n\n**"$roll [amount of coins]"** to use a slot machine.\n**"$toggleanim"**- Toggle rolling animation.\n\n**"$bj"**- Play Blackjack.\n **You can do everything with buttons, but if they don't work, you can use these commands instead.**\n**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.\n**"$startbj"**- Used to start a game of Blackjack.\n**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.\n\n**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?\n\n**"$grid [amount of coins]"**- Start a game of grid slots!\n\n**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.\n\n**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.\n\n**"$level"**- Shows your level, how much xp you have,and need for the next level.\nWhen you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.\nYou can gain xp by playing our various games!\n\n**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.\n**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.\nThe max limit is at level 21, where your limit is 100000 coins.\n**"$paydebt"**- Pay off all of your debt, if you have the coins for it.`;
+      const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned a daily challenge for some quick coins.📅\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n⏩**"$toggleanim"**- Toggle rolling animation.⏩\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:`;
       message.author.send(theHelpMessage);
     }
 
@@ -398,24 +417,26 @@ function startBot() {
       }
     }
 
-// Command to check daily challenge progress
-if (message.content.toLowerCase() === "$daily") {
-  const status = await daily.getDailyStatus(userId); // Ensure to await the async call
-  await message.reply(status);
-}
+    // Command to check daily challenge progress
+    if (message.content.toLowerCase() === "$daily") {
+      const status = await daily.getDailyStatus(userId); // Ensure to await the async call
+      await message.reply(status);
+    }
 
     // Command to check wallet balance
-    if (message.content === "$w") {
+    if (message.content === "$w" || message.content === "$wallet") {
       const userId = message.author.id;
 
       try {
         // Make sure to await the database query
         const user = await User.findOne({ userId });
-
+        const theirDebt = await wallet.getDebt(userId);
         if (user) {
           // Send the user's coins and free spins as a response
           message.channel.send(
-            `You have **${user.coins}** coins in your wallet 💰.`
+            `You have **${user.coins}** coins in your wallet 💰.${
+              theirDebt ? `\nYour debt: ${theirDebt}` : ``
+            }`
           );
         } else {
           message.channel.send("You don't have a wallet yet.");
@@ -528,7 +549,7 @@ if (message.content.toLowerCase() === "$daily") {
           `You haven't paid off your debt! You can't get a loan if you have a debt!`
         );
       }
-      limit = findLoanLimit(userId);
+      limit = await findLoanLimit(userId);
 
       if (amount > limit) {
         return message.reply(
@@ -669,7 +690,7 @@ if (message.content.toLowerCase() === "$daily") {
 
     // $LEVEL
     if (message.content.toLowerCase().startsWith("$level")) {
-      return message.reply(xpSystem.xpOverview(userId));
+      return message.reply(await xpSystem.xpOverview(userId));
     }
 
     if (message.content.toLowerCase().startsWith("$joinbj")) {
@@ -1105,7 +1126,7 @@ if (message.content.toLowerCase() === "$daily") {
       .setLabel("Pay off debt")
       .setStyle(ButtonStyle.Secondary);
     const walletButton = generateWalletButton();
-    const xpForPlayer = xpSystem.getXpData(userId);
+    const xpForPlayer = await xpSystem.getXpData(userId);
     if ((await wallet.getDebt(userId)) > 0) {
       const row = new ActionRowBuilder().addComponents(
         requestAmountButton,
@@ -1227,9 +1248,9 @@ if (message.content.toLowerCase() === "$daily") {
       components: [row],
     });
   }
-  function findLoanLimit(userId) {
+  async function findLoanLimit(userId) {
     let limit = 0;
-    const xpDataForUser = xpSystem.xpOverview(userId, true);
+    const xpDataForUser = await xpSystem.xpOverview(userId, true);
 
     if (xpDataForUser.level >= 3) {
       if (xpDataForUser.level >= 3) {
@@ -1248,19 +1269,19 @@ if (message.content.toLowerCase() === "$daily") {
         limit = 25000;
       }
       if (xpDataForUser.level >= 13) {
-        limit = 30000;
-      }
-      if (xpDataForUser.level >= 15) {
-        limit = 40000;
-      }
-      if (xpDataForUser.level >= 17) {
         limit = 50000;
       }
+      if (xpDataForUser.level >= 15) {
+        limit = 70000;
+      }
+      if (xpDataForUser.level >= 17) {
+        limit = 100000;
+      }
       if (xpDataForUser.level >= 19) {
-        limit = 75000;
+        limit = 150000;
       }
       if (xpDataForUser.level >= 21) {
-        limit = 100000;
+        limit = 200000;
       }
     }
     //yandere dev
@@ -1353,9 +1374,9 @@ if (message.content.toLowerCase() === "$daily") {
             "Please provide a valid amount of coins to add."
           );
         }
-        const xpDataForUser = xpSystem.xpOverview(userId, true);
+        const xpDataForUser = await xpSystem.xpOverview(userId, true);
         // Extract the user ID of the mentioned user
-        const limit = findLoanLimit(userId);
+        const limit = await findLoanLimit(userId);
         if (xpDataForUser.level < 3) {
           return interaction.reply({
             content: `You can't get loans until you are level 3 or above!`,
@@ -1420,10 +1441,10 @@ if (message.content.toLowerCase() === "$daily") {
         );
 
         if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
-          //await interaction.reply({
+          // await interaction.reply({
           //  content: `You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`,
           //  ephemeral: true,
-          //});
+          // });
           return;
         }
 
@@ -1446,13 +1467,13 @@ if (message.content.toLowerCase() === "$daily") {
           generateRollPreviousButton(interaction.channel, result.betAmount);
           generateWalletButton();
         } else {
-          await interaction.reply({
+          return await interaction.reply({
             content: "You don't have enough coins to place this bet.",
             ephemeral: true,
           });
         }
       } else {
-        await interaction.reply({
+        return await interaction.reply({
           content: "Please provide a valid bet amount.",
           ephemeral: true,
         });
@@ -1897,7 +1918,7 @@ if (message.content.toLowerCase() === "$daily") {
         const loanInput = new TextInputBuilder()
           .setCustomId("custom_loan_input")
           .setLabel(
-            `Your Loan Amount: (Your limit is:${findLoanLimit(
+            `Your Loan Amount: (Your limit is:${await findLoanLimit(
               interaction.user.id
             )} coins)`
           )
@@ -2083,17 +2104,17 @@ if (message.content.toLowerCase() === "$daily") {
       const payout = gridData.betAmount * totalMultiplier;
 
       if (totalMultiplier >= 4) {
-        const xpGainForHugeWin = xpSystem.calculateXpGain(
+        const xpGainForHugeWin = await xpSystem.calculateXpGain(
           gridData.betAmount,
           gridXpGainHuge
         );
-        xpSystem.addXp(gridData.userId, xpGainForHugeWin);
+        await xpSystem.addXp(gridData.userId, xpGainForHugeWin);
       } else if (totalMultiplier > 1) {
-        const xpGainForSmallWin = xpSystem.calculateXpGain(
+        const xpGainForSmallWin = await xpSystem.calculateXpGain(
           gridData.betAmount,
           gridXpGainSmall
         );
-        xpSystem.addXp(gridData.userId, xpGainForSmallWin);
+        await xpSystem.addXp(gridData.userId, xpGainForSmallWin);
       }
       const coinMessage = await wallet.addCoins(gridData.userId, payout);
 

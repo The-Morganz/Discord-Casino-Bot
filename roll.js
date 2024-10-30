@@ -181,9 +181,9 @@ async function roll(userId, betAmount, message, button = false) {
     }
   }
 
-  const xpGain = xpSystem.calculateXpGain(betAmount, normalXpGain);
+  const xpGain = await xpSystem.calculateXpGain(betAmount, normalXpGain);
   console.log(xpGain);
-  xpSystem.addXp(userId, xpGain);
+  await xpSystem.addXp(userId, xpGain);
 
   // Return the final result and payout (if needed)
   return {

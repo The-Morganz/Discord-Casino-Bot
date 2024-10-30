@@ -402,10 +402,14 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       continue;
     }
   }
-  thatRoom.players.forEach((e) => {
-    const xpGainAfterCut = xpSystem.calculateXpGain(e.betAmount, xpGain);
-    xpSystem.addXp(e.userId, xpGainAfterCut);
-  });
+  for (let i = 0; i < thatRoom.players.length; i++) {
+    const xpGainAfterCut = await xpSystem.calculateXpGain(
+      thatRoom.players[i].betAmount,
+      xpGain
+    );
+    await xpSystem.addXp(thatRoom.players[i].userId, xpGainAfterCut);
+  }
+
   eventEmitter.emit("restartGame", channelToSendTo);
   resetDeckCounter(channelId);
 }

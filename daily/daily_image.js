@@ -1,7 +1,7 @@
 const wallet = require("../wallet");
 const xpSystem = require(`../xp/xp`);
-const DailyChallenge = require('../models/DailyChallenge');
-
+const DailyChallenge = require("../models/DailyChallenge");
+const gainFromChallenge = 500;
 // Initialize an image challenge for a user
 function initializeImageChallenge(userId) {
   return {
@@ -9,6 +9,7 @@ function initializeImageChallenge(userId) {
     imagesSent: 0,
     requiredImages: 1,
     completed: false,
+    gainedXpReward: false,
   };
 }
 
@@ -24,10 +25,12 @@ async function incrementImageCount(userChallenge, userId) {
       const gain = gainFromChallenge * theirXP.multiplier;
       const coinMessage = await wallet.addCoins(userId, gain); // Reward the user with coins
       console.log(
-        `User ${userId} has completed the image challenge and earned ${gain} coins.${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`
+        `User ${userId} has completed the image challenge and earned ${gain} coins.${
+          coinMessage !== `` ? `\n*${coinMessage}*` : ``
+        }`
       );
     }
-    
+
     // Save the updated challenge to MongoDB
     await userChallenge.save();
   }
@@ -39,7 +42,7 @@ async function getImageStatus(userChallenge, userId) {
   const { imagesSent, requiredImages, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
   const gain = gainFromChallenge * theirXP.multiplier;
-  
+
   if (completed) {
     return `🎉 You have completed today's image challenge and earned ${gain} coins!`;
   } else {
