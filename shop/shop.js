@@ -1,8 +1,10 @@
 // const wallet = require(`../wallet`);
 const ShopInventory = require(`../models/ShopInventory`);
+const User = require("../models/User");
 const UserInventory = require(`../models/UserInventory`);
 const { shopItems } = require(`./shopItems`);
-function getDurationDates(whatDoYouWantBro) {
+// Mogo sam da exportujem iz shopItems al se plasim da se nesto ne ukenja pa sam samo kopirao opet ovde, koristi se u checkExpiredItem.
+function getDurationDates(whatDoYouWantBro, howManyHours = 1) {
   const today = new Date();
 
   const tomorrow = new Date(today);
@@ -16,15 +18,15 @@ function getDurationDates(whatDoYouWantBro) {
     const tomorrowTime = tomorrow.getTime();
     return tomorrowTime;
   }
-}
-
-async function checkIfExpiredItem(userId, endTime, itemName) {
-  console.log(endTime);
-  if (endTime === 0) {
-    return false;
+  if (whatDoYouWantBro === `hour`) {
+    const hourLater = new Date(today.getTime() + howManyHours * 3600000);
+    const hourTime = hourLater.getTime();
+    return hourTime;
   }
+}
+// Ovo se najvise koristi u checkIfHaveInInventory, ali moze se i ovako koristiti. Ako je neki item expired, samo ga izbrise i return true, ako ne onda ce return false.
+async function checkIfExpiredItem(userId, endTime, itemName) {
   const rightNow = getDurationDates(`now`);
-  console.log(`bomboclart`);
   if (endTime <= rightNow) {
     await removeExpiredItems(userId);
     return true;
@@ -32,11 +34,12 @@ async function checkIfExpiredItem(userId, endTime, itemName) {
   return false;
 }
 
+// Ovo mi chatgpt pomogo, znaci bukv samo izbrise iteme koji su expired
 async function removeExpiredItems(userId, endTimeCheck = 1) {
   const currentTime = getDurationDates(`now`); // Get the current time
 
   // Update the user's inventory by pulling out expired items
-  await UserInventory.updateOne(
+  await UserInventory.updateMany(
     { userId: userId }, // Find the document by userId
     {
       $pull: {
@@ -47,6 +50,8 @@ async function removeExpiredItems(userId, endTimeCheck = 1) {
     }
   );
 }
+
+// Dodao sam $removeitem fazon ali ne radi zato sto item names imaju spaces i morao bi mnogo da se smaram za nesto sto mogu samo da udjem u databazu i izbrisem ako mi treba. Ovo koristi za one time use items ili ako oces da izbrises neki item nekome.
 async function removeSpecificItem(userId, itemName) {
   await UserInventory.updateOne(
     { userId: userId }, // Find the document by userId
@@ -60,6 +65,7 @@ async function removeSpecificItem(userId, itemName) {
   );
 }
 
+// Da se updatuje databaza ako dodas nove iteme, nema startTime i endTime zato sto to zavisi od kad igrac kupi, i nije set. Mzd bi mogo da dodam endTime: Infinity za neke iteme al nzm za sad
 async function saveInDB() {
   for (const item of shopItems) {
     await ShopInventory.findOneAndUpdate(
@@ -70,6 +76,7 @@ async function saveInDB() {
   }
 }
 
+// Self-Explanitory
 async function getUserInventory(userId) {
   await removeExpiredItems(userId);
   const user = await UserInventory.findOne({ userId: userId });
@@ -78,7 +85,7 @@ async function getUserInventory(userId) {
   return user ? user.inventory : [];
 }
 
-// Ovo sam exportovo i moze se svuda koristiti, true ako taj item postoji u inventory od usera. Za sad "item" mora biti String. Npr "High Roller Pass"
+// Ovo sam exportovo i moze se svuda koristiti, true ako taj item postoji u inventory od usera. Za sad "item" mora biti String. Npr "XP Booster"
 async function checkIfHaveInInventory(item, userId) {
   const thatInventory = await UserInventory.findOne({
     userId: userId,
@@ -94,7 +101,6 @@ async function checkIfHaveInInventory(item, userId) {
       break;
     }
   }
-  console.log(expired);
   if (thatInventory === null || expired) {
     return false;
   }
@@ -102,16 +108,24 @@ async function checkIfHaveInInventory(item, userId) {
 }
 
 // Logika za dodavanje itema i uzimanje para kad kupis item.... Ovde se (za sad) pise i poruka koja se posalje, returnuje se message
-async function buyLogic(itemName, userId) {
+async function buyLogic(itemName, userId, wallet) {
   const hasItemInInv = await checkIfHaveInInventory(itemName, userId);
-  console.log(hasItemInInv);
   if (hasItemInInv) return `You already have that item!`;
+
   let itemInfo;
   shopItems.forEach((entry, index) => {
     if (entry.name === itemName) {
       itemInfo = entry;
     }
   });
+  const userBalance = await wallet.getCoins(userId);
+  if (userBalance < itemInfo.price) {
+    return `You don't have enough coins to make this purchase.`;
+  }
+  const userDebt = await wallet.getDebt(userId);
+  if (userDebt !== 0) {
+    return `You have to clear your debt before making a purchase!`;
+  }
   await UserInventory.findOneAndUpdate(
     { userId: userId }, // Find the document by itemName
     {
@@ -126,8 +140,31 @@ async function buyLogic(itemName, userId) {
     }, // Push new item into the inventory array
     { upsert: true, new: true } // Return the updated document
   );
+  await wallet.removeCoins(userId, itemInfo.price, true);
+  return `<@${userId}> bought the ${itemName}!`;
+}
 
-  return `You've bought the ${itemName}!`;
+async function customNameSetter(argumentsOfMessage, userId, notSelf = false) {
+  let customName = ``;
+  let i = 1;
+  if (notSelf) i = 2;
+  for (i; i < argumentsOfMessage.length; i++) {
+    customName += `${argumentsOfMessage[i]} `;
+  }
+  customName = customName.trim();
+  await User.findOneAndUpdate(
+    { userId: userId },
+    { customName: customName },
+    { upsert: true }
+  );
+  return;
+}
+
+async function getCustomName(userId) {
+  const thatUser = await User.findOne({
+    userId: userId,
+  });
+  return thatUser.customName;
 }
 
 module.exports = {
@@ -138,4 +175,6 @@ module.exports = {
   removeExpiredItems,
   getUserInventory,
   removeSpecificItem,
+  customNameSetter,
+  getCustomName,
 };

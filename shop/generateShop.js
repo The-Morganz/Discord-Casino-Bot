@@ -1,4 +1,5 @@
 const { shopItems } = require(`./shopItems`);
+// Ovo sam morao ovde da stavim zato sto me node smara zbog circular dependencies, although sam kinda fixao kad sam dodao da mora passujes wallet kao argument (zbog walleta se desavao circ dependency), ali sam ostavio ovde ako se zbog nekog razloga usere opet, a i plus izgleda kao da znamo sta radimo kad ima vise fileova
 async function generateShop(
   ActionRowBuilder,
   ButtonBuilder,
@@ -13,6 +14,7 @@ async function generateShop(
   let row = new ActionRowBuilder();
   shopItems.forEach((item, index) => {
     let canBuy = false;
+
     if (walletAmount > item.price) canBuy = true;
 
     const button = new ButtonBuilder()

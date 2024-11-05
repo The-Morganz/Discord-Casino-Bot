@@ -11,6 +11,7 @@ const {
   channelLink,
   GuildForumThreadManager,
   EmbedBuilder,
+  MessageReaction,
 } = require("discord.js");
 const wallet = require("./wallet");
 const roll = require("./roll");
@@ -277,10 +278,10 @@ function startBot() {
         userId,
         wallet
       );
-      return message.channel.send({ embeds: [embed], components: rows });
+      return message.reply({ embeds: [embed], components: rows });
     }
     if (message.content.toLowerCase() === `$shophelp`) {
-      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- You only lose 75% of your bet when you lose. Removes after use.`;
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Players Custom Name"**- Changes another players' custom name to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.5 more coins on every win! Expires after a hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.`;
       message.author.send(theHelpMessage);
       return;
     }
@@ -312,6 +313,71 @@ function startBot() {
         `You have removed ${itemName} from <@${mentionedUser}>`
       );
     }
+    if (message.content.toLowerCase().startsWith("$customname")) {
+      const doTheyHaveLicense = await shop.checkIfHaveInInventory(
+        `Custom Name License`,
+        userId
+      );
+      if (!doTheyHaveLicense) {
+        return message.reply(
+          `You don't have the Custom Name License to be able to do this!`
+        );
+      }
+
+      const args = message.content.split(" ");
+      console.log(args);
+      if (args.length === 1) {
+        return message.reply(`Invalid custom name.`);
+      }
+      if (args.length > 6) {
+        return message.reply(
+          `Your custom name is too long! Custom names can only be 5 words long.`
+        );
+      }
+
+      shop.customNameSetter(args, userId);
+      message.reply(
+        `Your custom name has been set.\n*The Custom Name License disappears from your hands.* `
+      );
+      shop.removeSpecificItem(userId, `Custom Name License`);
+      return;
+    }
+    // Change Players Custom Name
+    if (message.content.toLowerCase().startsWith("$changename")) {
+      const doTheyHaveLicense = await shop.checkIfHaveInInventory(
+        `Change Players Custom Name`,
+        userId
+      );
+      if (!doTheyHaveLicense) {
+        return message.reply(
+          `You don't have the Change Players Custom Name item to be able to do this!`
+        );
+      }
+
+      const args = message.content.split(" ");
+      // Get the tagged user from the message (the second argument)
+      const mentionedUser = message.mentions.users.first();
+      console.log(mentionedUser);
+      // Check if a user is tagged
+      if (!mentionedUser) {
+        return message.reply("Please mention a valid user.");
+      }
+
+      const targetUserId = mentionedUser.id;
+      console.log(args);
+      if (args.length === 2) {
+        return message.reply(`Invalid custom name.`);
+      }
+      if (args.length > 7) {
+        return message.reply(
+          `Your custom name is too long! Custom names can only be 5 words long.\n*The Change Players Custom Name item disappears from your hands.*`
+        );
+      }
+      shop.customNameSetter(args, targetUserId, true);
+      message.reply(`${mentionedUser.username} custom name has been changed. `);
+      shop.removeSpecificItem(userId, `Change Players Custom Name`);
+      return;
+    }
 
     if (
       message.content.toLowerCase() === `$inventory` ||
@@ -336,22 +402,34 @@ function startBot() {
       console.log(topUsers);
 
       // Build the leaderboard message
-      let leaderboardMessage = "🏆 **Leaderboard - Top 5** 🏆\n";
-
+      let leaderboardMessage = ``;
+      let leaderboardFirst = `🏆 **Leaderboard - Top 5** 🏆\n\n`;
       // Iterate over each top user and build the message
       for (const [index, user] of topUsers.entries()) {
         const theirDebt = await wallet.getDebt(user.userId); // Await debt retrieval
         const theirLevel = await xpSystem.xpOverview(user.userId, true); // Ensure this is async if needed
-
-        leaderboardMessage += `${index + 1}. ${user.displayName} (${
-          theirLevel.level
-        }) - **${user.coins}** coins. ${
+        if (index === 0) {
+          leaderboardFirst += `${index + 1}. ${user.displayName} ${
+            user.customName ? `(${user.customName})` : ``
+          } (${theirLevel.level}) - **${user.coins}** coins. ${
+            theirDebt ? `${theirDebt} coins in debt.` : ``
+          }`;
+          continue;
+        }
+        leaderboardMessage += `${index + 1}. ${user.displayName} ${
+          user.customName ? `(${user.customName})` : ``
+        } (${theirLevel.level}) - **${user.coins}** coins. ${
           theirDebt ? `${theirDebt} coins in debt.` : ``
         }\n`;
       }
-
+      const embed = new EmbedBuilder()
+        .setTitle(`${leaderboardFirst}`)
+        .setDescription(leaderboardMessage)
+        .setColor("#FFD700");
       // Send the leaderboard message
-      await message.reply(leaderboardMessage);
+      return message.reply({ embeds: [embed] });
+
+      // await message.reply(leaderboardMessage);
     }
 
     // $GRID
@@ -384,15 +462,26 @@ function startBot() {
 
       const userId = message.author.id;
       const userCoins = await wallet.getCoins(userId);
-      const bettingLimit = 100000;
+      let bettingLimit = 100000;
+      const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+        `High Roller Pass`,
+        userId
+      );
+      if (doTheyHaveHighRollerPass) bettingLimit = 100000000;
       // Check if the user has enough coins
       if (userCoins < amount) {
         return message.reply("You don't have enough coins to start the grid.");
       }
       if (amount > 100000) {
-        return message.reply(
-          `You've hit the betting limit! The limit is ${bettingLimit}.`
-        );
+        if (doTheyHaveHighRollerPass && amount <= 100000000) {
+          message.reply(
+            `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`
+          );
+        } else {
+          return message.reply(
+            `You've hit the betting limit! The limit is ${bettingLimit}.`
+          );
+        }
       }
       // Deduct the coins from the user's wallet
       await wallet.removeCoins(userId, Number(amount));
@@ -573,7 +662,7 @@ function startBot() {
       const debtFreeAdd = args[3];
 
       // Add coins to the mentioned user's wallet
-      await wallet.addCoins(targetUserId, amount, true); // Ensure addCoins is awaited if async
+      await wallet.addCoins(targetUserId, amount, true, true); // Ensure addCoins is awaited if async
       if (debtFreeAdd !== "debtFree") {
         await wallet.addDebt(targetUserId, amount); // Ensure addDebt is awaited if async
       }
@@ -621,7 +710,7 @@ function startBot() {
           `You can't get that much coins. Your limit is ${limit} coins.`
         );
       }
-      await wallet.addCoins(targetUserId, amount, true);
+      await wallet.addCoins(targetUserId, amount, true, true);
       await wallet.addDebt(targetUserId, amount);
       await message.reply(
         `You have added **${amount}** coins to your wallet. Your debt: ${await wallet.getDebt(
@@ -679,7 +768,7 @@ function startBot() {
         return message.reply("You can't give yourself coins.");
       }
       // Add coins to the mentioned user's wallet
-      await wallet.addCoins(targetUserId, amount);
+      await wallet.addCoins(targetUserId, amount, true, true);
       await wallet.removeCoins(userId, amount);
       await message.reply(
         `<@${userId}> has added ${amount} coins to ${mentionedUser.username}'s wallet.`
@@ -707,6 +796,19 @@ function startBot() {
       let betAmount = parseInt(args[1]);
 
       console.log(`Received $roll command with bet amount: ${betAmount}`);
+      const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+        `High Roller Pass`,
+        userId
+      );
+      if (betAmount > 10000) {
+        if (doTheyHaveHighRollerPass && betAmount <= 1000000) {
+          message.reply(
+            `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`
+          );
+        } else {
+          return message.reply(`You've hit the betting limit!`);
+        }
+      }
 
       if (!isNaN(betAmount) && betAmount > 0) {
         const coins = await wallet.getCoins(userId);
@@ -743,7 +845,7 @@ function startBot() {
           }
 
           const result = await roll.roll(userId, betAmount, message);
-          generateRollPreviousButton(message.channel, result.betAmount);
+          generateRollPreviousButton(message.channel, result.betAmount, userId);
           generateWalletButton();
         } else {
           await message.reply("You don't have enough coins to place this bet.");
@@ -803,14 +905,24 @@ function startBot() {
       const args = message.content.split(" ");
       const betAmount = parseInt(args[1]);
 
-      if (betAmount > 100000001) {
-        message.reply(`You've hit the betting limit!`);
-        return;
+      const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+        `High Roller Pass`,
+        userId
+      );
+      if (betAmount > 100000) {
+        if (doTheyHaveHighRollerPass && amount <= 100000000) {
+          message.reply(
+            `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`
+          );
+        } else {
+          message.reply(`You've hit the betting limit!`);
+          return;
+        }
       }
       // Ne mozes da betujes ako nisi u room
 
       // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
-      if (isNaN(betAmount) || betAmount <= 0 || betAmount > 10000001) {
+      if (isNaN(betAmount) || betAmount <= 0 || betAmount > 100000000) {
         message.reply(`Bet amount invalid!`);
         return;
       }
@@ -1302,9 +1414,9 @@ function startBot() {
       components: [row],
     });
   }
-  function generateRollPreviousButton(channel, betAmount) {
+  function generateRollPreviousButton(channel, betAmount, userId) {
     const rollPrev = new ButtonBuilder()
-      .setCustomId(`roll_prev_${betAmount}`)
+      .setCustomId(`roll_prev_${betAmount}_${userId}`)
       .setLabel(`Roll Previous Amount (${betAmount})`)
       .setStyle(ButtonStyle.Success);
     const walletButton = generateWalletButton();
@@ -1364,19 +1476,27 @@ function startBot() {
         const channelId = interaction.channel.id;
         // Validate the input to ensure it's a valid number
         const betAmount = parseInt(customBet, 10);
+        let highRollerMessage = ``;
         // Process the custom bet (this is where you would add your bet logic)
-
-        if (betAmount > 100000001) {
-          await interaction.reply({
-            content: `You've hit the betting limit!`,
-            ephemeral: true,
-          });
-          return;
+        const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+          `High Roller Pass`,
+          userId
+        );
+        if (betAmount > 100000) {
+          if (doTheyHaveHighRollerPass && betAmount <= 100000000) {
+            highRollerMessage = `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`;
+          } else {
+            await interaction.reply({
+              content: `You've hit the betting limit!`,
+              ephemeral: true,
+            });
+            return;
+          }
         }
         // Ne mozes da betujes ako nisi u room
 
         // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
-        if (isNaN(betAmount) || betAmount <= 0 || betAmount > 10000001) {
+        if (isNaN(betAmount) || betAmount <= 0 || betAmount > 100000000) {
           await interaction.reply({
             content: `Bet amount invalid!`,
             ephemeral: true,
@@ -1421,7 +1541,7 @@ function startBot() {
           });
           return;
         }
-        await interaction.reply(whatDoItSay);
+        await interaction.reply(`${highRollerMessage}\n${whatDoItSay}`);
         return;
 
         // Add custom logic to handle bet (e.g., store bet amount, etc.)
@@ -1460,7 +1580,7 @@ function startBot() {
             ephemeral: true,
           });
         }
-        await wallet.addCoins(userId, amount, true);
+        await wallet.addCoins(userId, amount, true, true);
         await wallet.addDebt(userId, amount);
         const row = new ActionRowBuilder().addComponents(
           generateWalletButton()
@@ -1477,8 +1597,18 @@ function startBot() {
 
     if (interaction.customId.startsWith("roll")) {
       let match = interaction.customId.match(/\d+/);
+      let [action, amount, usersButton] = interaction.customId
+        .split("_")
+        .slice(1);
       let betAmount;
-
+      const userId = interaction.user.id;
+      if (usersButton !== userId) {
+        await interaction.reply({
+          content: `You can't use other people's buttons!`,
+          ephemeral: true,
+        });
+        return;
+      }
       if (match) {
         betAmount = parseInt(match[0], 10);
         console.log(`Button roll with bet amount: ${betAmount}`);
@@ -1491,7 +1621,18 @@ function startBot() {
         return;
       }
 
-      const userId = interaction.user.id;
+      let highRollerMessage = ``;
+      const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+        `High Roller Pass`,
+        userId
+      );
+      if (betAmount > 10000) {
+        if (doTheyHaveHighRollerPass && betAmount <= 1000000) {
+          highRollerMessage = `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`;
+        } else {
+          return interaction.reply(`You've hit the betting limit!`);
+        }
+      }
 
       if (!isNaN(betAmount) && betAmount > 0) {
         const coins = await wallet.getCoins(userId);
@@ -1529,7 +1670,11 @@ function startBot() {
           }
 
           const result = await roll.roll(userId, betAmount, interaction, true);
-          generateRollPreviousButton(interaction.channel, result.betAmount);
+          generateRollPreviousButton(
+            interaction.channel,
+            result.betAmount,
+            userId
+          );
           generateWalletButton();
         } else {
           return await interaction.reply({
@@ -1546,9 +1691,17 @@ function startBot() {
       return;
     }
     if (interaction.customId.startsWith("buy_")) {
-      let [action, userId] = interaction.customId.split("_").slice(1); // bj_hit_userId or bj_stand_userId
-      console.log(action, userId);
-      const message = await shop.buyLogic(action, userId);
+      let [action, usersButton] = interaction.customId.split("_").slice(1);
+      const userId = interaction.user.id;
+      console.log(action, usersButton);
+      if (usersButton !== userId) {
+        await interaction.reply({
+          content: `You can't interact with buttons created by others`,
+          ephemeral: true,
+        });
+        return;
+      }
+      const message = await shop.buyLogic(action, userId, wallet);
       await interaction.reply(message);
       return;
     }
@@ -1694,18 +1847,26 @@ function startBot() {
         if (action === "betAll") {
           betAmount = await wallet.getCoins(userId);
         }
+        let highRollerMessage = ``;
+        const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+          `High Roller Pass`,
+          userId
+        );
 
-        if (betAmount > 100000001) {
-          await interaction.reply({
-            content: `You've hit the betting limit!`,
-            ephemeral: true,
-          });
-          return;
+        if (betAmount > 100000) {
+          if (doTheyHaveHighRollerPass && betAmount <= 100000000) {
+            highRollerMessage = `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`;
+          } else {
+            await interaction.reply({
+              content: `You've hit the betting limit!`,
+              ephemeral: true,
+            });
+            return;
+          }
         }
-        // Ne mozes da betujes ako nisi u room
 
         // I ne mozes da betujes ako ukucas nesto invalidno za betAmount
-        if (isNaN(betAmount) || betAmount <= 0 || betAmount > 10000001) {
+        if (isNaN(betAmount) || betAmount <= 0 || betAmount > 100000000) {
           await interaction.reply({
             content: `Bet amount invalid!`,
             ephemeral: true,
@@ -1750,7 +1911,7 @@ function startBot() {
           });
           return;
         }
-        await interaction.reply(whatDoItSay);
+        await interaction.reply(`${highRollerMessage}\n${whatDoItSay}`);
         return;
       }
       if (action === `leaveRoom`) {
@@ -2188,6 +2349,7 @@ function startBot() {
         );
         await xpSystem.addXp(gridData.userId, xpGainForSmallWin);
       }
+      // const doTheyHaveWealthMultiplier = await shop.checkIfHaveInInventory(`Wealth Multiplier`,userId);
       const coinMessage = await wallet.addCoins(gridData.userId, payout);
 
       // Add the payout to the user's wallet

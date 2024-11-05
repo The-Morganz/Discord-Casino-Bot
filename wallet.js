@@ -34,9 +34,19 @@ async function getDebt(userId) {
 // Add debt to a user
 async function addDebt(userId, amount) {
   const user = await initializeWallet(userId);
+  const doTheyHaveInterestFree = await shopAndItems.checkIfHaveInInventory(
+    `Interest-Free Loan`,
+    userId
+  );
   if (typeof amount === "number" && amount > 0) {
-    user.debt += Math.round(amount + amount * 0.05);
-    await user.save();
+    if (doTheyHaveInterestFree) {
+      user.debt += Math.round(amount);
+      await shopAndItems.removeSpecificItem(userId, `Interest-Free Loan`);
+      await user.save();
+    } else {
+      user.debt += Math.round(amount + amount * 0.05);
+      await user.save();
+    }
   } else {
     console.error(`Invalid debt amount: ${amount}`);
   }
@@ -60,22 +70,13 @@ async function clearDebt(userId) {
   await user.save();
 }
 
-// function addCoins(userId, amount, debtFree = false) {
-//   if (typeof amount === "number" && amount > 0) {
-//     let message = "";
-//     if (wallets[userId].debt > 0 && !debtFree) {
-//       let tenPercentOffWinnings = Math.round(amount * 0.1);
-//       payDebt(userId, tenPercentOffWinnings);
-//       amount = Math.round(amount * 0.9);
-//       message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
-//       if (wallets[userId].debt <= 0) {
-//         message += `\nYou're debt free!`;
-//       }
-//     }
-//   }
-// }
 // Add coins to a user's wallet
-async function addCoins(userId, amount, debtFree = false) {
+async function addCoins(
+  userId,
+  amount,
+  debtFree = false,
+  ignoreWealthMultiplier = false
+) {
   const user = await initializeWallet(userId);
   if (typeof amount === "number" && amount > 0) {
     let message = "";
@@ -83,10 +84,18 @@ async function addCoins(userId, amount, debtFree = false) {
       const tenPercentOffWinnings = Math.round(amount * 0.1);
       await payDebt(userId, tenPercentOffWinnings);
       amount = Math.round(amount * 0.9);
-      message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
+      message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)\n`;
       if (userId.debt <= 0) {
         message += `\nYou're debt free!`;
       }
+    }
+    const doTheyHaveWealthMultiplier =
+      await shopAndItems.checkIfHaveInInventory(`Wealth Multiplier`, userId);
+    if (doTheyHaveWealthMultiplier && !ignoreWealthMultiplier) {
+      message += `More coins come your way. You earn ${
+        amount * 0.5
+      } extra coins.`;
+      amount = amount * 1.5;
     }
     const roundedAmount = Math.round(amount);
     user.coins += Math.trunc(roundedAmount);
@@ -98,19 +107,20 @@ async function addCoins(userId, amount, debtFree = false) {
 }
 
 // Remove coins from a user's wallet
-async function removeCoins(userId, amount) {
+async function removeCoins(userId, amount, ignoreShield) {
   const user = await initializeWallet(userId);
   // checkIfHaveInInventory
   const doTheyHaveCoinShield = await shopAndItems.checkIfHaveInInventory(
     `Coin Shield`,
     userId
   );
-  if (doTheyHaveCoinShield) {
-    amount = amount * 0.75;
-    shopAndItems.removeSpecificItem(userId, `Coin Shield`);
+  if (doTheyHaveCoinShield && !ignoreShield) {
+    amount = amount * 0.9;
+    // shopAndItems.removeSpecificItem(userId, `Coin Shield`);
   }
   if (typeof amount === "number" && amount > 0 && user.coins >= amount) {
-    user.coins -= amount;
+    const roundedAmount = Math.round(amount);
+    user.coins -= Math.trunc(roundedAmount);
     await user.save();
   } else {
     console.error(`Invalid amount or insufficient balance: ${amount}`);
@@ -176,8 +186,16 @@ async function getTopUsers(message) {
       topUsers.map(async (user) => {
         try {
           const member = await message.guild.members.fetch(user.userId);
+          const customUserName = await shopAndItems.getCustomName(user.userId);
+
           const displayName = member ? member.displayName : "Unknown User";
-          return { displayName, coins: user.coins, userId: user.userId };
+
+          return {
+            displayName,
+            coins: user.coins,
+            userId: user.userId,
+            customName: customUserName,
+          };
         } catch (err) {
           console.error(
             `Error fetching member for userId: ${user.userId}`,
@@ -187,6 +205,7 @@ async function getTopUsers(message) {
             displayName: "Unknown User",
             coins: user.coins,
             userId: user.userId,
+            customName: customUserName,
           };
         }
       })
