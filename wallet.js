@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const User = require("./models/User"); // Import Mongoose User model
+const shopAndItems = require(`./shop/shop`);
 
 // Get or initialize user's wallet in MongoDB
 async function initializeWallet(userId) {
@@ -59,20 +60,20 @@ async function clearDebt(userId) {
   await user.save();
 }
 
-function addCoins(userId, amount, debtFree = false) {
-  if (typeof amount === "number" && amount > 0) {
-    let message = "";
-    if (wallets[userId].debt > 0 && !debtFree) {
-      let tenPercentOffWinnings = Math.round(amount * 0.1);
-      payDebt(userId, tenPercentOffWinnings);
-      amount = Math.round(amount * 0.9);
-      message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
-      if (wallets[userId].debt <= 0) {
-        message += `\nYou're debt free!`;
-      }
-    }
-  }
-}
+// function addCoins(userId, amount, debtFree = false) {
+//   if (typeof amount === "number" && amount > 0) {
+//     let message = "";
+//     if (wallets[userId].debt > 0 && !debtFree) {
+//       let tenPercentOffWinnings = Math.round(amount * 0.1);
+//       payDebt(userId, tenPercentOffWinnings);
+//       amount = Math.round(amount * 0.9);
+//       message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)`;
+//       if (wallets[userId].debt <= 0) {
+//         message += `\nYou're debt free!`;
+//       }
+//     }
+//   }
+// }
 // Add coins to a user's wallet
 async function addCoins(userId, amount, debtFree = false) {
   const user = await initializeWallet(userId);
@@ -87,7 +88,8 @@ async function addCoins(userId, amount, debtFree = false) {
         message += `\nYou're debt free!`;
       }
     }
-    user.coins += amount;
+    const roundedAmount = Math.round(amount);
+    user.coins += Math.trunc(roundedAmount);
     await user.save();
     return message;
   } else {
@@ -98,6 +100,15 @@ async function addCoins(userId, amount, debtFree = false) {
 // Remove coins from a user's wallet
 async function removeCoins(userId, amount) {
   const user = await initializeWallet(userId);
+  // checkIfHaveInInventory
+  const doTheyHaveCoinShield = await shopAndItems.checkIfHaveInInventory(
+    `Coin Shield`,
+    userId
+  );
+  if (doTheyHaveCoinShield) {
+    amount = amount * 0.75;
+    shopAndItems.removeSpecificItem(userId, `Coin Shield`);
+  }
   if (typeof amount === "number" && amount > 0 && user.coins >= amount) {
     user.coins -= amount;
     await user.save();

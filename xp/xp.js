@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const filePath = path.join(__dirname, "xp.json");
-const UserXP = require('../models/UserXP');
+const shopAndItems = require(`../shop/shop`);
+const UserXP = require("../models/UserXP");
 
 // Helper function to read the current XP data
 function readXpData() {
@@ -24,19 +25,29 @@ function writeXpData(data) {
 async function addXp(userId, amount) {
   let userXP = await UserXP.findOne({ userId });
   if (!userXP) {
-      userXP = new UserXP({ userId });
+    userXP = new UserXP({ userId });
   }
-
+  const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
+    `XP Booster`,
+    userId
+  );
+  if (doTheyHaveBooster) {
+    amount = amount * 2;
+    console.log(amount);
+  }
+  console.log(doTheyHaveBooster);
   userXP.xp += Math.round(amount);
 
   // Level up if XP meets or exceeds the requirement
   if (userXP.xp >= userXP.nextLevelXpReq) {
-      await levelUp(userId, userXP);
+    await levelUp(userId, userXP);
   } else {
-      await userXP.save();
+    await userXP.save();
   }
 
-  console.log(`Added ${amount} XP to user ${userId}. They now have ${userXP.xp} XP.`);
+  console.log(
+    `Added ${amount} XP to user ${userId}. They now have ${userXP.xp} XP.`
+  );
 }
 
 // Function to handle leveling up
@@ -54,8 +65,8 @@ async function levelUp(userId, userXP) {
 async function xpOverview(userId, value = false) {
   let userXP = await UserXP.findOne({ userId });
   if (!userXP) {
-      userXP = new UserXP({ userId });
-      await userXP.save();
+    userXP = new UserXP({ userId });
+    await userXP.save();
   }
 
   const levelOfPlayer = userXP.level;
@@ -63,7 +74,7 @@ async function xpOverview(userId, value = false) {
   const xpNeeded = userXP.nextLevelXpReq;
 
   let message = `<@${userId}> is level **${levelOfPlayer}**. They have **${xpOfPlayer} XP**, and need ${
-      xpNeeded - xpOfPlayer
+    xpNeeded - xpOfPlayer
   } XP to level up.`;
 
   return value ? userXP : message;
@@ -73,8 +84,8 @@ async function xpOverview(userId, value = false) {
 async function getXpData(userId) {
   let userXP = await UserXP.findOne({ userId });
   if (!userXP) {
-      userXP = new UserXP({ userId });
-      await userXP.save();
+    userXP = new UserXP({ userId });
+    await userXP.save();
   }
   return userXP;
 }
@@ -85,4 +96,11 @@ function calculateXpGain(betAmount, normalXpGain) {
   return (percentage / 100) * normalXpGain;
 }
 
-module.exports = { addXp, getXpData, xpOverview, calculateXpGain, readXpData, writeXpData };
+module.exports = {
+  addXp,
+  getXpData,
+  xpOverview,
+  calculateXpGain,
+  readXpData,
+  writeXpData,
+};

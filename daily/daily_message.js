@@ -1,6 +1,9 @@
 const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
+const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
+let gainFromChallenge = 250;
+
 // Generate a random message requirement between 20 and 40
 function generateRandomMessageRequirement() {
   return Math.floor(Math.random() * 11) + 5; // Generates a random number between 20 and 40
@@ -16,7 +19,6 @@ function initializeMessageChallenge(userId) {
     gainedXpReward: false,
   };
 }
-let gainFromChallenge = 500;
 
 async function incrementMessageCount(userChallenge, userId) {
   if (!userChallenge.completed) {
@@ -26,7 +28,14 @@ async function incrementMessageCount(userChallenge, userId) {
     if (userChallenge.messages >= userChallenge.requiredMessages) {
       userChallenge.completed = true;
       const theirXP = await xpSystem.getXpData(userId);
-      const gain = 500 * theirXP.multiplier;
+      let gain = 500 * theirXP.multiplier;
+      const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
+        `Double Challenge Rewards`,
+        userId
+      );
+      if (doTheyHaveBooster) {
+        gain = gain * 2;
+      }
       await wallet.addCoins(userId, gain);
       console.log(
         `User ${userId} has completed the message challenge and earned ${gain} coins.`
@@ -45,7 +54,14 @@ async function incrementMessageCount(userChallenge, userId) {
 async function getMessageStatus(userChallenge, userId) {
   const { messages, requiredMessages, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
-  const gain = gainFromChallenge * theirXP.multiplier;
+  let gain = gainFromChallenge * theirXP.multiplier;
+  const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
+    `Double Challenge Rewards`,
+    userId
+  );
+  if (doTheyHaveBooster) {
+    gain = gain * 2;
+  }
   if (completed) {
     return `🎉 You have completed today's message challenge and earned ${gain} coins!`;
   } else {

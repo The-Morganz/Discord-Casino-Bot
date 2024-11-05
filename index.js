@@ -10,6 +10,7 @@ const {
   TextInputStyle,
   channelLink,
   GuildForumThreadManager,
+  EmbedBuilder,
 } = require("discord.js");
 const wallet = require("./wallet");
 const roll = require("./roll");
@@ -34,6 +35,9 @@ const User = require("./models/User");
 const DailyChallenge = require("./models/DailyChallenge");
 const UserXP = require("./models/UserXP");
 const { format } = require("date-fns");
+const Inventories = require("./models/UserInventory");
+const shop = require("./shop/shop");
+const { generateShop } = require(`./shop/generateShop`);
 const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
@@ -261,6 +265,67 @@ function startBot() {
     if (message.content.toLowerCase() === "$help") {
       const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned a daily challenge for some quick coins.📅\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n⏩**"$toggleanim"**- Toggle rolling animation.⏩\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:`;
       message.author.send(theHelpMessage);
+    }
+
+    if (message.content.toLowerCase() === "$shop") {
+      await shop.saveInDB();
+      const { embed, rows } = await generateShop(
+        ActionRowBuilder,
+        ButtonBuilder,
+        ButtonStyle,
+        EmbedBuilder,
+        userId,
+        wallet
+      );
+      return message.channel.send({ embeds: [embed], components: rows });
+    }
+    if (message.content.toLowerCase() === `$shophelp`) {
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- You only lose 75% of your bet when you lose. Removes after use.`;
+      message.author.send(theHelpMessage);
+      return;
+    }
+    if (message.content.toLowerCase() === `$removeitem`) {
+      if (message.author.id !== ownerId && message.author.id !== ownerId2) {
+        return message.reply("You don't have permission to use this command.");
+      }
+
+      const args = message.content.split(" ");
+      const itemName = parseInt(args[1]);
+
+      // Get the tagged user from the message (the second argument)
+      const mentionedUser = message.mentions.users.first();
+
+      // Check if a user is tagged
+      if (!mentionedUser) {
+        return message.reply(
+          "Please mention a valid user to add coins to their wallet."
+        );
+      }
+
+      // Extract the user ID of the mentioned user
+      const targetUserId = mentionedUser.id;
+
+      await shop.removeSpecificItem(mentionedUser, itemName);
+
+      // Send a confirmation message
+      await message.reply(
+        `You have removed ${itemName} from <@${mentionedUser}>`
+      );
+    }
+
+    if (
+      message.content.toLowerCase() === `$inventory` ||
+      message.content.toLowerCase() === `$inv`
+    ) {
+      const inventory = await shop.getUserInventory(userId);
+      let messageToSend = `You have:`;
+      inventory.forEach((item) => {
+        messageToSend += ` "${item.itemName}"`;
+      });
+      if (messageToSend === `You have:`) {
+        return message.reply(`You don't have any items!`);
+      }
+      return await message.reply(messageToSend);
     }
 
     if (
@@ -1478,6 +1543,13 @@ function startBot() {
           ephemeral: true,
         });
       }
+      return;
+    }
+    if (interaction.customId.startsWith("buy_")) {
+      let [action, userId] = interaction.customId.split("_").slice(1); // bj_hit_userId or bj_stand_userId
+      console.log(action, userId);
+      const message = await shop.buyLogic(action, userId);
+      await interaction.reply(message);
       return;
     }
 
