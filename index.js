@@ -39,6 +39,7 @@ const { format } = require("date-fns");
 const Inventories = require("./models/UserInventory");
 const shop = require("./shop/shop");
 const { generateShop } = require(`./shop/generateShop`);
+const playerInfo = require(`./playerinfo`);
 const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
@@ -281,7 +282,8 @@ function startBot() {
       return message.reply({ embeds: [embed], components: rows });
     }
     if (message.content.toLowerCase() === `$shophelp`) {
-      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Players Custom Name"**- Changes another players' custom name to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.5 more coins on every win! Expires after a hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.`;
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, upon winning the bet, you will get a 20% bonus. Removes after one use, win or loss.`;
+      // **"Debt Eraser"**- Cuts your debt in half. You can buy this item while you have debt, which will use the item instantly.Removes after one use.
       message.author.send(theHelpMessage);
       return;
     }
@@ -342,15 +344,15 @@ function startBot() {
       shop.removeSpecificItem(userId, `Custom Name License`);
       return;
     }
-    // Change Players Custom Name
+    // Change Custom Name
     if (message.content.toLowerCase().startsWith("$changename")) {
       const doTheyHaveLicense = await shop.checkIfHaveInInventory(
-        `Change Players Custom Name`,
+        `Change Custom Name`,
         userId
       );
       if (!doTheyHaveLicense) {
         return message.reply(
-          `You don't have the Change Players Custom Name item to be able to do this!`
+          `You don't have the Change Custom Name item to be able to do this!`
         );
       }
 
@@ -375,7 +377,27 @@ function startBot() {
       }
       shop.customNameSetter(args, targetUserId, true);
       message.reply(`${mentionedUser.username} custom name has been changed. `);
-      shop.removeSpecificItem(userId, `Change Players Custom Name`);
+      shop.removeSpecificItem(userId, `Change Custom Name`);
+      return;
+    }
+
+    if (message.content.toLowerCase().startsWith(`$playerinfo`)) {
+      const args = message.content.split(" ");
+      // Get the tagged user from the message (the second argument)
+      const mentionedUser = message.mentions.users.first();
+      console.log(mentionedUser);
+      // Check if a user is tagged
+      if (!mentionedUser) {
+        return message.reply("Please mention a valid user.");
+      }
+
+      const targetUserId = mentionedUser.id;
+      const playerInfoString = await playerInfo.getPlayerInfoString(
+        mentionedUser,
+        targetUserId,
+        userId
+      );
+      message.reply(playerInfoString);
       return;
     }
 
@@ -386,12 +408,12 @@ function startBot() {
       const inventory = await shop.getUserInventory(userId);
       let messageToSend = `You have:`;
       inventory.forEach((item) => {
-        messageToSend += ` "${item.itemName}"`;
+        messageToSend += `\n${item.itemName}`;
       });
       if (messageToSend === `You have:`) {
         return message.reply(`You don't have any items!`);
       }
-      return await message.reply(messageToSend);
+      return await message.author.send(messageToSend);
     }
 
     if (
@@ -444,7 +466,7 @@ function startBot() {
         );
       }
 
-      const amount = parseInt(args[1]); // Get the coin amount
+      let amount = parseInt(args[1]); // Get the coin amount
       const mineCount = parseInt(args[2]); // Get the mine count
 
       // Validate the bet amount and mine count
@@ -483,6 +505,24 @@ function startBot() {
           );
         }
       }
+      const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+        `Risk Taker's Badge`,
+        userId
+      );
+      let riskTakerExtra = 0;
+      if (doTheyHaveRiskTaker) {
+        const theirCoinAmount = await wallet.getCoins(userId);
+
+        // Define the threshold (80% of their total coins)
+        const riskThreshold = theirCoinAmount * 0.8;
+        // Check if the bet amount is greater than or equal to the threshold
+        if (amount >= riskThreshold) {
+          // Increase bet amount by 20% of their total coins
+          riskTakerExtra = theirCoinAmount * 0.2;
+          riskTakerExtra = Math.round(riskTakerExtra);
+          await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+        }
+      }
       // Deduct the coins from the user's wallet
       await wallet.removeCoins(userId, Number(amount));
 
@@ -496,7 +536,7 @@ function startBot() {
       gridOwners[sentMessage.id] = {
         userId: message.author.id,
         isComplete: false,
-        betAmount: amount,
+        betAmount: amount + riskTakerExtra,
         mineCount: mineCount, // Store the mine count
         revealedMultipliers: [],
         fromButton: false,
@@ -662,7 +702,7 @@ function startBot() {
       const debtFreeAdd = args[3];
 
       // Add coins to the mentioned user's wallet
-      await wallet.addCoins(targetUserId, amount, true, true); // Ensure addCoins is awaited if async
+      await wallet.addCoins(targetUserId, amount, true, true, true); // Ensure addCoins is awaited if async
       if (debtFreeAdd !== "debtFree") {
         await wallet.addDebt(targetUserId, amount); // Ensure addDebt is awaited if async
       }
@@ -710,10 +750,17 @@ function startBot() {
           `You can't get that much coins. Your limit is ${limit} coins.`
         );
       }
-      await wallet.addCoins(targetUserId, amount, true, true);
+      const doTheyHaveDebtEraser = await shop.checkIfHaveInInventory(
+        `Debt Eraser`,
+        userId
+      );
+
+      await wallet.addCoins(targetUserId, amount, true, true, true);
       await wallet.addDebt(targetUserId, amount);
       await message.reply(
-        `You have added **${amount}** coins to your wallet. Your debt: ${await wallet.getDebt(
+        `You have added **${amount}** coins to your wallet.${
+          doTheyHaveDebtEraser ? `*Your debt has been cut in half*` : ``
+        } Your debt: ${await wallet.getDebt(
           targetUserId
         )}.You can pay off your debt fully with "$paydebt".`
       );
@@ -732,7 +779,7 @@ function startBot() {
         return;
       }
       if (playerCoins >= playerDebt) {
-        await wallet.removeCoins(userId, playerDebt);
+        await wallet.removeCoins(userId, playerDebt, true, true);
         await wallet.payDebt(userId, playerDebt);
         await message.reply(`You have paid off your debt!`);
         return;
@@ -768,8 +815,8 @@ function startBot() {
         return message.reply("You can't give yourself coins.");
       }
       // Add coins to the mentioned user's wallet
-      await wallet.addCoins(targetUserId, amount, true, true);
-      await wallet.removeCoins(userId, amount);
+      await wallet.addCoins(targetUserId, amount, true, true, true);
+      await wallet.removeCoins(userId, amount, true, true);
       await message.reply(
         `<@${userId}> has added ${amount} coins to ${mentionedUser.username}'s wallet.`
       );
@@ -829,6 +876,11 @@ function startBot() {
           );
           return;
         }
+        const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+          `Risk Taker's Badge`,
+          userId
+        );
+        let riskTakerExtra = 0;
 
         if (coins >= betAmount || freeSpinBetAmount !== null) {
           if (freeSpinBetAmount !== null) {
@@ -838,13 +890,27 @@ function startBot() {
             );
             await wallet.useFreeSpin(userId); // Only consume one free spin here
           } else {
+            if (doTheyHaveRiskTaker) {
+              const theirCoinAmount = await wallet.getCoins(userId);
+              const riskThreshold = theirCoinAmount * 0.8;
+              console.log(riskThreshold);
+              if (betAmount >= riskThreshold) {
+                riskTakerExtra = theirCoinAmount * 0.2;
+                riskTakerExtra = Math.round(riskTakerExtra);
+                await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+              }
+            }
             console.log(
               `User has enough coins. Attempting to remove ${betAmount} coins...`
             );
             await wallet.removeCoins(userId, betAmount);
           }
 
-          const result = await roll.roll(userId, betAmount, message);
+          const result = await roll.roll(
+            userId,
+            betAmount + riskTakerExtra,
+            message
+          );
           generateRollPreviousButton(message.channel, result.betAmount, userId);
           generateWalletButton();
         } else {
@@ -937,11 +1003,29 @@ function startBot() {
         message.reply(`You don't have enough money to make this bet!`);
         return;
       }
+      const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+        `Risk Taker's Badge`,
+        userId
+      );
+      let riskTakerExtra = 0;
+      if (doTheyHaveRiskTaker) {
+        const theirCoinAmount = await wallet.getCoins(userId);
+
+        // Define the threshold (80% of their total coins)
+        const riskThreshold = theirCoinAmount * 0.8;
+        // Check if the bet amount is greater than or equal to the threshold
+        if (betAmount >= riskThreshold) {
+          // Increase bet amount by 20% of their total coins
+          riskTakerExtra = theirCoinAmount * 0.2;
+          riskTakerExtra = Math.round(riskTakerExtra);
+          await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+        }
+      }
       await wallet.removeCoins(userId, betAmount);
       const whatDoItSay = await blackjackBets.addBet(
         userId,
         channelId,
-        betAmount
+        betAmount + riskTakerExtra
       );
       // stard da gamez
       if (whatDoItSay === "true") {
@@ -1124,7 +1208,8 @@ function startBot() {
         message.reply(
           `The DEALER has taken 10 coins from <@${userId}>'s wallet`
         );
-        await wallet.removeCoins(userId, 10);
+        await wallet.removeCoins(userId, 10, true);
+
         return;
       } else {
         message.reply(
@@ -1518,11 +1603,29 @@ function startBot() {
           });
           return;
         }
+        const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+          `Risk Taker's Badge`,
+          userId
+        );
+        let riskTakerExtra = 0;
+        if (doTheyHaveRiskTaker) {
+          const theirCoinAmount = await wallet.getCoins(userId);
+
+          // Define the threshold (80% of their total coins)
+          const riskThreshold = theirCoinAmount * 0.8;
+          // Check if the bet amount is greater than or equal to the threshold
+          if (Number(betAmount) >= riskThreshold) {
+            // Increase bet amount by 20% of their total coins
+            riskTakerExtra = theirCoinAmount * 0.2;
+            riskTakerExtra = Math.round(riskTakerExtra);
+            await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+          }
+        }
         await wallet.removeCoins(userId, Number(betAmount));
         const whatDoItSay = await blackjackBets.addBet(
           userId,
           channelId,
-          betAmount
+          betAmount + riskTakerExtra
         );
         // stard da gamez
         if (whatDoItSay === "true") {
@@ -1580,13 +1683,19 @@ function startBot() {
             ephemeral: true,
           });
         }
-        await wallet.addCoins(userId, amount, true, true);
+        const doTheyHaveDebtEraser = await shop.checkIfHaveInInventory(
+          `Debt Eraser`,
+          userId
+        );
+        await wallet.addCoins(userId, amount, true, true, true);
         await wallet.addDebt(userId, amount);
         const row = new ActionRowBuilder().addComponents(
           generateWalletButton()
         );
         await interaction.reply({
-          content: `You have added **${amount}** coins to your wallet. Your debt: ${await wallet.getDebt(
+          content: `You have added **${amount}** coins to your wallet.${
+            doTheyHaveDebtEraser ? `*Your debt has been cut in half*.` : ``
+          } Your debt: ${await wallet.getDebt(
             userId
           )}.You can pay off your debt fully with "$paydebt" or "$loan".`,
           components: [row],
@@ -1653,6 +1762,11 @@ function startBot() {
           // });
           return;
         }
+        const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+          `Risk Taker's Badge`,
+          userId
+        );
+        let riskTakerExtra = 0;
 
         if (coins >= betAmount || freeSpinBetAmount !== null) {
           if (freeSpinBetAmount !== null) {
@@ -1666,16 +1780,40 @@ function startBot() {
             console.log(
               `User has enough coins. Attempting to remove ${betAmount} coins...`
             );
+            if (doTheyHaveRiskTaker) {
+              const theirCoinAmount = await wallet.getCoins(userId);
+
+              // Define the threshold (80% of their total coins)
+              const riskThreshold = theirCoinAmount * 0.8;
+              // Check if the bet amount is greater than or equal to the threshold
+              if (betAmount >= riskThreshold) {
+                // Increase bet amount by 20% of their total coins
+                riskTakerExtra = theirCoinAmount * 0.2;
+                riskTakerExtra = Math.round(riskTakerExtra);
+                await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+              }
+            }
             await wallet.removeCoins(userId, betAmount);
           }
-
-          const result = await roll.roll(userId, betAmount, interaction, true);
-          generateRollPreviousButton(
-            interaction.channel,
-            result.betAmount,
-            userId
-          );
-          generateWalletButton();
+          try {
+            const result = await roll.roll(
+              userId,
+              betAmount + riskTakerExtra,
+              interaction,
+              true
+            );
+            generateRollPreviousButton(
+              interaction.channel,
+              result.betAmount,
+              userId
+            );
+            generateWalletButton();
+          } catch (err) {
+            return await interaction.reply({
+              content: `Something went wrong... Try again. (Error:${err})`,
+              ephemeral: true,
+            });
+          }
         } else {
           return await interaction.reply({
             content: "You don't have enough coins to place this bet.",
@@ -1702,8 +1840,38 @@ function startBot() {
         return;
       }
       const message = await shop.buyLogic(action, userId, wallet);
-      await interaction.reply(message);
+      const doTheyHaveLevelJump = await shop.checkIfHaveInInventory(
+        `Level Jump`,
+        userId
+      );
+      if (doTheyHaveLevelJump) {
+        const xpInfo = await xpSystem.getXpData(userId);
+        const xpNeededToLevelUp = xpInfo.nextLevelXpReq - xpInfo.xp;
+        await xpSystem.addXp(userId, xpNeededToLevelUp, true);
+        await shop.removeSpecificItem(userId, `Level Jump`);
+        return await interaction.reply({
+          content: `You bought Level Jump and used it!`,
+          ephemeral: true,
+        });
+      }
+      await interaction.reply({ content: message, ephemeral: true });
       return;
+      // const doTheyHaveDebtEraser = await shop.checkIfHaveInInventory(
+      //   `Debt Eraser`,
+      //   userId
+      // );
+      // if (doTheyHaveDebtEraser) {
+      //   const usersDebt = await wallet.getDebt(userId);
+      //   if (usersDebt > 0) {
+      //     await wallet.payDebt(userId, usersDebt * 0.5);
+      //     await interaction.reply(
+      //       `${message}, and have cleared 50% of your debt!`
+      //     );
+      //     await shop.removeSpecificItem(userId, `Debt Eraser`);
+      //     return;
+      //   }
+      //   return await interaction.reply(message);
+      // }
     }
 
     if (interaction.customId.startsWith("bj_")) {
@@ -1888,11 +2056,29 @@ function startBot() {
           });
           return;
         }
+        const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+          `Risk Taker's Badge`,
+          userId
+        );
+        let riskTakerExtra = 0;
+        if (doTheyHaveRiskTaker) {
+          const theirCoinAmount = await wallet.getCoins(userId);
+
+          // Define the threshold (80% of their total coins)
+          const riskThreshold = theirCoinAmount * 0.8;
+          // Check if the bet amount is greater than or equal to the threshold
+          if (betAmount >= riskThreshold) {
+            // Increase bet amount by 20% of their total coins
+            riskTakerExtra = theirCoinAmount * 0.2;
+            riskTakerExtra = Math.round(riskTakerExtra);
+            await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+          }
+        }
         await wallet.removeCoins(userId, betAmount);
         const whatDoItSay = await blackjackBets.addBet(
           userId,
           channelId,
-          betAmount
+          betAmount + riskTakerExtra
         );
         // stard da gamez
         if (whatDoItSay === "true") {
@@ -2187,7 +2373,7 @@ function startBot() {
           generateWalletButton()
         );
         if (playerCoins >= playerDebt) {
-          await wallet.removeCoins(userId, playerDebt);
+          await wallet.removeCoins(userId, playerDebt, true, true);
           await wallet.payDebt(userId, playerDebt);
           await interaction.reply({
             content: `You have paid off your debt!`,
@@ -2241,8 +2427,25 @@ function startBot() {
             "You already have an active grid! Complete it before creating a new one."
           );
         }
-        console.log(betAmount);
-        console.log(`type shit`);
+        const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+          `Risk Taker's Badge`,
+          userId
+        );
+        let riskTakerExtra = 0;
+        if (doTheyHaveRiskTaker) {
+          const theirCoinAmount = await wallet.getCoins(userId);
+
+          // Define the threshold (80% of their total coins)
+          const riskThreshold = theirCoinAmount * 0.8;
+          // Check if the bet amount is greater than or equal to the threshold
+          if (betAmount >= riskThreshold) {
+            // Increase bet amount by 20% of their total coins
+            riskTakerExtra = theirCoinAmount * 0.2;
+            riskTakerExtra = Math.round(riskTakerExtra);
+            await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+          }
+        }
+
         await wallet.removeCoins(userId, Number(betAmount));
         const buttonGrid = grid.createButtonGrid(
           Number(mineCount),
@@ -2259,7 +2462,7 @@ function startBot() {
         gridOwners[interaction.id] = {
           userId: interaction.user.id,
           isComplete: false,
-          betAmount: Number(betAmount),
+          betAmount: Number(betAmount) + riskTakerExtra,
           mineCount: Number(mineCount), // Add mineCount here
           revealedMultipliers: [],
           fromButton: true,
@@ -2373,7 +2576,7 @@ function startBot() {
         content: `Game ended! <@${
           interaction.user.id
         }> earned ${payout} coins.${
-          coinMessage !== `` ? `\n*${coinMessage}*` : ``
+          coinMessage !== `` ? `\n${coinMessage}` : ``
         }`,
         components: [row],
       });

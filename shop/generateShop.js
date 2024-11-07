@@ -19,7 +19,7 @@ async function generateShop(
 
     const button = new ButtonBuilder()
       .setCustomId(`buy_${item.name}_${userId}`)
-      .setLabel(`${item.name} - ${item.price} coins`)
+      .setLabel(`${item.emoji}${item.name} - ${item.price} coins`)
       .setStyle(canBuy ? ButtonStyle.Success : ButtonStyle.Danger);
     row.addComponents(button);
 

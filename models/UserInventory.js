@@ -5,6 +5,7 @@ const inventoryItemsSchema = new mongoose.Schema({
   price: { type: String, required: true },
   startTime: { type: Number, required: false },
   endTime: { type: Number, required: false },
+  riskTaker: { type: Boolean, default: false },
 });
 
 const inventorySchema = new mongoose.Schema({

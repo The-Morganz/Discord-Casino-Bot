@@ -32,10 +32,16 @@ async function incrementImageCount(userChallenge, userId) {
       if (doTheyHaveBooster) {
         gain = gain * 2;
       }
-      const coinMessage = await wallet.addCoins(userId, gain); // Reward the user with coins
+      const coinMessage = await wallet.addCoins(
+        userId,
+        gain,
+        false,
+        false,
+        true
+      ); // Reward the user with coins
       console.log(
         `User ${userId} has completed the image challenge and earned ${gain} coins.${
-          coinMessage !== `` ? `\n*${coinMessage}*` : ``
+          coinMessage !== `` ? `\n${coinMessage}` : ``
         }`
       );
     }

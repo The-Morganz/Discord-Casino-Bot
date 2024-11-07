@@ -22,7 +22,7 @@ function writeXpData(data) {
 }
 
 // Function to add XP to a user
-async function addXp(userId, amount) {
+async function addXp(userId, amount, ignoreBooster = false) {
   let userXP = await UserXP.findOne({ userId });
   if (!userXP) {
     userXP = new UserXP({ userId });
@@ -31,11 +31,10 @@ async function addXp(userId, amount) {
     `XP Booster`,
     userId
   );
-  if (doTheyHaveBooster) {
+  if (doTheyHaveBooster && !ignoreBooster) {
     amount = amount * 2;
     console.log(amount);
   }
-  console.log(doTheyHaveBooster);
   userXP.xp += Math.round(amount);
 
   // Level up if XP meets or exceeds the requirement
@@ -48,6 +47,21 @@ async function addXp(userId, amount) {
   console.log(
     `Added ${amount} XP to user ${userId}. They now have ${userXP.xp} XP.`
   );
+}
+async function removeXp(userId, amount) {
+  let userXp = await UserXP.findOne({ userId });
+  if (!userXp) {
+    userXp = new UserXP({ userId });
+  }
+  userXp.xp -= Math.round(amount);
+
+  // Level up if XP meets or exceeds the requirement
+  if (userXp.xp <= 0) {
+    userXp.xp = 0;
+    await userXp.save();
+  } else {
+    await userXp.save();
+  }
 }
 
 // Function to handle leveling up
@@ -98,6 +112,7 @@ function calculateXpGain(betAmount, normalXpGain) {
 
 module.exports = {
   addXp,
+  removeXp,
   getXpData,
   xpOverview,
   calculateXpGain,

@@ -1,4 +1,6 @@
 const wallet = require("./wallet");
+const shopAndItems = require(`./shop/shop`);
+const xpSystem = require(`./xp/xp`);
 
 // Utility function to create a delay
 function sleep(ms) {
@@ -107,11 +109,19 @@ async function flipCoin(userId) {
   // Randomly determine heads or tails
   const flipResult = Math.random() < 0.5 ? "heads" : "tails";
   let winnerId;
-
+  let loserId;
   if (flipResult === challenge.choice) {
     winnerId = userId;
+    loserId = challenge.challengerId;
+    if (loserId === winnerId) {
+      loserId = challenge.targetId;
+    }
   } else {
     winnerId = challenge.challengerId;
+    loserId = userId;
+    if (loserId === winnerId) {
+      loserId = challenge.challengerId;
+    }
   }
 
   // Deduct coins from both users
@@ -120,10 +130,24 @@ async function flipCoin(userId) {
 
   // Add double the amount to the winner
   const coinMessage = await wallet.addCoins(winnerId, challenge.amount * 2);
+  const doTheyHaveXPStealer = await shopAndItems.checkIfHaveInInventory(
+    `XP Stealer`,
+    winnerId
+  );
+
+  if (doTheyHaveXPStealer) {
+    const winnerXP = await xpSystem.getXpData(challenge.challengerId);
+    const loserXP = await xpSystem.getXpData(challenge.targetId);
+    await xpSystem.removeXp(loserId, 20);
+
+    await xpSystem.addXp(winnerId, 20);
+
+    console.log(winnerXP.xp, loserXP.xp);
+  }
   console.log(coinMessage);
   const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${
     challenge.amount * 2
-  }** coins! 🪙 ${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
+  }** coins! 🪙 ${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
   delete pendingChallenges[userId];
 
   return resultMessage;

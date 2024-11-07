@@ -38,13 +38,25 @@ async function addDebt(userId, amount) {
     `Interest-Free Loan`,
     userId
   );
+  const doTheyHaveDebtEraser = await shopAndItems.checkIfHaveInInventory(
+    `Debt Eraser`,
+    userId
+  );
   if (typeof amount === "number" && amount > 0) {
     if (doTheyHaveInterestFree) {
       user.debt += Math.round(amount);
+      if (doTheyHaveDebtEraser) {
+        user.debt -= Math.round(amount * 0.5);
+        await shopAndItems.removeSpecificItem(userId, `Debt Eraser`);
+      }
       await shopAndItems.removeSpecificItem(userId, `Interest-Free Loan`);
       await user.save();
     } else {
       user.debt += Math.round(amount + amount * 0.05);
+      if (doTheyHaveDebtEraser) {
+        user.debt -= Math.round(amount * 0.5);
+        await shopAndItems.removeSpecificItem(userId, `Debt Eraser`);
+      }
       await user.save();
     }
   } else {
@@ -75,7 +87,8 @@ async function addCoins(
   userId,
   amount,
   debtFree = false,
-  ignoreWealthMultiplier = false
+  ignoreWealthMultiplier = false,
+  dontGiveToDealer = false
 ) {
   const user = await initializeWallet(userId);
   if (typeof amount === "number" && amount > 0) {
@@ -84,21 +97,22 @@ async function addCoins(
       const tenPercentOffWinnings = Math.round(amount * 0.1);
       await payDebt(userId, tenPercentOffWinnings);
       amount = Math.round(amount * 0.9);
-      message = `The bank has taken their fair share... (-${tenPercentOffWinnings} coins)\n`;
+      message = `*The bank has taken their fair share... (-${tenPercentOffWinnings} coins)*`;
       if (userId.debt <= 0) {
-        message += `\nYou're debt free!`;
+        message += `\n*You're debt free!*`;
       }
     }
     const doTheyHaveWealthMultiplier =
       await shopAndItems.checkIfHaveInInventory(`Wealth Multiplier`, userId);
     if (doTheyHaveWealthMultiplier && !ignoreWealthMultiplier) {
-      message += `More coins come your way. You earn ${
-        amount * 0.5
-      } extra coins.`;
-      amount = amount * 1.5;
+      message += `\n*More coins come your way. You earn ${
+        amount * 0.2
+      } extra coins.*`;
+      amount = amount * 1.2;
     }
     const roundedAmount = Math.round(amount);
     user.coins += Math.trunc(roundedAmount);
+    if (!dontGiveToDealer) await removeDealerCoins(roundedAmount);
     await user.save();
     return message;
   } else {
@@ -107,7 +121,12 @@ async function addCoins(
 }
 
 // Remove coins from a user's wallet
-async function removeCoins(userId, amount, ignoreShield) {
+async function removeCoins(
+  userId,
+  amount,
+  ignoreShield,
+  dontGiveToDealer = false
+) {
   const user = await initializeWallet(userId);
   // checkIfHaveInInventory
   const doTheyHaveCoinShield = await shopAndItems.checkIfHaveInInventory(
@@ -121,10 +140,24 @@ async function removeCoins(userId, amount, ignoreShield) {
   if (typeof amount === "number" && amount > 0 && user.coins >= amount) {
     const roundedAmount = Math.round(amount);
     user.coins -= Math.trunc(roundedAmount);
+    if (!dontGiveToDealer) await addDealerCoins(roundedAmount);
     await user.save();
   } else {
     console.error(`Invalid amount or insufficient balance: ${amount}`);
   }
+}
+
+async function addDealerCoins(amount) {
+  const dealer = await initializeWallet(`1292934767511212042`);
+  const roundedAmount = Math.round(amount);
+  dealer.coins += Math.trunc(roundedAmount);
+  await dealer.save();
+}
+async function removeDealerCoins(amount) {
+  const dealer = await initializeWallet(`1292934767511212042`);
+  const roundedAmount = Math.round(amount);
+  dealer.coins -= Math.trunc(roundedAmount);
+  await dealer.save();
 }
 
 // Get the number of free spins a user has
@@ -179,11 +212,28 @@ async function useFreeSpin(userId) {
 async function getTopUsers(message) {
   try {
     // Query MongoDB for top 5 users based on coins, sorted in descending order
-    const topUsers = await User.find().sort({ coins: -1 }).limit(5);
-
-    // Retrieve the display names from Discord for each user
+    const allUsers = await User.find().sort({ coins: -1 });
+    // // const topUsersAfterHidingSome = [];
+    // const topUsers = await User.find().sort({ coins: -1 }).limit(5);
+    let mysteriousMessage = ``;
+    let topUsers = [];
+    for (let i = 0; i < allUsers.length; i++) {
+      const doTheyHaveInvis = await shopAndItems.checkIfHaveInInventory(
+        `Invisible Player`,
+        allUsers[i].userId
+      );
+      if (doTheyHaveInvis) mysteriousMessage = `*and someone is hiding...*`;
+      if (doTheyHaveInvis || allUsers[i].userId === `1292934767511212042`) {
+        continue;
+      }
+      if (topUsers.length === 5) {
+        break;
+      }
+      topUsers.push(allUsers[i]);
+    }
+    //Retrieve the display names from Discord for each user
     const leaderboard = await Promise.all(
-      topUsers.map(async (user) => {
+      topUsers.map(async (user, index) => {
         try {
           const member = await message.guild.members.fetch(user.userId);
           const customUserName = await shopAndItems.getCustomName(user.userId);
@@ -195,6 +245,7 @@ async function getTopUsers(message) {
             coins: user.coins,
             userId: user.userId,
             customName: customUserName,
+            mysteriousMessage: mysteriousMessage,
           };
         } catch (err) {
           console.error(
@@ -206,6 +257,7 @@ async function getTopUsers(message) {
             coins: user.coins,
             userId: user.userId,
             customName: customUserName,
+            mysteriousMessage: mysteriousMessage,
           };
         }
       })

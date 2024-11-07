@@ -36,7 +36,7 @@ async function incrementMessageCount(userChallenge, userId) {
       if (doTheyHaveBooster) {
         gain = gain * 2;
       }
-      await wallet.addCoins(userId, gain);
+      await wallet.addCoins(userId, gain, false, false, true);
       console.log(
         `User ${userId} has completed the message challenge and earned ${gain} coins.`
       );

@@ -77,12 +77,23 @@ async function saveInDB() {
 }
 
 // Self-Explanitory
-async function getUserInventory(userId) {
+async function getUserInventory(userId, string = false) {
   await removeExpiredItems(userId);
   const user = await UserInventory.findOne({ userId: userId });
 
   // Check if the user exists and return their inventory, or return an empty array
-  return user ? user.inventory : [];
+  if (string === false) return user ? user.inventory : [];
+  if (!user) return;
+  let inventoryString = ``;
+  user.inventory.forEach((item, index, arr) => {
+    if (arr.length - 1 === index) {
+      inventoryString += `${item.itemName}`;
+      return;
+    }
+    inventoryString += `${item.itemName}, `;
+  });
+
+  return inventoryString.trim();
 }
 
 // Ovo sam exportovo i moze se svuda koristiti, true ako taj item postoji u inventory od usera. Za sad "item" mora biti String. Npr "XP Booster"
@@ -91,6 +102,10 @@ async function checkIfHaveInInventory(item, userId) {
     userId: userId,
     "inventory.itemName": item, // Check if inventory contains the specified item
   });
+  if (thatInventory === null) {
+    return false;
+  }
+  console.log(thatInventory);
   const usersInventory = await getUserInventory(userId);
   let expired = false;
 
@@ -101,7 +116,7 @@ async function checkIfHaveInInventory(item, userId) {
       break;
     }
   }
-  if (thatInventory === null || expired) {
+  if (expired) {
     return false;
   }
   return true;
@@ -123,7 +138,7 @@ async function buyLogic(itemName, userId, wallet) {
     return `You don't have enough coins to make this purchase.`;
   }
   const userDebt = await wallet.getDebt(userId);
-  if (userDebt !== 0) {
+  if (userDebt !== 0 && itemName !== `Debt Eraser`) {
     return `You have to clear your debt before making a purchase!`;
   }
   await UserInventory.findOneAndUpdate(
@@ -135,13 +150,15 @@ async function buyLogic(itemName, userId, wallet) {
           price: itemInfo.price,
           startTime: itemInfo.startTime,
           endTime: itemInfo.endTime,
+          riskTaker: itemName === `Risk Taker's Badge` ? true : false,
         },
       },
     }, // Push new item into the inventory array
     { upsert: true, new: true } // Return the updated document
   );
+
   await wallet.removeCoins(userId, itemInfo.price, true);
-  return `<@${userId}> bought the ${itemName}!`;
+  return `You bought the ${itemName}!`;
 }
 
 async function customNameSetter(argumentsOfMessage, userId, notSelf = false) {

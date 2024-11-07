@@ -351,7 +351,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.userId
       }> has gotten a NATURAL BLACKJACK and has won +${
         player.betAmount * 3
-      } :fireworks:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
+      } :fireworks:${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -363,7 +363,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       );
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
-      } :gem:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
+      } :gem:${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -389,7 +389,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       );
       message = `:gem: <@${player.userId}> has won +${
         player.betAmount * 2
-      } :gem:${coinMessage !== `` ? `\n*${coinMessage}*` : ``}`;
+      } :gem:${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;

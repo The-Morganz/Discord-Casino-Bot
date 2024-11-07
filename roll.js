@@ -151,7 +151,7 @@ async function roll(userId, betAmount, message, button = false) {
   let finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
     payout > 0
       ? `You won **${payout}** coins! 🎉${
-          coinMessage !== `` ? `\n*${coinMessage}*` : ``
+          coinMessage !== `` ? `\n${coinMessage}` : ``
         } ${
           freeSpinAmount ? `You have ${freeSpinAmount} free spins left.` : ``
         }`
