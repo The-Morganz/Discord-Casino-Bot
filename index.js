@@ -23,7 +23,12 @@ const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
-const { placeBet, startRace, getShuffledChances, initializeHorseStats } = require('./horse');
+const {
+  placeBet,
+  startRace,
+  getShuffledChances,
+  initializeHorseStats,
+} = require("./horse");
 const voiceReward = require("./voiceReward");
 const coinflip = require("./coinflip");
 const grid = require("./grid");
@@ -278,99 +283,122 @@ function startBot() {
     }
 
     // Handle placing bets HORSE
-    if (message.content.startsWith('$horsebet')) {
-      let args = message.content.split(' ');
+    if (message.content.startsWith("$horsebet")) {
+      let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
 
       // Check if betting is open
       if (!bettingOpen) {
-          return message.reply("Betting is not open yet. Wait for the owner to start the race.");
+        return message.reply(
+          "Betting is not open yet. Wait for the owner to start the race."
+        );
       }
 
       // Check if the race has already started
       if (raceInProgress) {
-          return message.reply("The race is already in progress, no more bets can be placed.");
+        return message.reply(
+          "The race is already in progress, no more bets can be placed."
+        );
       }
 
       // Validate bet
-      if (isNaN(amount) || isNaN(horseNumber) || horseNumber < 1 || horseNumber > 8) {
-          return message.reply('Invalid bet. Usage: $horsebet [amount] [horse number (1-8)]');
+      if (
+        isNaN(amount) ||
+        isNaN(horseNumber) ||
+        horseNumber < 1 ||
+        horseNumber > 8
+      ) {
+        return message.reply(
+          "Invalid bet. Usage: $horsebet [amount] [horse number (1-8)]"
+        );
       }
 
       // Call the placeBet function
       let response = placeBet(message.author, amount, horseNumber);
       return message.reply(response);
-  }
+    }
 
-  // Handle starting the race (only admin can start the race)
-  if (message.content === '$horse start') {
-      console.log('Admin start race command received!');  // Log to verify the command was captured
+    // Handle starting the race (only admin can start the race)
+    if (message.content === "$horse start") {
+      console.log("Admin start race command received!"); // Log to verify the command was captured
       if (message.author.id === ownerId) {
-          console.log('Admin ID matches, starting the race!');
-          let response = await startRace(message);
-          message.reply(response);
+        console.log("Admin ID matches, starting the race!");
+        let response = await startRace(message);
+        message.reply(response);
 
-          // Enable betting after the start race command
-          bettingOpen = true;
+        // Enable betting after the start race command
+        bettingOpen = true;
 
-          // Disable betting after 1 minute (when the race animation begins)
-          setTimeout(() => {
-              raceInProgress = true;  // The race starts, so disable further betting
-          }, 10000);  // 1 minute countdown
+        // Disable betting after 1 minute (when the race animation begins)
+        setTimeout(() => {
+          raceInProgress = true; // The race starts, so disable further betting
+        }, 10000); // 1 minute countdown
       } else {
-          console.log('Non-admin user tried to start the race.');
-          message.reply('Only the admin can start the race!');
+        console.log("Non-admin user tried to start the race.");
+        message.reply("Only the admin can start the race!");
       }
-  }
+    }
 
-  // Handle displaying horse stats
-  if (message.content === '$horse stats') {
-      const chances = getShuffledChances();  // Get the shuffled chances for each horse
+    // Handle displaying horse stats
+    if (message.content === "$horse stats") {
+      const chances = getShuffledChances(); // Get the shuffled chances for each horse
 
       // Display the chances for each horse
       const statsMessage = chances
-          .map((chance, index) => `Horse ${index + 1}: ${chance}% chance to win`)
-          .join("\n");
+        .map((chance, index) => `Horse ${index + 1}: ${chance}% chance to win`)
+        .join("\n");
 
       message.reply(`Current horse stats:\n${statsMessage}`);
-  }
+    }
 
-        // SHOP
-        if (message.content.toLowerCase() === `$shophelp`) {
-          const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.`;
-          // **"Debt Eraser"**- Cuts your debt in half. You can buy this item while you have debt, which will use the item instantly.Removes after one use.
-          message.author.send(theHelpMessage);
-          return;
-        }
-        if (message.content.toLowerCase() === `$removeitem`) {
-          if (message.author.id !== ownerId && message.author.id !== ownerId2) {
-            return message.reply("You don't have permission to use this command.");
-          }
+    if (message.content.toLowerCase() === "$shop") {
+      await shop.saveInDB();
+      const { embed, rows } = await generateShop(
+        ActionRowBuilder,
+        ButtonBuilder,
+        ButtonStyle,
+        EmbedBuilder,
+        userId,
+        wallet
+      );
+      return message.reply({ embeds: [embed], components: rows });
+    }
+    // SHOP
+    if (message.content.toLowerCase() === `$shophelp`) {
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.`;
+      // **"Debt Eraser"**- Cuts your debt in half. You can buy this item while you have debt, which will use the item instantly.Removes after one use.
+      message.author.send(theHelpMessage);
+      return;
+    }
+    if (message.content.toLowerCase() === `$removeitem`) {
+      if (message.author.id !== ownerId && message.author.id !== ownerId2) {
+        return message.reply("You don't have permission to use this command.");
+      }
 
-          const args = message.content.split(" ");
-          const itemName = parseInt(args[1]);
+      const args = message.content.split(" ");
+      const itemName = parseInt(args[1]);
 
-          // Get the tagged user from the message (the second argument)
-          const mentionedUser = message.mentions.users.first();
+      // Get the tagged user from the message (the second argument)
+      const mentionedUser = message.mentions.users.first();
 
-          // Check if a user is tagged
-          if (!mentionedUser) {
-            return message.reply(
-              "Please mention a valid user to add coins to their wallet."
-            );
-          }
+      // Check if a user is tagged
+      if (!mentionedUser) {
+        return message.reply(
+          "Please mention a valid user to add coins to their wallet."
+        );
+      }
 
-          // Extract the user ID of the mentioned user
-          const targetUserId = mentionedUser.id;
+      // Extract the user ID of the mentioned user
+      const targetUserId = mentionedUser.id;
 
-          await shop.removeSpecificItem(mentionedUser, itemName);
+      await shop.removeSpecificItem(mentionedUser, itemName);
 
-          // Send a confirmation message
-          await message.reply(
-            `You have removed ${itemName} from <@${mentionedUser}>`
-          );
-        }
+      // Send a confirmation message
+      await message.reply(
+        `You have removed ${itemName} from <@${mentionedUser}>`
+      );
+    }
 
     if (message.content.toLowerCase().startsWith("$customname")) {
       const doTheyHaveLicense = await shop.checkIfHaveInInventory(
@@ -2586,22 +2614,26 @@ function startBot() {
     }
 
     // Handle the "End Game" button
-    if (interaction.customId === "end_game" || interaction.customId.startsWith(`end_game`)) {
+    if (
+      interaction.customId === "end_game" ||
+      interaction.customId.startsWith(`end_game`)
+    ) {
       if (gridData.isComplete) {
         return interaction.reply({
           content: "The game has already ended.",
           ephemeral: true,
         });
       }
-      
-        // Ensure the user has revealed at least three grid buttons before ending the game
-        if (gridData.revealedMultipliers.length < 2) {
-          return interaction.reply({
-            content: "You need to reveal at least two buttons before ending the game.",
-            ephemeral: true,
-          });
-        }
-      
+
+      // Ensure the user has revealed at least three grid buttons before ending the game
+      if (gridData.revealedMultipliers.length < 2) {
+        return interaction.reply({
+          content:
+            "You need to reveal at least two buttons before ending the game.",
+          ephemeral: true,
+        });
+      }
+
       // Calculate the payout based on the revealed multipliers
       const totalMultiplier = gridData.revealedMultipliers.reduce(
         (sum, multiplier) => sum + multiplier,
