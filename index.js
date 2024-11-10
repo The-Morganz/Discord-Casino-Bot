@@ -23,7 +23,7 @@ const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
-const { placeBet, startRace } = require('./horse');
+const { placeBet, startRace, getShuffledChances, initializeHorseStats } = require('./horse');
 const voiceReward = require("./voiceReward");
 const coinflip = require("./coinflip");
 const grid = require("./grid");
@@ -252,6 +252,8 @@ async function migrateXpData() {
 }
 
 let gridOwners = {}; // Object to store the grid owner by message ID
+let bettingOpen = false;
+let raceInProgress = false; // Track whether the race animation has started
 
 function startBot() {
   client.once("ready", () => {
@@ -275,12 +277,23 @@ function startBot() {
       message.author.send(theHelpMessagePt2);
     }
 
-     // Handle placing bets
-     if (message.content.startsWith('$horsebet')) {
+    // Handle placing bets HORSE
+    if (message.content.startsWith('$horsebet')) {
       let args = message.content.split(' ');
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
 
+      // Check if betting is open
+      if (!bettingOpen) {
+          return message.reply("Betting is not open yet. Wait for the owner to start the race.");
+      }
+
+      // Check if the race has already started
+      if (raceInProgress) {
+          return message.reply("The race is already in progress, no more bets can be placed.");
+      }
+
+      // Validate bet
       if (isNaN(amount) || isNaN(horseNumber) || horseNumber < 1 || horseNumber > 8) {
           return message.reply('Invalid bet. Usage: $horsebet [amount] [horse number (1-8)]');
       }
@@ -297,10 +310,30 @@ function startBot() {
           console.log('Admin ID matches, starting the race!');
           let response = await startRace(message);
           message.reply(response);
+
+          // Enable betting after the start race command
+          bettingOpen = true;
+
+          // Disable betting after 1 minute (when the race animation begins)
+          setTimeout(() => {
+              raceInProgress = true;  // The race starts, so disable further betting
+          }, 10000);  // 1 minute countdown
       } else {
           console.log('Non-admin user tried to start the race.');
           message.reply('Only the admin can start the race!');
       }
+  }
+
+  // Handle displaying horse stats
+  if (message.content === '$horse stats') {
+      const chances = getShuffledChances();  // Get the shuffled chances for each horse
+
+      // Display the chances for each horse
+      const statsMessage = chances
+          .map((chance, index) => `Horse ${index + 1}: ${chance}% chance to win`)
+          .join("\n");
+
+      message.reply(`Current horse stats:\n${statsMessage}`);
   }
 
         // SHOP
