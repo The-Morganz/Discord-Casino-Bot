@@ -38,26 +38,20 @@ function createButtonGrid(mineCount, customId = ``) {
   return rows;
 }
 
-// Function to assign multipliers based on the number of mines
 function assignMultipliers(mineCount) {
   console.log(mineCount);
   const multiplierMap = {
-    4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.5x
-    5: [...Array(11).fill(0.75)], // 
-    6: [...Array(10).fill(1)], 
-    7: [...Array(9).fill(1.5)], //
-    8: [...Array(8).fill(2)],
-    9: [...Array(7).fill(3)], // 
-    10: [...Array(6).fill(4)],
-    11: [...Array(5).fill(5)], // 
-    12: [...Array(4).fill(6)],
-    13: [...Array(3).fill(8)], // 
-    14: [...Array(2).fill(10)],
-    15: [...Array(1).fill(16)], // 
+    4: [...Array(12).fill(0.25)], // 4 mines => remaining 12 cells are 0.25x
+    5: [...Array(11).fill(0.5)], // 5 mines => remaining 11 cells are 0.5x
+    6: [...Array(10).fill(1.5)], // 6 mines => remaining 10 cells are 1.5x
+    7: [...Array(9).fill(1)], // 7 mines => remaining 9 cells are 1x
+    8: [...Array(8).fill(2)], // 8 mines => remaining 8 cells are 2x
+    9: [...Array(7).fill(4)], // 9 mines => remaining 7 cells are 4x
+    10: [...Array(6).fill(8)], // 10 mines => remaining 6 cells are 8x
   };
 
   const multipliers = multiplierMap[mineCount] || multiplierMap[4]; // Default to 4 mines if invalid
-  const mines = Array(mineCount).fill(0); // Create mine cells (0x multiplier)
+  const mines = Array(Math.min(mineCount, 10)).fill(0); // Cap the mines at 10
 
   const fullGrid = [...multipliers, ...mines]; // Combine multipliers and mines
 
