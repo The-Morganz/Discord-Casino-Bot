@@ -3,6 +3,12 @@ const path = require("path");
 const DailyChallenge = require("../models/DailyChallenge");
 const messageChallenge = require("./daily_message");
 const imageChallenge = require("./daily_image");
+const voiceChallenge = require(`./daily_voice`);
+const playBlackjackChallenge = require(`./daily_playBlackjack`);
+const playSlotsChallenge = require(`./daily_playSlots`);
+const playGridChallenge = require(`./daily_playGrid`);
+const santaGiveChallenge = require(`./daily_give`);
+const winFlipChallenge = require(`./daily_winFlip`);
 const xpSystem = require("../xp/xp");
 
 // Path to store daily challenge progress
@@ -38,9 +44,21 @@ function getTodayDate() {
 }
 
 // Randomly assign a challenge type
-function assignRandomChallenge() {
-  const challengeTypes = ["message", "image"];
+function assignRandomChallenge(array = getChallengeTypes()) {
+  const challengeTypes = array;
   return challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
+}
+function getChallengeTypes() {
+  return [
+    "message",
+    "image",
+    `voice`,
+    `playBlackjack`,
+    `playSlots`,
+    `playGrid`,
+    `santaGive`,
+    `winFlip`,
+  ];
 }
 
 // Initialize or update a daily challenge for a user
@@ -50,35 +68,90 @@ async function initializeDailyChallenge(userId) {
     userId: userId,
     date: today,
   });
+  const challengeTypes = getChallengeTypes();
   if (!userChallenge) {
-    const challengeType = assignRandomChallenge();
-    let challengeData = {
-      userId: userId,
-      date: today,
-      completed: false,
-      gainedXpReward: false,
-      challengeType,
-    };
+    await DailyChallenge.findOneAndUpdate(
+      { userId: userId },
+      { challenges: [] },
+      { upsert: true }
+    );
+  }
+  if (!userChallenge) {
+    for (let i = 0; i < 3; i++) {
+      const challengeType = assignRandomChallenge(challengeTypes);
+      let challengeData = {
+        userId: userId,
+        date: today,
+        completed: false,
+        gainedXpReward: false,
+        challengeType,
+      };
 
-    if (challengeType === "message") {
-      challengeData = {
-        ...challengeData,
-        ...messageChallenge.initializeMessageChallenge(userId),
-      };
-    } else if (challengeType === "image") {
-      challengeData = {
-        ...challengeData,
-        ...imageChallenge.initializeImageChallenge(userId),
-      };
+      switch (challengeType) {
+        case `message`:
+          challengeData = {
+            ...challengeData,
+            ...messageChallenge.initializeMessageChallenge(userId),
+          };
+          break;
+        case `image`:
+          challengeData = {
+            ...challengeData,
+            ...imageChallenge.initializeImageChallenge(userId),
+          };
+          break;
+        case `voice`:
+          challengeData = {
+            ...challengeData,
+            ...voiceChallenge.initializeVoiceChallenge(userId),
+          };
+          break;
+        case `playBlackjack`:
+          challengeData = {
+            ...challengeData,
+            ...playBlackjackChallenge.initializePlayBlackjackChallenge(userId),
+          };
+          break;
+        case `playSlots`:
+          challengeData = {
+            ...challengeData,
+            ...playSlotsChallenge.initializePlaySlotsChallenge(userId),
+          };
+          break;
+        case `playGrid`:
+          challengeData = {
+            ...challengeData,
+            ...playGridChallenge.initializePlayGridChallenge(userId),
+          };
+          break;
+        case `santaGive`:
+          challengeData = {
+            ...challengeData,
+            ...santaGiveChallenge.initializeGiveChallenge(userId),
+          };
+          break;
+        case `winFlip`:
+          challengeData = {
+            ...challengeData,
+            ...winFlipChallenge.initializeWinFlipChallenge(userId),
+          };
+          break;
+        default:
+          break;
+      }
+      await DailyChallenge.updateOne(
+        { userId: userId }, // Match criteria
+        { $push: { challenges: { challengeData } } }, // Set the data
+        { upsert: true } // Create if it doesn't exist
+      );
+      const indexOfChalType = challengeTypes.indexOf(challengeType);
+      challengeTypes.splice(indexOfChalType, 1);
     }
     await DailyChallenge.updateOne(
-      { userId: userId }, // Match criteria
-      { $set: challengeData }, // Set the data
-      { upsert: true } // Create if it doesn't exist
+      { userId: userId },
+      { date: today },
+      { upsert: true }
     );
-    // ovo je pre bilo
-    // userChallenge = new DailyChallenge(challengeData);
-    // await userChallenge.save();
   }
   // Fetch the document to return, whether newly created or pre-existing
   return await DailyChallenge.findOne({ userId, date: today });
@@ -86,48 +159,152 @@ async function initializeDailyChallenge(userId) {
 }
 
 // Increment based on challenge type
-async function incrementChallenge(userId, isImage = false) {
+async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
   const userChallenge = await initializeDailyChallenge(userId);
-  if (userChallenge.challengeType === "message" && !isImage) {
-    const completed = await messageChallenge.incrementMessageCount(
-      userChallenge,
-      userId
-    );
-    if (completed && !userChallenge.gainedXpReward) {
-      await xpSystem.addXp(userId, 100); // Reward 100 XP for completing the message challenge
-      userChallenge.gainedXpReward = true;
-    }
-  } else if (userChallenge.challengeType === "image" && isImage) {
-    const completed = await imageChallenge.incrementImageCount(
-      userChallenge,
-      userId
-    );
-    if (completed && !userChallenge.gainedXpReward) {
-      await xpSystem.addXp(userId, 100); // Reward 100 XP for completing the image challenge
-      userChallenge.gainedXpReward = true;
-    }
+  let completed = false;
+  for (let i = 0; i < 3; i++) {
+    // holy yandere dev
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `message` &&
+      typeOfChallenge === `message`
+    )
+      completed = await messageChallenge.incrementMessageCount(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `image` &&
+      typeOfChallenge === `image`
+    )
+      completed = await imageChallenge.incrementImageCount(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `voice` &&
+      typeOfChallenge === `voice`
+    )
+      completed = await voiceChallenge.incrementMinutes(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType ===
+        `playBlackjack` &&
+      typeOfChallenge === `playBlackjack`
+    )
+      completed = await playBlackjackChallenge.incrementGames(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `playSlots` &&
+      typeOfChallenge === `playSlots`
+    )
+      completed = await playSlotsChallenge.incrementSlotsGames(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `playGrid` &&
+      typeOfChallenge === `playGrid`
+    )
+      completed = await playGridChallenge.incrementGridGames(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `santaGive` &&
+      typeOfChallenge === `santaGive`
+    )
+      completed = await santaGiveChallenge.incrementAmount(
+        userChallenge,
+        userId,
+        i,
+        amountGiven
+      );
+    if (
+      userChallenge.challenges[i].challengeData.challengeType === `winFlip` &&
+      typeOfChallenge === `winFlip`
+    )
+      completed = await winFlipChallenge.incrementFlipWins(
+        userChallenge,
+        userId,
+        i
+      );
   }
-
-  await userChallenge.save();
 }
 
 // DAILY STATUS
 async function getDailyStatus(userId) {
   const userChallenge = await initializeDailyChallenge(userId);
 
-  let statusMessage = "";
-  if (userChallenge.challengeType === "message") {
-    statusMessage = await messageChallenge.getMessageStatus(
-      userChallenge,
-      userId
-    );
-  } else if (userChallenge.challengeType === "image") {
-    statusMessage = await imageChallenge.getImageStatus(userChallenge, userId);
+  let statusMessage = ``;
+  for (let i = 0; i < 3; i++) {
+    switch (userChallenge.challenges[i].challengeData.challengeType) {
+      case `message`:
+        statusMessage += await messageChallenge.getMessageStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `image`:
+        statusMessage += await imageChallenge.getImageStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `voice`:
+        statusMessage += await voiceChallenge.getVoiceStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `playBlackjack`:
+        statusMessage += await playBlackjackChallenge.getGameStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `playSlots`:
+        statusMessage += await playSlotsChallenge.getSlotsGameStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `playGrid`:
+        statusMessage += await playGridChallenge.getGameStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `santaGive`:
+        statusMessage += await santaGiveChallenge.getGiveStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `winFlip`:
+        statusMessage += await winFlipChallenge.getWinFlipStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      default:
+        break;
+    }
+    statusMessage += `\n\n`;
   }
 
   // Get XP data for the user and include it in the message
   const userXP = await xpSystem.getXpData(userId);
-  statusMessage += `\nYou currently have ${userXP.xp} XP and are at level ${userXP.level}.`;
+  statusMessage += `You currently have ${userXP.xp} XP and are at level ${userXP.level}.`;
 
   return statusMessage;
 }

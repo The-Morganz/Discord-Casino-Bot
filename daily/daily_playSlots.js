@@ -2,32 +2,32 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
-let gainFromChallenge = 250;
-let gainXpFromChallenge = 50;
-// Generate a random message requirement between 20 and 40
-function generateRandomMessageRequirement() {
-  return Math.floor(Math.random() * 11) + 5; // Generates a random number between 20 and 40
+let gainFromChallenge = 500;
+let gainXpFromChallenge = 150;
+function generateRandomGameRequirement() {
+  const gamesToPlay = [15, 20, 25];
+  return gamesToPlay[Math.floor(Math.random() * gamesToPlay.length)];
 }
 
 // Initialize a message challenge
-function initializeMessageChallenge(userId) {
+function initializePlaySlotsChallenge(userId) {
   return {
-    challengeType: "message",
-    messages: 0,
-    requiredMessages: generateRandomMessageRequirement(),
+    challengeType: "playSlots",
+    slotGamesPlayed: 0,
+    requiredSlotsGames: generateRandomGameRequirement(),
     completed: false,
     gainedXpReward: false,
   };
 }
 
-async function incrementMessageCount(userChallenge, userId, challengeNumber) {
+async function incrementSlotsGames(userChallenge, userId, challengeNumber) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.challenges[challengeNumber].challengeData.messages += 1;
-
-    // Check if the required number of messages has been reached
+    userChallenge.challenges[
+      challengeNumber
+    ].challengeData.slotGamesPlayed += 1;
     if (
-      userChallenge.challenges[challengeNumber].challengeData.messages >=
-      userChallenge.challenges[challengeNumber].challengeData.requiredMessages
+      userChallenge.challenges[challengeNumber].challengeData.slotGamesPlayed >=
+      userChallenge.challenges[challengeNumber].challengeData.requiredSlotsGames
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       const theirXP = await xpSystem.getXpData(userId);
@@ -40,19 +40,19 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
+      const theirCoinAmount = await wallet.getCoins(userId);
+      const precentOfCoins = theirCoinAmount * 0.1;
       console.log(
-        `User ${userId} has completed the message challenge and earned ${gain} coins.`
+        `User ${userId} has completed the slots challenge and earned ${gain} coins.`
       );
+      await wallet.addFreeSpins(userId, 10, Math.round(precentOfCoins));
     }
-
-    // Save the updated challenge back to MongoDB
-    // await userChallenge.save();
   }
   if (
     userChallenge.challenges[challengeNumber].challengeData.completed &&
     !userChallenge.challenges[challengeNumber].challengeData.gainedXpReward
   ) {
-    await xpSystem.addXp(userId, gainXpFromChallenge); // Reward 100 XP for completing the image challenge
+    await xpSystem.addXp(userId, gainXpFromChallenge);
     userChallenge.challenges[
       challengeNumber
     ].challengeData.gainedXpReward = true;
@@ -77,8 +77,8 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
 }
 
 // Get the message challenge status
-async function getMessageStatus(userChallenge, userId) {
-  const { messages, requiredMessages, completed } = userChallenge;
+async function getSlotsGameStatus(userChallenge, userId) {
+  const { slotGamesPlayed, requiredSlotsGames, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
   let gain = gainFromChallenge * theirXP.multiplier;
   const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
@@ -89,14 +89,18 @@ async function getMessageStatus(userChallenge, userId) {
     gain = gain * 2;
   }
   if (completed) {
-    return `🎉 You have completed today's message challenge and earned ${gain} coins!`;
+    const theirCoinAmount = await wallet.getCoins(userId);
+    const precentOfCoins = theirCoinAmount * 0.1;
+    return `🎉 You have played enough slots, finishing the challenge and earning ${gain} coins! You gained 10 free spins with a bet of ${Math.round(
+      precentOfCoins
+    )}`;
   } else {
-    return `🎁 Send ${requiredMessages} messages. Progress: ${messages}/${requiredMessages} messages.`;
+    return `🎁 Play ${requiredSlotsGames} games of slots. Progress: ${slotGamesPlayed}/${requiredSlotsGames} games. Will gain 10 free spins.`;
   }
 }
 
 module.exports = {
-  initializeMessageChallenge,
-  incrementMessageCount,
-  getMessageStatus,
+  initializePlaySlotsChallenge,
+  incrementSlotsGames,
+  getSlotsGameStatus,
 };

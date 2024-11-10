@@ -222,7 +222,8 @@ async function getTopUsers(message) {
         `Invisible Player`,
         allUsers[i].userId
       );
-      if (doTheyHaveInvis) mysteriousMessage = `*and someone is hiding...*`;
+      if (doTheyHaveInvis)
+        mysteriousMessage = `*seems like someone is missing...*`;
       if (doTheyHaveInvis || allUsers[i].userId === `1292934767511212042`) {
         continue;
       }

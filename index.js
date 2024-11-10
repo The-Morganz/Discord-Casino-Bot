@@ -265,8 +265,10 @@ function startBot() {
 
     //
     if (message.content.toLowerCase() === "$help") {
-      const theHelpMessage = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned a daily challenge for some quick coins.📅\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n⏩**"$toggleanim"**- Toggle rolling animation.⏩\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:`;
-      message.author.send(theHelpMessage);
+      const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned a daily challenge for some quick coins.📅\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n⏩**"$toggleanim"**- Toggle rolling animation.⏩\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:`;
+      const theHelpMessagePt2 = `**"$playerinfo [@User]"**- Display information about tagged player.\n\n**"$shop"**- Go to the shop.\n**"$shophelp"**- Get details about items in the shop.`;
+      message.author.send(theHelpMessagePt1);
+      message.author.send(theHelpMessagePt2);
     }
 
     if (message.content.toLowerCase() === "$shop") {
@@ -282,7 +284,7 @@ function startBot() {
       return message.reply({ embeds: [embed], components: rows });
     }
     if (message.content.toLowerCase() === `$shophelp`) {
-      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, upon winning the bet, you will get a 20% bonus. Removes after one use, win or loss.`;
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.`;
       // **"Debt Eraser"**- Cuts your debt in half. You can buy this item while you have debt, which will use the item instantly.Removes after one use.
       message.author.send(theHelpMessage);
       return;
@@ -327,7 +329,6 @@ function startBot() {
       }
 
       const args = message.content.split(" ");
-      console.log(args);
       if (args.length === 1) {
         return message.reply(`Invalid custom name.`);
       }
@@ -359,14 +360,12 @@ function startBot() {
       const args = message.content.split(" ");
       // Get the tagged user from the message (the second argument)
       const mentionedUser = message.mentions.users.first();
-      console.log(mentionedUser);
       // Check if a user is tagged
       if (!mentionedUser) {
         return message.reply("Please mention a valid user.");
       }
 
       const targetUserId = mentionedUser.id;
-      console.log(args);
       if (args.length === 2) {
         return message.reply(`Invalid custom name.`);
       }
@@ -385,7 +384,6 @@ function startBot() {
       const args = message.content.split(" ");
       // Get the tagged user from the message (the second argument)
       const mentionedUser = message.mentions.users.first();
-      console.log(mentionedUser);
       // Check if a user is tagged
       if (!mentionedUser) {
         return message.reply("Please mention a valid user.");
@@ -421,7 +419,6 @@ function startBot() {
       message.content.toLowerCase() === "$lb"
     ) {
       const topUsers = await wallet.getTopUsers(message); // Get top 5 users with display names
-      console.log(topUsers);
 
       // Build the leaderboard message
       let leaderboardMessage = ``;
@@ -444,6 +441,7 @@ function startBot() {
           theirDebt ? `${theirDebt} coins in debt.` : ``
         }\n`;
       }
+      leaderboardMessage += `\n${topUsers[4].mysteriousMessage}`;
       const embed = new EmbedBuilder()
         .setTitle(`${leaderboardFirst}`)
         .setDescription(leaderboardMessage)
@@ -518,7 +516,7 @@ function startBot() {
         // Check if the bet amount is greater than or equal to the threshold
         if (amount >= riskThreshold) {
           // Increase bet amount by 20% of their total coins
-          riskTakerExtra = theirCoinAmount * 0.2;
+          riskTakerExtra = amount * 0.2;
           riskTakerExtra = Math.round(riskTakerExtra);
           await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
         }
@@ -595,7 +593,7 @@ function startBot() {
     }
 
     // Track messages for the daily message challenge
-    await daily.incrementChallenge(userId, false);
+    await daily.incrementChallenge(userId, `message`);
 
     // Track image posts for the daily image challenge
     if (message.attachments.size > 0) {
@@ -604,7 +602,7 @@ function startBot() {
           attachment.contentType &&
           attachment.contentType.startsWith("image/")
         ) {
-          await daily.incrementChallenge(userId, true);
+          await daily.incrementChallenge(userId, `image`);
           // Optionally, send a reply message
           // await message.reply("Your image counts towards today's challenge!");
         }
@@ -817,6 +815,7 @@ function startBot() {
       // Add coins to the mentioned user's wallet
       await wallet.addCoins(targetUserId, amount, true, true, true);
       await wallet.removeCoins(userId, amount, true, true);
+      await daily.incrementChallenge(userId, `santaGive`, amount);
       await message.reply(
         `<@${userId}> has added ${amount} coins to ${mentionedUser.username}'s wallet.`
       );
@@ -835,6 +834,10 @@ function startBot() {
         message.reply(`Animation for rolling will not be skipped!`);
         return;
       }
+    }
+    if (message.content.toLowerCase().startsWith(`$changeroll`)) {
+      const rollSkin = roll.changeEmotes();
+      message.reply(`You changed your roll theme to ${rollSkin}!`);
     }
 
     // $ROLL
@@ -892,10 +895,9 @@ function startBot() {
           } else {
             if (doTheyHaveRiskTaker) {
               const theirCoinAmount = await wallet.getCoins(userId);
-              const riskThreshold = theirCoinAmount * 0.8;
-              console.log(riskThreshold);
+              const riskThreshold = betAmount * 0.8;
               if (betAmount >= riskThreshold) {
-                riskTakerExtra = theirCoinAmount * 0.2;
+                riskTakerExtra = amount * 0.2;
                 riskTakerExtra = Math.round(riskTakerExtra);
                 await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
               }
@@ -1016,7 +1018,7 @@ function startBot() {
         // Check if the bet amount is greater than or equal to the threshold
         if (betAmount >= riskThreshold) {
           // Increase bet amount by 20% of their total coins
-          riskTakerExtra = theirCoinAmount * 0.2;
+          riskTakerExtra = betAmount * 0.2;
           riskTakerExtra = Math.round(riskTakerExtra);
           await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
         }
@@ -1616,7 +1618,7 @@ function startBot() {
           // Check if the bet amount is greater than or equal to the threshold
           if (Number(betAmount) >= riskThreshold) {
             // Increase bet amount by 20% of their total coins
-            riskTakerExtra = theirCoinAmount * 0.2;
+            riskTakerExtra = betAmount * 0.2;
             riskTakerExtra = Math.round(riskTakerExtra);
             await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
           }
@@ -1788,7 +1790,7 @@ function startBot() {
               // Check if the bet amount is greater than or equal to the threshold
               if (betAmount >= riskThreshold) {
                 // Increase bet amount by 20% of their total coins
-                riskTakerExtra = theirCoinAmount * 0.2;
+                riskTakerExtra = betAmount * 0.2;
                 riskTakerExtra = Math.round(riskTakerExtra);
                 await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
               }
@@ -2069,7 +2071,7 @@ function startBot() {
           // Check if the bet amount is greater than or equal to the threshold
           if (betAmount >= riskThreshold) {
             // Increase bet amount by 20% of their total coins
-            riskTakerExtra = theirCoinAmount * 0.2;
+            riskTakerExtra = betAmount * 0.2;
             riskTakerExtra = Math.round(riskTakerExtra);
             await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
           }
@@ -2337,7 +2339,7 @@ function startBot() {
         const loanInput = new TextInputBuilder()
           .setCustomId("custom_loan_input")
           .setLabel(
-            `Your Loan Amount: (Your limit is:${await findLoanLimit(
+            `Loan Amount: (Your limit:${await findLoanLimit(
               interaction.user.id
             )} coins)`
           )
@@ -2440,7 +2442,7 @@ function startBot() {
           // Check if the bet amount is greater than or equal to the threshold
           if (betAmount >= riskThreshold) {
             // Increase bet amount by 20% of their total coins
-            riskTakerExtra = theirCoinAmount * 0.2;
+            riskTakerExtra = betAmount * 0.2;
             riskTakerExtra = Math.round(riskTakerExtra);
             await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
           }
@@ -2494,7 +2496,11 @@ function startBot() {
       const lastKey = Object.keys(gridOwners).pop();
       // Delete the last object
       delete gridOwners[lastKey];
-      await interaction.message.delete(); // Remove the grid message
+      try {
+        await interaction.message.delete(); // Remove the grid message
+      } catch (err) {
+        console.log(`Something went wrong...`);
+      }
       return interaction.reply({
         content: "Something went wrong with the grid data.",
         ephemeral: true,
@@ -2554,7 +2560,7 @@ function startBot() {
       }
       // const doTheyHaveWealthMultiplier = await shop.checkIfHaveInInventory(`Wealth Multiplier`,userId);
       const coinMessage = await wallet.addCoins(gridData.userId, payout);
-
+      await daily.incrementChallenge(gridData.userId, `playGrid`);
       // Add the payout to the user's wallet
       // await wallet.addCoins(gridData.userId, payout);
       gridData.isComplete = true; // Mark the grid as complete
@@ -2629,13 +2635,15 @@ function startBot() {
       );
       delete gridOwners[idOfGridData];
       // End the game with no payout
-      setTimeout(async () => {
-        await interaction.followUp({
-          content: `Game over! <@${interaction.user.id}> lost everything!`,
-          components: [row],
-        });
-        await interaction.message.delete(); // Remove the grid message after the delay
-      }, 0);
+
+      await daily.incrementChallenge(gridData.userId, `playGrid`);
+
+      await interaction.followUp({
+        content: `Game over! <@${interaction.user.id}> lost everything!`,
+        components: [row],
+      });
+      await interaction.message.delete(); // Remove the grid message after the delay
+
       return;
     }
 

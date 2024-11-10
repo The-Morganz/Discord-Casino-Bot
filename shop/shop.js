@@ -105,7 +105,6 @@ async function checkIfHaveInInventory(item, userId) {
   if (thatInventory === null) {
     return false;
   }
-  console.log(thatInventory);
   const usersInventory = await getUserInventory(userId);
   let expired = false;
 

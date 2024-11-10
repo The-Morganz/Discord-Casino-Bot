@@ -1,6 +1,6 @@
 const wallet = require("./wallet");
 const xpSystem = require("./xp/xp");
-
+const daily = require(`./daily/daily`);
 // Store users and their join times
 const userVoiceTimes = new Map();
 const rewardIntervalMs = 60000; // 60 seconds
@@ -34,6 +34,7 @@ function userLeftVoice(userId) {
 // Reward the user with 10 coins for staying in voice
 async function rewardUserForVoice(userId) {
   if (!userVoiceTimes.has(userId)) return;
+  await daily.incrementChallenge(userId, `voice`);
   const theirXP = await xpSystem.getXpData(userId);
   const gain = passiveIncomeGain * theirXP.multiplier;
 

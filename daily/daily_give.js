@@ -2,32 +2,39 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
-let gainFromChallenge = 250;
-let gainXpFromChallenge = 50;
-// Generate a random message requirement between 20 and 40
-function generateRandomMessageRequirement() {
-  return Math.floor(Math.random() * 11) + 5; // Generates a random number between 20 and 40
+let gainFromChallenge = 500;
+let gainXpFromChallenge = 150;
+let amountToGive = 1000;
+function generateRandomGiveTime() {
+  const timesToGive = [1];
+  return timesToGive[Math.floor(Math.random() * timesToGive.length)];
 }
 
 // Initialize a message challenge
-function initializeMessageChallenge(userId) {
+function initializeGiveChallenge(userId) {
   return {
-    challengeType: "message",
-    messages: 0,
-    requiredMessages: generateRandomMessageRequirement(),
+    challengeType: "santaGive",
+    // timesGiven: 0,
+    // requiredGiveTimes: generateRandomGiveTime(),
+    amountGiven: 0,
+    amountNeededToGive: amountToGive,
     completed: false,
     gainedXpReward: false,
   };
 }
 
-async function incrementMessageCount(userChallenge, userId, challengeNumber) {
+async function incrementAmount(
+  userChallenge,
+  userId,
+  challengeNumber,
+  amountGivenNow
+) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.challenges[challengeNumber].challengeData.messages += 1;
-
-    // Check if the required number of messages has been reached
+    userChallenge.challenges[challengeNumber].challengeData.amountGiven +=
+      amountGivenNow;
     if (
-      userChallenge.challenges[challengeNumber].challengeData.messages >=
-      userChallenge.challenges[challengeNumber].challengeData.requiredMessages
+      userChallenge.challenges[challengeNumber].challengeData.amountGiven >=
+      userChallenge.challenges[challengeNumber].challengeData.amountNeededToGive
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       const theirXP = await xpSystem.getXpData(userId);
@@ -41,18 +48,15 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
       }
       await wallet.addCoins(userId, gain, false, false, true);
       console.log(
-        `User ${userId} has completed the message challenge and earned ${gain} coins.`
+        `User ${userId} has completed the santa challenge and earned ${gain} coins.`
       );
     }
-
-    // Save the updated challenge back to MongoDB
-    // await userChallenge.save();
   }
   if (
     userChallenge.challenges[challengeNumber].challengeData.completed &&
     !userChallenge.challenges[challengeNumber].challengeData.gainedXpReward
   ) {
-    await xpSystem.addXp(userId, gainXpFromChallenge); // Reward 100 XP for completing the image challenge
+    await xpSystem.addXp(userId, gainXpFromChallenge);
     userChallenge.challenges[
       challengeNumber
     ].challengeData.gainedXpReward = true;
@@ -77,8 +81,8 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
 }
 
 // Get the message challenge status
-async function getMessageStatus(userChallenge, userId) {
-  const { messages, requiredMessages, completed } = userChallenge;
+async function getGiveStatus(userChallenge, userId) {
+  const { amountGiven, amountNeededToGive, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
   let gain = gainFromChallenge * theirXP.multiplier;
   const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
@@ -89,14 +93,14 @@ async function getMessageStatus(userChallenge, userId) {
     gain = gain * 2;
   }
   if (completed) {
-    return `🎉 You have completed today's message challenge and earned ${gain} coins!`;
+    return `🎉 You have given enough coins to others,finishing the challenge and earning ${gain} coins!`;
   } else {
-    return `🎁 Send ${requiredMessages} messages. Progress: ${messages}/${requiredMessages} messages.`;
+    return `🎁 Give ${amountNeededToGive} coins to other players. Progress: ${amountGiven}/${amountNeededToGive} coins.`;
   }
 }
 
 module.exports = {
-  initializeMessageChallenge,
-  incrementMessageCount,
-  getMessageStatus,
+  initializeGiveChallenge,
+  incrementAmount,
+  getGiveStatus,
 };

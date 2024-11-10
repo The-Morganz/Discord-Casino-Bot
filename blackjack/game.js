@@ -2,6 +2,7 @@ const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
 const { makeDeck } = require("./makeDeck");
 const xpSystem = require("../xp/xp");
+const dailyChallenges = require(`../daily/daily`);
 const xpGain = 15;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
@@ -408,8 +409,11 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       xpGain
     );
     await xpSystem.addXp(thatRoom.players[i].userId, xpGainAfterCut);
+    await dailyChallenges.incrementChallenge(
+      thatRoom.players[i].userId,
+      `playBlackjack`
+    );
   }
-
   eventEmitter.emit("restartGame", channelToSendTo);
   resetDeckCounter(channelId);
 }

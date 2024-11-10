@@ -3,6 +3,7 @@ const xpSystem = require(`../xp/xp`);
 const DailyChallenge = require("../models/DailyChallenge");
 const shopAndItems = require(`../shop/shop`);
 const gainFromChallenge = 250;
+const gainXpFromChallenge = 50;
 // Initialize an image challenge for a user
 function initializeImageChallenge(userId) {
   return {
@@ -15,20 +16,22 @@ function initializeImageChallenge(userId) {
 }
 
 // Increment image count and check if the challenge is completed
-async function incrementImageCount(userChallenge, userId) {
-  if (!userChallenge.completed) {
-    userChallenge.imagesSent += 1;
+async function incrementImageCount(userChallenge, userId, challengeNumber) {
+  if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
+    userChallenge.challenges[challengeNumber].challengeData.imagesSent += 1;
 
     // Check if the required number of images has been sent
-    if (userChallenge.imagesSent >= userChallenge.requiredImages) {
-      userChallenge.completed = true;
+    if (
+      userChallenge.challenges[challengeNumber].challengeData.imagesSent >=
+      userChallenge.challenges[challengeNumber].challengeData.requiredImages
+    ) {
+      userChallenge.challenges[challengeNumber].challengeData.completed = true;
       const theirXP = await xpSystem.getXpData(userId);
       let gain = gainFromChallenge * theirXP.multiplier;
       const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
         `Double Challenge Rewards`,
         userId
       );
-      // console.log(doTheyHaveBooster);
       if (doTheyHaveBooster) {
         gain = gain * 2;
       }
@@ -44,11 +47,31 @@ async function incrementImageCount(userChallenge, userId) {
           coinMessage !== `` ? `\n${coinMessage}` : ``
         }`
       );
-    }
-
-    // Save the updated challenge to MongoDB
-    await userChallenge.save();
+    } // Save the updated challenge to MongoDB
   }
+  if (
+    userChallenge.challenges[challengeNumber].challengeData.completed &&
+    !userChallenge.challenges[challengeNumber].challengeData.gainedXpReward
+  ) {
+    await xpSystem.addXp(userId, gainXpFromChallenge); // Reward 100 XP for completing the image challenge
+    userChallenge.challenges[
+      challengeNumber
+    ].challengeData.gainedXpReward = true;
+  }
+  await DailyChallenge.findOneAndUpdate(
+    {
+      userId: userId,
+    },
+    {
+      $set: {
+        [`challenges.${challengeNumber}.challengeData`]:
+          userChallenge.challenges[challengeNumber].challengeData,
+      },
+    },
+    {
+      upsert: true,
+    }
+  );
   return userChallenge;
 }
 
@@ -69,7 +92,7 @@ async function getImageStatus(userChallenge, userId) {
   if (completed) {
     return `🎉 You have completed today's image challenge and earned ${gain} coins!`;
   } else {
-    return `🎁 Today's challenge: Send ${requiredImages} image(s). Progress: ${imagesSent}/${requiredImages} image(s).`;
+    return `🎁 Send ${requiredImages} image(s). Progress: ${imagesSent}/${requiredImages} image(s).`;
   }
 }
 

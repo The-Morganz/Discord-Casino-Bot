@@ -2,32 +2,30 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
-let gainFromChallenge = 250;
-let gainXpFromChallenge = 50;
-// Generate a random message requirement between 20 and 40
-function generateRandomMessageRequirement() {
-  return Math.floor(Math.random() * 11) + 5; // Generates a random number between 20 and 40
+let gainFromChallenge = 500;
+let gainXpFromChallenge = 100;
+function generateRandomTimeRequirement() {
+  return Math.floor(Math.random() * 10) + 10;
 }
 
 // Initialize a message challenge
-function initializeMessageChallenge(userId) {
+function initializeVoiceChallenge(userId) {
   return {
-    challengeType: "message",
-    messages: 0,
-    requiredMessages: generateRandomMessageRequirement(),
+    challengeType: "voice",
+    minutesInVoice: 0,
+    requiredTime: generateRandomTimeRequirement(),
     completed: false,
     gainedXpReward: false,
   };
 }
 
-async function incrementMessageCount(userChallenge, userId, challengeNumber) {
+async function incrementMinutes(userChallenge, userId, challengeNumber) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.challenges[challengeNumber].challengeData.messages += 1;
+    userChallenge.minutesInVoice += 1;
 
-    // Check if the required number of messages has been reached
     if (
-      userChallenge.challenges[challengeNumber].challengeData.messages >=
-      userChallenge.challenges[challengeNumber].challengeData.requiredMessages
+      userChallenge.challenges[challengeNumber].challengeData.minutesInVoice >=
+      userChallenge.challenges[challengeNumber].challengeData.requiredTime
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       const theirXP = await xpSystem.getXpData(userId);
@@ -41,7 +39,7 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
       }
       await wallet.addCoins(userId, gain, false, false, true);
       console.log(
-        `User ${userId} has completed the message challenge and earned ${gain} coins.`
+        `User ${userId} has completed the voice challenge and earned ${gain} coins.`
       );
     }
 
@@ -71,14 +69,13 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
       upsert: true,
     }
   );
-
   // Return the updated userChallenge object
   return userChallenge;
 }
 
 // Get the message challenge status
-async function getMessageStatus(userChallenge, userId) {
-  const { messages, requiredMessages, completed } = userChallenge;
+async function getVoiceStatus(userChallenge, userId) {
+  const { minutesInVoice, requiredTime, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
   let gain = gainFromChallenge * theirXP.multiplier;
   const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
@@ -89,14 +86,14 @@ async function getMessageStatus(userChallenge, userId) {
     gain = gain * 2;
   }
   if (completed) {
-    return `🎉 You have completed today's message challenge and earned ${gain} coins!`;
+    return `🎉 You have completed today's voice challenge and earned ${gain} coins!`;
   } else {
-    return `🎁 Send ${requiredMessages} messages. Progress: ${messages}/${requiredMessages} messages.`;
+    return `🎁 Spend ${requiredTime} minutes in any voice chat. Progress: ${minutesInVoice}/${requiredTime} minutes.`;
   }
 }
 
 module.exports = {
-  initializeMessageChallenge,
-  incrementMessageCount,
-  getMessageStatus,
+  initializeVoiceChallenge,
+  incrementMinutes,
+  getVoiceStatus,
 };
