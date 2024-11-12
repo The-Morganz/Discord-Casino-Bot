@@ -17,25 +17,17 @@ const {
   MessageReaction,
 } = require("discord.js");
 const wallet = require("./wallet");
-const roll = require("./roll");
+const roll = require("./roll/roll");
 const blackjackRooms = require("./blackjack/rooms");
 const blackjackBets = require(`./blackjack/bettingBJ`);
 const blackjackGame = require("./blackjack/game");
 const EventEmitter = require("events");
 const daily = require("./daily/daily");
-const {
-  placeBet,
-  startRace,
-  getShuffledChances,
-  initializeHorseStats,
-} = require("./horse");
 const voiceReward = require("./voiceReward");
-const coinflip = require("./coinflip");
-const grid = require("./grid");
-const { info } = require("console");
+const coinflip = require("./flip/coinflip");
+const grid = require("./grid/grid");
 const { makeDeck, randomNumber } = require("./blackjack/makeDeck");
 const xpSystem = require("./xp/xp");
-const { totalmem, userInfo } = require("os");
 const path = require("path");
 const eventEmitter = new EventEmitter();
 const express = require("express");
@@ -45,10 +37,14 @@ const User = require("./models/User");
 const DailyChallenge = require("./models/DailyChallenge");
 const UserXP = require("./models/UserXP");
 const { format } = require("date-fns");
-const Inventories = require("./models/UserInventory");
 const shop = require("./shop/shop");
 const { generateShop } = require(`./shop/generateShop`);
 const playerInfo = require(`./playerinfo`);
+const horse2 = require(`./horse/horse`);
+const {
+  generateRollThemeButtons,
+  generateChooseThemeButtons,
+} = require("./roll/generateRollThemeButtons");
 const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
@@ -276,80 +272,49 @@ function startBot() {
 
     //
     if (message.content.toLowerCase() === "$help") {
-      const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned a daily challenge for some quick coins.📅\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n⏩**"$toggleanim"**- Toggle rolling animation.⏩\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:`;
-      const theHelpMessagePt2 = `**"$playerinfo [@User]"**- Display information about tagged player.\n\n**"$shop"**- Go to the shop.\n**"$shophelp"**- Get details about items in the shop.`;
+      const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned daily challenges for some quick coins.📅\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n⏩**"$toggleanim"**- Toggle rolling animation.⏩\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n🏇**"$horsebet [bet amount] [horse number]"**- Place a bet in a horse race. This also starts the horse race.🏇\n🏇**"$horsestats"**- Shows you the odds of each horse winning, the lower the odds, the higher the chance to win.🏇\n🏇**"$horserace"**- See when the horse race is starting.🏇\n🏇**"$horsenotify"**-Get notified via direct message a few moments before the race starts.🏇`;
+      const theHelpMessagePt2 = `\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:\n\n:information:**"$playerinfo [@User]"**- Display information about tagged player.:information:\n\n🛒**"$shop"**- Go to the shop.🛒\n🛒**"$shophelp"**- Get details about items in the shop.🛒`;
       message.author.send(theHelpMessagePt1);
       message.author.send(theHelpMessagePt2);
     }
-
-    // Handle placing bets HORSE
-    if (message.content.startsWith("$horsebet")) {
+    // HOOORSE IM HORSING AROUND
+    if (message.content.startsWith(`$horsebet`)) {
       let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
+      const isBetValid = await horse2.isBetValid(amount, horseNumber, userId);
+      if (isBetValid !== true) return message.reply(isBetValid);
+      const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+        `Risk Taker's Badge`,
+        userId
+      );
+      let riskTakerExtra = 0;
+      if (doTheyHaveRiskTaker) {
+        const theirCoinAmount = await wallet.getCoins(userId);
 
-      // Check if betting is open
-      if (!bettingOpen) {
-        return message.reply(
-          "Betting is not open yet. Wait for the owner to start the race."
-        );
+        // Define the threshold (80% of their total coins)
+        const riskThreshold = theirCoinAmount * 0.8;
+        // Check if the bet amount is greater than or equal to the threshold
+        if (amount >= riskThreshold) {
+          // Increase bet amount by 20% of their total coins
+          riskTakerExtra = amount * 0.2;
+          riskTakerExtra = Math.round(riskTakerExtra);
+          await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+        }
       }
-
-      // Check if the race has already started
-      if (raceInProgress) {
-        return message.reply(
-          "The race is already in progress, no more bets can be placed."
-        );
-      }
-
-      // Validate bet
-      if (
-        isNaN(amount) ||
-        isNaN(horseNumber) ||
-        horseNumber < 1 ||
-        horseNumber > 8
-      ) {
-        return message.reply(
-          "Invalid bet. Usage: $horsebet [amount] [horse number (1-8)]"
-        );
-      }
-
-      // Call the placeBet function
-      let response = placeBet(message.author, amount, horseNumber);
-      return message.reply(response);
+      await horse2.addHorseBet(userId, amount, horseNumber, message);
+      await horse2.theFinalCountdown(message);
     }
-
-    // Handle starting the race (only admin can start the race)
-    if (message.content === "$horse start") {
-      console.log("Admin start race command received!"); // Log to verify the command was captured
-      if (message.author.id === ownerId) {
-        console.log("Admin ID matches, starting the race!");
-        let response = await startRace(message);
-        message.reply(response);
-
-        // Enable betting after the start race command
-        bettingOpen = true;
-
-        // Disable betting after 1 minute (when the race animation begins)
-        setTimeout(() => {
-          raceInProgress = true; // The race starts, so disable further betting
-        }, 10000); // 1 minute countdown
-      } else {
-        console.log("Non-admin user tried to start the race.");
-        message.reply("Only the admin can start the race!");
-      }
+    if (message.content.startsWith(`$horserace`)) {
+      return horse2.whenDoesRaceStart(message);
     }
-
-    // Handle displaying horse stats
-    if (message.content === "$horse stats") {
-      const chances = getShuffledChances(); // Get the shuffled chances for each horse
-
-      // Display the chances for each horse
-      const statsMessage = chances
-        .map((chance, index) => `Horse ${index + 1}: ${chance}% chance to win`)
-        .join("\n");
-
-      message.reply(`Current horse stats:\n${statsMessage}`);
+    if (message.content.startsWith(`$horsestats`)) {
+      horse2.getHorseStats(message);
+    }
+    if (message.content.startsWith(`$horsenotify`)) {
+      const user = await client.users.fetch(userId);
+      const messageToSend = await horse2.notify(user);
+      message.reply(messageToSend);
     }
 
     if (message.content.toLowerCase() === "$shop") {
@@ -366,7 +331,7 @@ function startBot() {
     }
     // SHOP
     if (message.content.toLowerCase() === `$shophelp`) {
-      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.`;
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.\n\n**"Roll Themes"**- Enter a new part of the shop, where you can buy themes for the slot machines!`;
       // **"Debt Eraser"**- Cuts your debt in half. You can buy this item while you have debt, which will use the item instantly.Removes after one use.
       message.author.send(theHelpMessage);
       return;
@@ -923,8 +888,18 @@ function startBot() {
       }
     }
     if (message.content.toLowerCase().startsWith(`$changeroll`)) {
-      const rollSkin = roll.changeEmotes();
-      message.reply(`You changed your roll theme to ${rollSkin}!`);
+      const maan = await generateChooseThemeButtons(
+        ActionRowBuilder,
+        ButtonBuilder,
+        ButtonStyle,
+        userId,
+        message
+      );
+      console.log(maan);
+
+      // await message.channel.send()
+      // const rollSkin = roll.changeEmotes();
+      // message.reply(`You changed your roll theme to ${rollSkin}!`);
     }
 
     // $ROLL
@@ -1918,16 +1893,63 @@ function startBot() {
       return;
     }
     if (interaction.customId.startsWith("buy_")) {
-      let [action, usersButton] = interaction.customId.split("_").slice(1);
+      let [action, usersButtonOrThemeName, extraUserIdForRollThemes] =
+        interaction.customId.split("_").slice(1);
       const userId = interaction.user.id;
-      console.log(action, usersButton);
-      if (usersButton !== userId) {
+
+      if (action === `back`) {
+        const { embed, rows } = await generateShop(
+          ActionRowBuilder,
+          ButtonBuilder,
+          ButtonStyle,
+          EmbedBuilder,
+          interaction.user.id,
+          wallet
+        );
+
+        return interaction.update({ embeds: [embed], components: rows });
+        return;
+      }
+
+      if (action === `themesBuy`) {
+        if (extraUserIdForRollThemes !== userId) {
+          await interaction.reply({
+            content: `You can't interact with buttons created by others`,
+            ephemeral: true,
+          });
+          return;
+        }
+        const message = await shop.buyLogicForRollThemes(
+          usersButtonOrThemeName,
+          userId,
+          wallet
+        );
+        await interaction.reply({ content: message, ephemeral: true });
+        return;
+      }
+      if (usersButtonOrThemeName !== userId) {
         await interaction.reply({
           content: `You can't interact with buttons created by others`,
           ephemeral: true,
         });
         return;
       }
+      console.log(action);
+      if (action === `themes`) {
+        const { embed, rows } = await generateRollThemeButtons(
+          ActionRowBuilder,
+          ButtonBuilder,
+          ButtonStyle,
+          EmbedBuilder,
+          userId,
+          wallet
+        );
+        return interaction.update({
+          embeds: [embed],
+          components: rows,
+        });
+      }
+
       const message = await shop.buyLogic(action, userId, wallet);
       const doTheyHaveLevelJump = await shop.checkIfHaveInInventory(
         `Level Jump`,
@@ -1945,22 +1967,19 @@ function startBot() {
       }
       await interaction.reply({ content: message, ephemeral: true });
       return;
-      // const doTheyHaveDebtEraser = await shop.checkIfHaveInInventory(
-      //   `Debt Eraser`,
-      //   userId
-      // );
-      // if (doTheyHaveDebtEraser) {
-      //   const usersDebt = await wallet.getDebt(userId);
-      //   if (usersDebt > 0) {
-      //     await wallet.payDebt(userId, usersDebt * 0.5);
-      //     await interaction.reply(
-      //       `${message}, and have cleared 50% of your debt!`
-      //     );
-      //     await shop.removeSpecificItem(userId, `Debt Eraser`);
-      //     return;
-      //   }
-      //   return await interaction.reply(message);
-      // }
+    }
+
+    if (interaction.customId.startsWith(`theme_`)) {
+      let [themeName, usersButton] = interaction.customId.split("_").slice(1);
+      if (usersButton !== interaction.user.id) {
+        return await interaction.reply({
+          content: `You can't interact with other people's buttons! If you want to change your roll theme, use "$shop".`,
+          ephemeral: true,
+        });
+      }
+      await roll.changeEmotes(interaction.user.id, themeName);
+      await interaction.reply(`Changed your roll theme to ${themeName}!`);
+      return;
     }
 
     if (interaction.customId.startsWith("bj_")) {
@@ -2588,10 +2607,14 @@ function startBot() {
       } catch (err) {
         console.log(`Something went wrong...`);
       }
-      return interaction.reply({
-        content: "Something went wrong with the grid data.",
-        ephemeral: true,
-      });
+      try {
+        return interaction.reply({
+          content: "Something went wrong with the grid data.",
+          ephemeral: true,
+        });
+      } catch (err) {
+        console.log(`Something went veery wrong`);
+      }
     }
 
     // Check if the user who clicked the button is the same as the one who created the grid
@@ -2689,7 +2712,6 @@ function startBot() {
     }
     let multiplier;
     // Reveal the multiplier for the clicked button
-    console.log(interaction.customId);
     if (gridData.fromButton) {
       multiplier = grid.revealMultiplier(interaction.customId, true);
     } else {

@@ -70,12 +70,8 @@ function revealMultiplier(customId, fromButton = false) {
   const parts = customId.split("_");
   console.log(parts);
   if (fromButton) {
-    const testing = parseFloat(parts[parts.length - 2]);
-    console.log(testing);
     return parseFloat(parts[parts.length - 2]); // Return the hidden multiplier as a float
   } else {
-    const testing = parseFloat(parts[parts.length - 1]);
-    console.log(testing);
     return parseFloat(parts[parts.length - 1]);
   }
 }

@@ -32,6 +32,7 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       const theirXP = await xpSystem.getXpData(userId);
       let gain = gainFromChallenge * theirXP.multiplier;
+
       const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
         `Double Challenge Rewards`,
         userId

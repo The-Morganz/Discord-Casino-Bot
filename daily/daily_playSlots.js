@@ -90,7 +90,7 @@ async function getSlotsGameStatus(userChallenge, userId) {
   }
   if (completed) {
     const theirCoinAmount = await wallet.getCoins(userId);
-    const precentOfCoins = theirCoinAmount * 0.1;
+    const precentOfCoins = theirCoinAmount * 0.05;
     return `🎉 You have played enough slots, finishing the challenge and earning ${gain} coins! You gained 10 free spins with a bet of ${Math.round(
       precentOfCoins
     )}`;

@@ -1,10 +1,140 @@
-const wallet = require("./wallet");
-const xpSystem = require("./xp/xp");
-const dailyChallenges = require(`./daily/daily`);
+const wallet = require("../wallet");
+const xpSystem = require("../xp/xp");
+const dailyChallenges = require(`../daily/daily`);
+const User = require(`../models/User`);
 const normalXpGain = 5;
 let rollType = 0;
 // Define emoji set with rarity, payout, and multiplier for betting
 let emojis = [`🍋`, `🍊`, `🍒`, `🍉`, `🍀`, `7️⃣`, `💎`];
+function getEmojiSet(themeName) {
+  switch (themeName) {
+    case `Fruits`:
+      emojis = [
+        `:lemon:`,
+        `:tangerine:`,
+        `:cherries:`,
+        `:watermelon:`,
+        `:four_leaf_clover:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Wild West`:
+      emojis = [
+        `:cactus:`,
+        `:cowboy:`,
+        `:snake:`,
+        `:horse:`,
+        `:bison:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Egypt`:
+      emojis = [
+        `:urn:`,
+        `:camel:`,
+        `:amphora:`,
+        `:dromedary_camel:`,
+        `:hindu_temple:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Greece`:
+      emojis = [
+        `:sunny:`,
+        `:ocean:`,
+        `:amphora:`,
+        `:nazar_amulet:`,
+        `:mermaid_tone1:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Asian`:
+      emojis = [
+        `:shinto_shrine:`,
+        `:ramen:`,
+        `:dragon:`,
+        `:folding_hand_fan:`,
+        `:ninja:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Ocean`:
+      emojis = [
+        `:jellyfish:`,
+        `:coral:`,
+        `:shell:`,
+        `:tropical_fish:`,
+        `:shark:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Pirate`:
+      emojis = [
+        `:pirate_flag:`,
+        `:anchor:`,
+        `:compass:`,
+        `:parrot:`,
+        `:dagger:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Magic`:
+      emojis = [
+        `:crystal_ball:`,
+        `:sparkles:`,
+        `:unicorn:`,
+        `:woman_mage_tone1:`,
+        `:stars:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Halloween`:
+      emojis = [
+        `:candy:`,
+        `:bat:`,
+        `:knife:`,
+        `:jack_o_lantern:`,
+        `:ghost:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    case `Christmas`:
+      emojis = [
+        `:christmas_tree:`,
+        `:deer:`,
+        `:snowman2:`,
+        `:snowflake:`,
+        `:santa:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+
+      break;
+    case `Space`:
+      emojis = [
+        `:satellite_orbital:`,
+        `:flying_saucer:`,
+        `:astronaut:`,
+        `:alien:`,
+        `:ringed_planet:`,
+        `:seven:`,
+        `:gem:`,
+      ];
+      break;
+    default:
+      break;
+  }
+  setEmojiSet();
+}
 function setEmojiSet() {
   for (let i = 0; i < emojis.length; i++) {
     emojiSet[i].emoji = emojis[i];
@@ -21,167 +151,15 @@ let emojiSet = [
   { emoji: "💎", rarity: 3, multiplier: 200, freeSpins: 50 },
 ];
 setEmojiSet();
-function changeEmotes() {
-  let messageToSend = ``;
-  switch (rollType) {
-    case 10:
-      emojis = [
-        `:lemon:`,
-        `:tangerine:`,
-        `:cherries:`,
-        `:watermelon:`,
-        `:four_leaf_clover:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType = 0;
-      messageToSend = `Fruits 🍒`;
-      break;
-    case 0:
-      emojis = [
-        `:cactus:`,
-        `:cowboy:`,
-        `:snake:`,
-        `:horse:`,
-        `:bison:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Wild West 🤠`;
-      break;
-    case 1:
-      emojis = [
-        `:urn:`,
-        `:camel:`,
-        `:amphora:`,
-        `:dromedary_camel:`,
-        `:hindu_temple:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Egypt :flag_eg:`;
-      break;
-    case 2:
-      emojis = [
-        `:sunny:`,
-        `:ocean:`,
-        `:amphora:`,
-        `:nazar_amulet:`,
-        `:mermaid_tone1:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Greece :flag_gr:`;
-      break;
-    case 3:
-      emojis = [
-        `:shinto_shrine:`,
-        `:ramen:`,
-        `:dragon:`,
-        `:folding_hand_fan:`,
-        `:ninja:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Asian :ninja:`;
-      break;
-    case 4:
-      emojis = [
-        `:jellyfish:`,
-        `:coral:`,
-        `:shell:`,
-        `:tropical_fish:`,
-        `:shark:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Ocean :ocean:`;
-      break;
-    case 5:
-      emojis = [
-        `:pirate_flag:`,
-        `:anchor:`,
-        `:compass:`,
-        `:parrot:`,
-        `:dagger:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Pirate :pirate_flag:`;
-      break;
-    case 6:
-      emojis = [
-        `:crystal_ball:`,
-        `:sparkles:`,
-        `:unicorn:`,
-        `:woman_mage_tone1:`,
-        `:stars:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Magic :magic_wand:`;
-      break;
-    case 7:
-      emojis = [
-        `:candy:`,
-        `:bat:`,
-        `:knife:`,
-        `:jack_o_lantern:`,
-        `:ghost:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Halloween :wilted_rose:`;
-      break;
-    case 8:
-      emojis = [
-        `:christmas_tree:`,
-        `:deer:`,
-        `:snowman2:`,
-        `:snowflake:`,
-        `:santa:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Christmas :christmas_tree:`;
-      break;
-    case 9:
-      emojis = [
-        `:satellite_orbital:`,
-        `:flying_saucer:`,
-        `:astronaut:`,
-        `:alien:`,
-        `:ringed_planet:`,
-        `:seven:`,
-        `:gem:`,
-      ];
-      setEmojiSet();
-      rollType++;
-      messageToSend = `Space :comet:`;
-      break;
-    default:
-      break;
-  }
-  return messageToSend;
+
+async function changeEmotes(userId, themeToChangeTo) {
+  await User.findOneAndUpdate(
+    { userId: userId },
+    { selectedTheme: themeToChangeTo },
+    { upsert: true }
+  );
+
+  return;
 }
 // Function to get a random emoji with a 10% chance for
 function getRandomEmoji() {
@@ -241,7 +219,8 @@ function skipAnimChange(state) {
 async function roll(userId, betAmount, message, button = false) {
   const frames = 3;
   const delay = 200; // 0.2 seconds
-
+  const thatUser = await User.findOne({ userId: userId });
+  getEmojiSet(thatUser.selectedTheme);
   let rollResult = [
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],
     [getRandomEmoji(), getRandomEmoji(), getRandomEmoji()],

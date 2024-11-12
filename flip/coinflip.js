@@ -1,7 +1,7 @@
-const wallet = require("./wallet");
-const shopAndItems = require(`./shop/shop`);
-const xpSystem = require(`./xp/xp`);
-const dailyChallenges = require(`./daily/daily`);
+const wallet = require("../wallet");
+const shopAndItems = require(`../shop/shop`);
+const xpSystem = require(`../xp/xp`);
+const dailyChallenges = require(`../daily/daily`);
 
 // Utility function to create a delay
 function sleep(ms) {

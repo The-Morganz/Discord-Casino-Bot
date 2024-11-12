@@ -2,6 +2,7 @@
 const ShopInventory = require(`../models/ShopInventory`);
 const User = require("../models/User");
 const UserInventory = require(`../models/UserInventory`);
+const { getAllEmojiThemes } = require("../roll/getAllEmojiThemes");
 const { shopItems } = require(`./shopItems`);
 // Mogo sam da exportujem iz shopItems al se plasim da se nesto ne ukenja pa sam samo kopirao opet ovde, koristi se u checkExpiredItem.
 function getDurationDates(whatDoYouWantBro, howManyHours = 1) {
@@ -120,7 +121,49 @@ async function checkIfHaveInInventory(item, userId) {
   }
   return true;
 }
+async function checkIfHaveThemeInInventory(nameOfTheme, userId) {
+  const thatInventory = await UserInventory.findOne({
+    userId: userId,
+    "themes.themeName": nameOfTheme, // Check if inventory contains the specified item
+  });
+  if (thatInventory === null) {
+    return false;
+  }
+  return true;
+}
+async function buyLogicForRollThemes(nameOfTheme, userId, wallet) {
+  const hasThemeInInv = await checkIfHaveThemeInInventory(nameOfTheme, userId);
+  if (hasThemeInInv) return `You already have that theme!`;
+  let themeInfo;
+  let themeShopItems = getAllEmojiThemes();
+  themeShopItems.forEach((entry, index) => {
+    if (entry.name === nameOfTheme) {
+      themeInfo = entry;
+    }
+  });
+  const userBalance = await wallet.getCoins(userId);
+  if (userBalance < themeInfo.price) {
+    return `You don't have enough coins to make this purchase.`;
+  }
+  const userDebt = await wallet.getDebt(userId);
+  if (userDebt !== 0) {
+    return `You have to clear your debt before making a purchase!`;
+  }
+  await UserInventory.findOneAndUpdate(
+    { userId: userId }, // Find the document by itemName
+    {
+      $push: {
+        themes: {
+          themeName: themeInfo.name,
+        },
+      },
+    }, // Push new item into the inventory array
+    { upsert: true } // Return the updated document
+  );
 
+  await wallet.removeCoins(userId, themeInfo.price, true);
+  return `You bought the ${nameOfTheme} roll theme! Use "$changeroll" to change your theme!`;
+}
 // Logika za dodavanje itema i uzimanje para kad kupis item.... Ovde se (za sad) pise i poruka koja se posalje, returnuje se message
 async function buyLogic(itemName, userId, wallet) {
   const hasItemInInv = await checkIfHaveInInventory(itemName, userId);
@@ -186,6 +229,7 @@ async function getCustomName(userId) {
 module.exports = {
   saveInDB,
   buyLogic,
+  buyLogicForRollThemes,
   checkIfHaveInInventory,
   checkIfExpiredItem,
   removeExpiredItems,
