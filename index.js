@@ -64,6 +64,20 @@ const ownerId2 = "294522326182002710";
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
+client.on("guildCreate", (guild) => {
+  // Find a channel to send the welcome message
+  const channel = guild.channels.cache.find(
+    (ch) =>
+      ch.type === "GUILD_TEXT" &&
+      ch.permissionsFor(guild.me).has("SEND_MESSAGES")
+  );
+
+  if (channel) {
+    channel.send(
+      `Hello! Thanks for inviting me to your server!\nTo get started, type **"$help"** to see all the services i offer!\nMade by tomazdravkovic and kalukalu.`
+    );
+  }
+});
 
 // Simple web server for UptimeRobot to ping
 app.get("/", (req, res) => {
@@ -282,7 +296,16 @@ function startBot() {
       let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
-      const isBetValid = await horse2.isBetValid(amount, horseNumber, userId);
+      const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+        `High Roller Pass`,
+        userId
+      );
+      const isBetValid = await horse2.isBetValid(
+        amount,
+        horseNumber,
+        userId,
+        doTheyHaveHighRollerPass
+      );
       if (isBetValid !== true) return message.reply(isBetValid);
       const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
         `Risk Taker's Badge`,
@@ -305,12 +328,15 @@ function startBot() {
       await horse2.addHorseBet(userId, amount, horseNumber, message);
       await horse2.theFinalCountdown(message);
     }
+    // YES IM STILL HORSING
     if (message.content.startsWith(`$horserace`)) {
       return horse2.whenDoesRaceStart(message);
     }
+    // WHAT ARE MY HORSING STATISTICS
     if (message.content.startsWith(`$horsestats`)) {
       horse2.getHorseStats(message);
     }
+    // CAN YOU CALL ME
     if (message.content.startsWith(`$horsenotify`)) {
       const user = await client.users.fetch(userId);
       const messageToSend = await horse2.notify(user);
@@ -1282,6 +1308,13 @@ function startBot() {
         return;
       }
     }
+    if (message.content.startsWith(`$devilsblessing`)) {
+      return message.reply(
+        `*We can't talk about him here... I hope you don't end up like those cups...*`
+      );
+    }
+
+    // yeah, im blackjack
     if (message.content.toLowerCase().startsWith("$bj")) {
       generateBlackjackButtons(message.channel);
     }
@@ -1908,7 +1941,6 @@ function startBot() {
         );
 
         return interaction.update({ embeds: [embed], components: rows });
-        return;
       }
 
       if (action === `themesBuy`) {

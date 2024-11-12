@@ -7,14 +7,23 @@ let raceInProgress = false;
 let countdown = undefined;
 let amountOfTimeToWaitInMs;
 let timeOfStartCountdown = 0;
-let minutesToStart = 5;
+let minutesToStart = 3;
 async function addHorseBet(userId, amount, horseNumber, message) {
+  const didTheyBetSomewhereElse = await horseRacing.findOne({ userId: userId });
+  if (didTheyBetSomewhereElse.channelId !== `0`)
+    return message.reply(
+      `You already placed a bet on a horse race in a different server!`
+    );
   await horseRacing.findOneAndUpdate(
     { userId: userId },
-    { betAmount: amount, horseNumber: horseNumber },
+    {
+      betAmount: amount,
+      horseNumber: horseNumber,
+      channelId: message.channel.id,
+    },
     { upsert: true }
   );
-  await wallet.removeCoins(userId, amount, true);
+  await wallet.removeCoins(userId, amount, false);
   message.reply(
     `🐎Your bet (${amount} coins) on **Horse ${horseNumber}** has been placed.🐎`
   );
@@ -24,7 +33,7 @@ async function removeHorseBets() {
   for (let i = 0; i < allUsers.length; i++) {
     await horseRacing.findOneAndUpdate(
       { userId: allUsers[i].userId },
-      { betAmount: 0 }
+      { betAmount: 0, channelId: 0, notify: false }
     );
   }
 }
@@ -62,7 +71,12 @@ function getHorseChances() {
   return shuffleChances(originalChances); // Sum should be 100
 }
 generateHorses(horseAmount);
-async function isBetValid(betAmount, horseNumber, userId) {
+async function isBetValid(
+  betAmount,
+  horseNumber,
+  userId,
+  doTheyHaveHighRollerPass
+) {
   const theirWallet = await wallet.getCoins(userId);
   if (raceInProgress) {
     return `A race is in progress.`;
@@ -70,11 +84,17 @@ async function isBetValid(betAmount, horseNumber, userId) {
   if (theirWallet < betAmount) {
     return `You don't have enough coins in your wallet!`;
   }
-  if (betAmount > 10000000) {
+  if (betAmount > 10000 && !doTheyHaveHighRollerPass) {
     return `You can't bet that much!`;
   }
-  if (isNaN(betAmount) || isNaN(horseNumber)) {
+  if (betAmount > 10000000 && doTheyHaveHighRollerPass) {
+    return `Even with a High Roller Pass, you can't bet that much.`;
+  }
+  if (isNaN(betAmount) || isNaN(horseNumber) || betAmount <= 0) {
     return `Not a valid number. Use "$horsebet [amount of coins] [horse number]"`;
+  }
+  if (horseNumber === 69) {
+    return `Seriously?`;
   }
   if (horseNumber > horses.length) {
     return `Not a valid horse number.`;
@@ -98,9 +118,9 @@ function generateHorses(howMany) {
 function getHorseStats(message) {
   if (raceInProgress)
     return message.reply(`You can't check the statistics now!`);
-  let messageToSend = ``;
+  let messageToSend = `The horse statistics for the upcoming horse race:\n`;
   for (let i = 0; i < horses.length; i++) {
-    messageToSend += `🐎Horse ${horses[i].horseNumber}: Odds(quota): **${horses[i].kvota}**.\n`;
+    messageToSend += `Horse ${horses[i].horseNumber}: Odds(quota): **${horses[i].kvota}**.\n`;
   }
   message.reply(messageToSend);
 }
@@ -113,7 +133,7 @@ async function sendUpdate(message, finishLine) {
     let repeatBullshit = finishLine - horses[i].position;
     if (repeatBullshit < 0) repeatBullshit = 0;
     theMessageToSend +=
-      `🐎${horses[i].horseNumber}:checkered_flag:` +
+      `${horses[i].horseNumber}:checkered_flag:` +
       "-".repeat(repeatBullshit) +
       `🏇\n`;
   }
@@ -163,13 +183,23 @@ async function startGame(message) {
     `🐎**Horse ${winner.horseNumber} won the race!**🐎`
   );
   await givePayouts(winner, message);
+  let messageToSend = `:man_red_haired: I'm here with horse number ${winner.horseNumber}. Let's hear what they have to say.`;
+  await message.channel.send(messageToSend);
+  await sleep(1500);
+  const interview = await horseOneLiner(winner);
+  await message.channel.send(`\n🐴${interview}`);
 }
 
 async function givePayouts(winner, message) {
-  const allUsers = await horseRacing.find();
-
+  const allUsers = await horseRacing.find({
+    channelId: { $eq: `${message.channel.id}` },
+    betAmount: { $gt: 0 },
+  });
+  console.log(allUsers);
+  const channelId = message.channel.id;
   for (let i = 0; i < allUsers.length; i++) {
-    if (allUsers[i].betAmount <= 0) continue;
+    if (allUsers[i].betAmount <= 0 || allUsers[i].channelId !== channelId)
+      continue;
     if (winner.horseNumber === allUsers[i].horseNumber) {
       const gain = allUsers[i].betAmount * winner.kvota;
       const coinMessage = await wallet.addCoins(allUsers[i].userId, gain);
@@ -254,19 +284,35 @@ async function notify(user) {
   }
   await horseRacing.findOneAndUpdate({ userId: user.id }, { notify: true });
 
-  let timeToNotify = (whenDoesRaceStart(`gay`, true) - 2) * (1000 * 60);
+  let timeToNotify = (whenDoesRaceStart(`gay`, true) - 1) * (1000 * 60);
   if (timeToNotify <= 0) timeToNotify = 1;
   setTimeout(() => {
     user.send(
       `🐎The horse race will start soon... You bet on horse ${areTheyBeingNotified.horseNumber}🐎`
     );
     console.log(`Notified.`);
-    removeNotifyFromMongo(user);
+    // removeNotifyFromMongo(user);
   }, timeToNotify);
   return `🐎You will be notified some time before the race starts.🐎`;
 }
-async function removeNotifyFromMongo(user) {
-  await horseRacing.findOneAndUpdate({ userId: user.id }, { notify: false });
+async function horseOneLiner(winner) {
+  const oneLiners = [
+    `After months of training, a lot of support from my rider, and him sorting something out with the managers of this race, i can finally say that it was worth it.`,
+    `I told my rider it's not just about winning, but now that I have, it actually feels pretty great!`,
+    `Who knew carrots and pep talks could get me this far?`,
+    `Winning feels almost as good as that time I found a patch of untouched grass!`,
+    `The secret? I just ran to the finish line.`,
+    `They said I had a 1 in ${horseAmount} chance... turns out I had a one-in-none excuse to lose!`,
+    `I'd like to thank my four legs for making this possible. Couldn't have done it without them!`,
+    `All that time pretending to be tired in training really paid off today!`,
+    `Winning was a breeze! …Well, maybe not for my competition.`,
+    `Wasn't really planning to win; just wanted to show off my new shoes.`,
+    `When you're this fast, every day is a cheat day.`,
+    `To my competitors: better luck next time! I'll be on vacation.`,
+  ];
+  const oneLiner = oneLiners[Math.floor(Math.random() * oneLiners.length)];
+  // messageToSend += oneLiner;
+  return oneLiner;
 }
 
 module.exports = {
