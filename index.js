@@ -304,7 +304,8 @@ function startBot() {
         amount,
         horseNumber,
         userId,
-        doTheyHaveHighRollerPass
+        doTheyHaveHighRollerPass,
+        message
       );
       if (isBetValid !== true) return message.reply(isBetValid);
       const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
@@ -339,7 +340,7 @@ function startBot() {
     // CAN YOU CALL ME
     if (message.content.startsWith(`$horsenotify`)) {
       const user = await client.users.fetch(userId);
-      const messageToSend = await horse2.notify(user);
+      const messageToSend = await horse2.notify(user, message);
       message.reply(messageToSend);
     }
 
@@ -2010,7 +2011,10 @@ function startBot() {
         });
       }
       await roll.changeEmotes(interaction.user.id, themeName);
-      await interaction.reply(`Changed your roll theme to ${themeName}!`);
+      await interaction.reply({
+        content: `Changed your roll theme to ${themeName}!`,
+        ephemeral: true,
+      });
       return;
     }
 

@@ -7,19 +7,51 @@ let raceInProgress = false;
 let countdown = undefined;
 let amountOfTimeToWaitInMs;
 let timeOfStartCountdown = 0;
-let minutesToStart = 3;
+let minutesToStart = 5;
+let guildsAndInfo = [];
+
+function addNewGuild(message) {
+  let youAreInARoom = false;
+  guildsAndInfo.forEach((e) => {
+    if (e.guildId === message.guildId) {
+      youAreInARoom = true;
+    }
+  });
+  if (youAreInARoom) return;
+
+  guildsAndInfo.push({
+    guildId: message.guildId,
+    horses: [],
+    horseAmount: 6,
+    splitDecision: false,
+    raceInProgress: false,
+    countdown: undefined,
+    amountOfTimeToWaitInMs: 0,
+    timeOfStartCountdown: 0,
+    minutesToStart: 3,
+    finishLine: 30,
+    someoneFinished: false,
+    whoFinishedAtSameTime: [],
+  });
+  generateHorses(6, message);
+}
+
 async function addHorseBet(userId, amount, horseNumber, message) {
   const didTheyBetSomewhereElse = await horseRacing.findOne({ userId: userId });
-  if (didTheyBetSomewhereElse.channelId !== `0`)
-    return message.reply(
-      `You already placed a bet on a horse race in a different server!`
-    );
+  // if (
+  //   didTheyBetSomewhereElse.channelId !== `0` &&
+  //   didTheyBetSomewhereElse.channelId !== null
+  // )
+  //   return message.reply(
+  //     `You already placed a bet on a horse race in a different server!`
+  //   );
+  addNewGuild(message);
   await horseRacing.findOneAndUpdate(
     { userId: userId },
     {
       betAmount: amount,
       horseNumber: horseNumber,
-      channelId: message.channel.id,
+      channelId: message.guildId,
     },
     { upsert: true }
   );
@@ -70,15 +102,18 @@ function getHorseChances() {
   let originalChances = generateArrayWithSum(horseAmount);
   return shuffleChances(originalChances); // Sum should be 100
 }
-generateHorses(horseAmount);
+// generateHorses(horseAmount);
 async function isBetValid(
   betAmount,
   horseNumber,
   userId,
-  doTheyHaveHighRollerPass
+  doTheyHaveHighRollerPass,
+  message
 ) {
+  const thatRoom = findHorseRoom(message);
+
   const theirWallet = await wallet.getCoins(userId);
-  if (raceInProgress) {
+  if (thatRoom.raceInProgress) {
     return `A race is in progress.`;
   }
   if (theirWallet < betAmount) {
@@ -96,17 +131,36 @@ async function isBetValid(
   if (horseNumber === 69) {
     return `Seriously?`;
   }
-  if (horseNumber > horses.length) {
+  if (horseNumber > thatRoom.horses.length) {
     return `Not a valid horse number.`;
   }
   return true;
 }
-function generateHorses(howMany) {
-  horses = [];
-  splitDecision = false;
+function findHorseRoom(message) {
+  let theRoom;
+  guildsAndInfo.forEach((e) => {
+    if (e.guildId === message.guildId) {
+      theRoom = e;
+    }
+  });
+  if (!theRoom) {
+    addNewGuild(message);
+    guildsAndInfo.forEach((e) => {
+      if (e.guildId === message.guildId) {
+        theRoom = e;
+      }
+    });
+  }
+  return theRoom;
+}
+function generateHorses(howMany, message) {
+  const thatRoom = findHorseRoom(message);
+
+  thatRoom.horses = [];
+  thatRoom.splitDecision = false;
   const horseChancesArray = getHorseChances();
   for (let i = 0; i < howMany; i++) {
-    horses.push({
+    thatRoom.horses.push({
       horseNumber: i + 1,
       chance: horseChancesArray[i],
       position: 0,
@@ -116,11 +170,13 @@ function generateHorses(howMany) {
   }
 }
 function getHorseStats(message) {
-  if (raceInProgress)
+  const thatRoom = findHorseRoom(message);
+
+  if (thatRoom.raceInProgress)
     return message.reply(`You can't check the statistics now!`);
   let messageToSend = `The horse statistics for the upcoming horse race:\n`;
-  for (let i = 0; i < horses.length; i++) {
-    messageToSend += `Horse ${horses[i].horseNumber}: Odds(quota): **${horses[i].kvota}**.\n`;
+  for (let i = 0; i < thatRoom.horses.length; i++) {
+    messageToSend += `Horse ${thatRoom.horses[i].horseNumber}: Odds(quota): **${thatRoom.horses[i].kvota}**.\n`;
   }
   message.reply(messageToSend);
 }
@@ -128,57 +184,58 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 async function sendUpdate(message, finishLine) {
+  const thatRoom = findHorseRoom(message);
   let theMessageToSend = ``;
-  for (let i = 0; i < horses.length; i++) {
-    let repeatBullshit = finishLine - horses[i].position;
+  for (let i = 0; i < thatRoom.horses.length; i++) {
+    let repeatBullshit = finishLine - thatRoom.horses[i].position;
     if (repeatBullshit < 0) repeatBullshit = 0;
     theMessageToSend +=
-      `${horses[i].horseNumber}:checkered_flag:` +
+      `${thatRoom.horses[i].horseNumber}:checkered_flag:` +
       "-".repeat(repeatBullshit) +
       `🏇\n`;
   }
   await message.edit(theMessageToSend);
 }
 async function startGame(message) {
-  const finishLine = 30;
-  let someoneFinished = false;
-  let whoFinishedAtSameTime = [];
-
+  const thatRoom = findHorseRoom(message);
   const theRaceAnimationMessage = await message.channel.send(
     `🐎**Horse race is starting...**🐎`
   );
   await sleep(1500);
-  raceInProgress = true;
-  while (!someoneFinished) {
-    for (let i = 0; i < horses.length; i++) {
-      horses[i].moveTimesThisTurn++;
+  thatRoom.someoneFinished = false;
+  thatRoom.raceInProgress = true;
+  while (!thatRoom.someoneFinished) {
+    for (let i = 0; i < thatRoom.horses.length; i++) {
+      thatRoom.horses[i].moveTimesThisTurn++;
       const randomChance = Math.random();
       if (randomChance >= 0.5) {
-        horses[i].moveTimesThisTurn++;
+        thatRoom.horses[i].moveTimesThisTurn++;
       }
       if (randomChance >= 0.1) {
-        horses[i].moveTimesThisTurn++;
+        thatRoom.horses[i].moveTimesThisTurn++;
       }
       const horseChanceMoveNumber = Math.trunc(Math.random() * 100);
-      if (horseChanceMoveNumber <= horses[i].chance) {
-        horses[i].moveTimesThisTurn++;
-        horses[i].moveTimesThisTurn++;
+      if (horseChanceMoveNumber <= thatRoom.horses[i].chance) {
+        thatRoom.horses[i].moveTimesThisTurn++;
+        thatRoom.horses[i].moveTimesThisTurn++;
       }
-      horses[i].position += horses[i].moveTimesThisTurn;
-      horses[i].moveTimesThisTurn = 0;
+      thatRoom.horses[i].position += thatRoom.horses[i].moveTimesThisTurn;
+      thatRoom.horses[i].moveTimesThisTurn = 0;
     }
 
-    for (let i = 0; i < horses.length; i++) {
-      if (horses[i].position >= finishLine) {
-        someoneFinished = true;
+    for (let i = 0; i < thatRoom.horses.length; i++) {
+      if (thatRoom.horses[i].position >= thatRoom.finishLine) {
+        thatRoom.someoneFinished = true;
         horseWonIndex = i;
-        whoFinishedAtSameTime.push(horses[i]);
+        thatRoom.whoFinishedAtSameTime.push(thatRoom.horses[i]);
       }
     }
     await sleep(1500);
-    await sendUpdate(theRaceAnimationMessage, finishLine);
+    await sendUpdate(theRaceAnimationMessage, thatRoom.finishLine);
   }
-  const winner = decideWinner(whoFinishedAtSameTime);
+  const winner = decideWinner(thatRoom.whoFinishedAtSameTime, message);
+  thatRoom.whoFinishedAtSameTime = [];
+  thatRoom.splitDecision = false;
   await message.channel.send(
     `🐎**Horse ${winner.horseNumber} won the race!**🐎`
   );
@@ -186,26 +243,28 @@ async function startGame(message) {
   let messageToSend = `:man_red_haired: I'm here with horse number ${winner.horseNumber}. Let's hear what they have to say.`;
   await message.channel.send(messageToSend);
   await sleep(1500);
-  const interview = await horseOneLiner(winner);
+  const interview = await horseOneLiner(winner, message);
   await message.channel.send(`\n🐴${interview}`);
 }
 
 async function givePayouts(winner, message) {
+  const thatRoom = findHorseRoom(message);
+
   const allUsers = await horseRacing.find({
-    channelId: { $eq: `${message.channel.id}` },
+    channelId: { $eq: `${message.guildId}` },
     betAmount: { $gt: 0 },
   });
-  console.log(allUsers);
-  const channelId = message.channel.id;
+  const channelId = message.guildId;
   for (let i = 0; i < allUsers.length; i++) {
     if (allUsers[i].betAmount <= 0 || allUsers[i].channelId !== channelId)
       continue;
     if (winner.horseNumber === allUsers[i].horseNumber) {
-      const gain = allUsers[i].betAmount * winner.kvota;
+      let gain = allUsers[i].betAmount * winner.kvota;
+      gain = Math.round(gain);
       const coinMessage = await wallet.addCoins(allUsers[i].userId, gain);
       await message.channel.send(
         `🐎<@${allUsers[i].userId}>'s horse won ${
-          splitDecision ? `by a split decision` : ``
+          thatRoom.splitDecision ? `by a split decision` : ``
         }, and they gained ${gain} coins! ${
           coinMessage === `` ? `` : coinMessage
         }🐎`
@@ -217,14 +276,16 @@ async function givePayouts(winner, message) {
     }
     await sleep(1500);
   }
-  raceInProgress = false;
-  countdown = undefined;
+  thatRoom.raceInProgress = false;
+  thatRoom.countdown = undefined;
   await removeHorseBets();
-  generateHorses(horseAmount);
+  generateHorses(thatRoom.horseAmount, message);
 }
 
-function decideWinner(whoFinishedAtSameTime) {
-  if (whoFinishedAtSameTime.length > 1) splitDecision = true;
+function decideWinner(whoFinishedAtSameTime, message) {
+  const thatRoom = findHorseRoom(message);
+
+  if (whoFinishedAtSameTime.length > 1) thatRoom.splitDecision = true;
   const theWinner = whoFinishedAtSameTime.reduce((highest, horse) => {
     if (horse.position > highest.position) {
       return horse;
@@ -236,45 +297,58 @@ function decideWinner(whoFinishedAtSameTime) {
 
   return theWinner;
 }
+async function findWhatServerTheyAreIn(userId) {
+  const wholeDocument = await horseRacing.findOne({ userId: userId });
+  return wholeDocument.channelId;
+}
 async function theFinalCountdown(message) {
-  if (countdown) {
+  const thatRoom = findHorseRoom(message);
+
+  if (thatRoom.countdown) {
     return;
   }
-  amountOfTimeToWaitInMs = minutesToStart * (1000 * 60);
-  // setTimeout(() => {
 
-  // }, timeToNotify);
-  timeOfStartCountdown = new Date().getTime();
+  thatRoom.amountOfTimeToWaitInMs = thatRoom.minutesToStart * (1000 * 60);
 
-  countdown = setTimeout(() => {
+  thatRoom.timeOfStartCountdown = new Date().getTime();
+
+  thatRoom.countdown = setTimeout(() => {
     startGame(message);
-    timeOfStartCountdown = 0;
-  }, amountOfTimeToWaitInMs);
+    thatRoom.timeOfStartCountdown = 0;
+  }, thatRoom.amountOfTimeToWaitInMs);
   // 600000
   message.channel.send(
-    `🐎**Horse race will start in ${minutesToStart} minutes**🐎`
+    `🐎**Horse race will start in ${thatRoom.minutesToStart} minutes**🐎`
   );
 }
 function whenDoesRaceStart(message, noMessage = false) {
-  if (timeOfStartCountdown === 0 && !raceInProgress && !noMessage) {
+  const thatRoom = findHorseRoom(message);
+
+  if (
+    thatRoom.timeOfStartCountdown === 0 &&
+    !thatRoom.raceInProgress &&
+    !noMessage
+  ) {
     return message.reply(
       `🐎Horse race hasn't been announced yet, use **"$horsebet [amount of coins] [horse number]"** to start the countdown🐎`
     );
   }
-  if (raceInProgress)
+  if (thatRoom.raceInProgress)
     return message.reply(`A race is ongoing. Try again in a moment...`);
   const currentTime = new Date().getTime();
   let minutesPassed = Math.floor(
-    (currentTime - timeOfStartCountdown) / (1000 * 60)
+    (currentTime - thatRoom.timeOfStartCountdown) / (1000 * 60)
   );
   if (!noMessage)
     message.reply(
-      `🐎${minutesToStart - minutesPassed} minutes until race start.🐎`
+      `🐎${thatRoom.minutesToStart - minutesPassed} minutes until race start.🐎`
     );
-  return minutesToStart - minutesPassed;
+  return thatRoom.minutesToStart - minutesPassed;
 }
-async function notify(user) {
-  if (!countdown)
+async function notify(user, message) {
+  const thatRoom = findHorseRoom(message);
+
+  if (!thatRoom.countdown)
     return `🐎No horse race planned soon! Use "$horsebet [amount of coins] [horse number]" to start the countdown🐎`;
   const areTheyBeingNotified = await horseRacing.findOne({
     userId: user.id,
@@ -295,14 +369,16 @@ async function notify(user) {
   }, timeToNotify);
   return `🐎You will be notified some time before the race starts.🐎`;
 }
-async function horseOneLiner(winner) {
+async function horseOneLiner(winner, message) {
+  const thatRoom = findHorseRoom(message);
+
   const oneLiners = [
     `After months of training, a lot of support from my rider, and him sorting something out with the managers of this race, i can finally say that it was worth it.`,
     `I told my rider it's not just about winning, but now that I have, it actually feels pretty great!`,
     `Who knew carrots and pep talks could get me this far?`,
     `Winning feels almost as good as that time I found a patch of untouched grass!`,
     `The secret? I just ran to the finish line.`,
-    `They said I had a 1 in ${horseAmount} chance... turns out I had a one-in-none excuse to lose!`,
+    `They said I had a 1 in ${thatRoom.horseAmount} chance... turns out I had a one-in-none excuse to lose!`,
     `I'd like to thank my four legs for making this possible. Couldn't have done it without them!`,
     `All that time pretending to be tired in training really paid off today!`,
     `Winning was a breeze! …Well, maybe not for my competition.`,
