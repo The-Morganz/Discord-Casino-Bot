@@ -222,8 +222,20 @@ async function getTopUsers(message) {
         `Invisible Player`,
         allUsers[i].userId
       );
+
       if (doTheyHaveInvis)
         mysteriousMessage = `*seems like someone is missing...*`;
+      if (allUsers[i].customName === "Unknown User") {
+        try {
+          const member = await message.guild.members.fetch(allUsers[i].userId);
+
+          await User.findOneAndUpdate(
+            { userId: allUsers[i].userId },
+            { customName: member.displayName },
+            { upsert: true }
+          );
+        } catch (error) {}
+      }
       if (doTheyHaveInvis || allUsers[i].userId === `1292934767511212042`) {
         continue;
       }
@@ -236,10 +248,9 @@ async function getTopUsers(message) {
     const leaderboard = await Promise.all(
       topUsers.map(async (user, index) => {
         try {
-          const member = await message.guild.members.fetch(user.userId);
           const customUserName = await shopAndItems.getCustomName(user.userId);
 
-          const displayName = member ? member.displayName : "Unknown User";
+          const displayName = customUserName ? customUserName : "Unknown User";
 
           return {
             displayName,

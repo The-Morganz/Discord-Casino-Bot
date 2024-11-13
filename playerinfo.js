@@ -1,6 +1,7 @@
 const xpSystem = require(`./xp/xp`);
 const wallet = require(`./wallet`);
 const shopAndItems = require(`./shop/shop`);
+const User = require("./models/User");
 async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
   let playerInfo = ``;
   const doTheyHaveInvis = await shopAndItems.checkIfHaveInInventory(
@@ -12,6 +13,7 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
   const playerLevel = await xpSystem.getXpData(targetUserId);
   const playerWallet = await wallet.getCoins(targetUserId);
   const playerDebt = await wallet.getDebt(targetUserId);
+  const playerUser = await User.findOne({ userId: targetUserId });
   const playerInventory = await shopAndItems.getUserInventory(
     targetUserId,
     true
@@ -39,6 +41,9 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
       playerInventory === `` || !playerInventory
         ? `🎒 This person doesn't have anything in their inventory\n`
         : `🎒 Inventory: ${playerInventory}\n`
+    }`;
+    playerInfo += `🎭${
+      playerUser.customName ? `Custom Name: ${playerUser.customName}` : ``
     }`;
   }
 

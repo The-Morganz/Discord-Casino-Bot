@@ -503,16 +503,16 @@ function startBot() {
         const theirDebt = await wallet.getDebt(user.userId); // Await debt retrieval
         const theirLevel = await xpSystem.xpOverview(user.userId, true); // Ensure this is async if needed
         if (index === 0) {
-          leaderboardFirst += `${index + 1}. ${user.displayName} ${
-            user.customName ? `(${user.customName})` : ``
-          } (${theirLevel.level}) - **${user.coins}** coins. ${
+          leaderboardFirst += `${index + 1}. ${user.displayName}  (${
+            theirLevel.level
+          }) - **${user.coins}** coins. ${
             theirDebt ? `${theirDebt} coins in debt.` : ``
           }`;
           continue;
         }
-        leaderboardMessage += `${index + 1}. ${user.displayName} ${
-          user.customName ? `(${user.customName})` : ``
-        } (${theirLevel.level}) - **${user.coins}** coins. ${
+        leaderboardMessage += `${index + 1}. ${user.displayName} (${
+          theirLevel.level
+        }) - **${user.coins}** coins. ${
           theirDebt ? `${theirDebt} coins in debt.` : ``
         }\n`;
       }
