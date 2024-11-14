@@ -21,7 +21,7 @@ function addNewGuild(message) {
     countdown: undefined,
     amountOfTimeToWaitInMs: 0,
     timeOfStartCountdown: 0,
-    minutesToStart: 3,
+    minutesToStart: 5,
     finishLine: 30,
     someoneFinished: false,
     whoFinishedAtSameTime: [],
@@ -31,13 +31,7 @@ function addNewGuild(message) {
 
 async function addHorseBet(userId, amount, horseNumber, message) {
   const didTheyBetSomewhereElse = await horseRacing.findOne({ userId: userId });
-  // if (
-  //   didTheyBetSomewhereElse.channelId !== `0` &&
-  //   didTheyBetSomewhereElse.channelId !== null
-  // )
-  //   return message.reply(
-  //     `You already placed a bet on a horse race in a different server!`
-  //   );
+
   addNewGuild(message);
   await horseRacing.findOneAndUpdate(
     { userId: userId },
