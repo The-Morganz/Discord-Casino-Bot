@@ -46,6 +46,7 @@ async function incrementSlotsGames(userChallenge, userId, challengeNumber) {
         `User ${userId} has completed the slots challenge and earned ${gain} coins.`
       );
       await wallet.addFreeSpins(userId, 10, Math.round(precentOfCoins));
+      return true;
     }
   }
   if (

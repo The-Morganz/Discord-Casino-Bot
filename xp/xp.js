@@ -71,7 +71,6 @@ async function levelUp(userId, userXP) {
   userXP.multiplier += 0.5;
   userXP.nextLevelXpReq = Math.round(userXP.nextLevelXpReq * 1.3);
   await userXP.save();
-
   console.log(`${userId} has leveled up to level ${userXP.level}!`);
 }
 
