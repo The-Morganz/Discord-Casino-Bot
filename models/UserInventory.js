@@ -16,13 +16,6 @@ const inventorySchema = new mongoose.Schema({
   inventory: [inventoryItemsSchema],
   themes: [inventoryRollThemesSchema],
 });
-inventorySchema.pre("save", function (next) {
-  const fruitsTheme = this.themes.find((theme) => theme.themeName === "Fruits");
-  if (!fruitsTheme) {
-    this.themes.push({ themeName: "Fruits" });
-  }
-  next();
-});
 
 const Inventories = mongoose.model("userInventories", inventorySchema);
 module.exports = Inventories;

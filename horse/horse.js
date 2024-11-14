@@ -1,13 +1,6 @@
 const horseRacing = require(`../models/HorseRacing`);
 const wallet = require(`../wallet`);
-let horses = [];
 const horseAmount = 6;
-let splitDecision = false;
-let raceInProgress = false;
-let countdown = undefined;
-let amountOfTimeToWaitInMs;
-let timeOfStartCountdown = 0;
-let minutesToStart = 5;
 let guildsAndInfo = [];
 
 function addNewGuild(message) {
@@ -358,7 +351,7 @@ async function notify(user, message) {
   }
   await horseRacing.findOneAndUpdate({ userId: user.id }, { notify: true });
 
-  let timeToNotify = (whenDoesRaceStart(`gay`, true) - 1) * (1000 * 60);
+  let timeToNotify = (whenDoesRaceStart(message, true) - 1) * (1000 * 60);
   if (timeToNotify <= 0) timeToNotify = 1;
   setTimeout(() => {
     user.send(

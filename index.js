@@ -922,11 +922,6 @@ function startBot() {
         userId,
         message
       );
-      console.log(maan);
-
-      // await message.channel.send()
-      // const rollSkin = roll.changeEmotes();
-      // message.reply(`You changed your roll theme to ${rollSkin}!`);
     }
 
     // $ROLL
@@ -934,7 +929,7 @@ function startBot() {
       const args = message.content.split(" ");
       let betAmount = parseInt(args[1]);
 
-      console.log(`Received $roll command with bet amount: ${betAmount}`);
+      // console.log(`Received $roll command with bet amount: ${betAmount}`);
       const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
         `High Roller Pass`,
         userId
@@ -956,10 +951,10 @@ function startBot() {
             ? await wallet.getFreeSpinBetAmount(userId)
             : null;
 
-        console.log(`User's balance before betting: ${coins}`);
-        console.log(
-          `Free spins available with bet amount: ${freeSpinBetAmount}`
-        );
+        // console.log(`User's balance before betting: ${coins}`);
+        // console.log(
+        //   `Free spins available with bet amount: ${freeSpinBetAmount}`
+        // );
 
         // Restrict roll if user has free spins and the bet amount doesn’t match the free spin's bet amount
         if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
@@ -991,9 +986,9 @@ function startBot() {
                 await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
               }
             }
-            console.log(
-              `User has enough coins. Attempting to remove ${betAmount} coins...`
-            );
+            // console.log(
+            //   `User has enough coins. Attempting to remove ${betAmount} coins...`
+            // );
             await wallet.removeCoins(userId, betAmount);
           }
 
@@ -1245,7 +1240,6 @@ function startBot() {
         eventEmitter,
         message.channel
       );
-      console.log(infoAboutPlayer);
       if (infoAboutPlayer.theirSum === 21) {
         const messagezz = blackjackGame.stand(
           userId,
@@ -1818,7 +1812,7 @@ function startBot() {
       }
       if (match) {
         betAmount = parseInt(match[0], 10);
-        console.log(`Button roll with bet amount: ${betAmount}`);
+        // console.log(`Button roll with bet amount: ${betAmount}`);
       } else {
         await interaction.reply({
           content: `Can't find previous roll amount!`,
@@ -1848,10 +1842,10 @@ function startBot() {
             ? await wallet.getFreeSpinBetAmount(userId)
             : null;
 
-        console.log(`User's balance before betting: ${coins}`);
-        console.log(
-          `Free spins available with bet amount: ${freeSpinBetAmount}`
-        );
+        // console.log(`User's balance before betting: ${coins}`);
+        // console.log(
+        //   `Free spins available with bet amount: ${freeSpinBetAmount}`
+        // );
 
         if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
           // await interaction.reply({
@@ -1875,9 +1869,9 @@ function startBot() {
             //});
             await wallet.useFreeSpin(userId); // Only consume one free spin here
           } else {
-            console.log(
-              `User has enough coins. Attempting to remove ${betAmount} coins...`
-            );
+            // console.log(
+            //   `User has enough coins. Attempting to remove ${betAmount} coins...`
+            // );
             if (doTheyHaveRiskTaker) {
               const theirCoinAmount = await wallet.getCoins(userId);
 
@@ -1967,7 +1961,6 @@ function startBot() {
         });
         return;
       }
-      console.log(action);
       if (action === `themes`) {
         const { embed, rows } = await generateRollThemeButtons(
           ActionRowBuilder,
@@ -2534,8 +2527,6 @@ function startBot() {
       let [action, betAmount, mineCount, userThatStarted] = interaction.customId
         .split("_")
         .slice(1); // bj_hit_userId or bj_stand_userId
-      console.log(userThatStarted);
-      console.log(interaction.customId);
 
       if (action === `play`) {
         // Check if the amount is a valid number
@@ -2544,8 +2535,7 @@ function startBot() {
         }
 
         const userId = interaction.user.id;
-        // console.log(userThatStarted);
-        // console.log(userId);
+
         if (userId !== userThatStarted) {
           return interaction.reply({
             content: `You can't interact with buttons created by others!`,
@@ -2560,7 +2550,7 @@ function startBot() {
             "You don't have enough coins to start the grid."
           );
         }
-        console.log(gridOwners);
+
         // Check if the user already has an active grid
         if (
           Object.values(gridOwners).some(
