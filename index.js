@@ -277,11 +277,11 @@ function startBot() {
 
   client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    if (
-      message.channel.id === `1293305339743174837` ||
-      message.channel.id === `1293268884211896340`
-    )
-      return;
+    // if (
+    //   message.channel.id !== `1293305339743174837` ||
+    //   message.channel.id !== `1293268884211896340`
+    // )
+    //   return;
     const userId = message.author.id;
     const channelId = message.channel.id;
 
@@ -728,8 +728,15 @@ function startBot() {
       message.content.toLowerCase() === "$fs"
     ) {
       const coins = await wallet.getFreeSpins(userId); // Get the user's balance
-      const debt = await wallet.getFreeSpins(userId);
-      await message.reply(`You have **${coins}** free spins remaining.`);
+      const freeSpinsBetAmount = await wallet.getFreeSpinBetAmount(userId);
+
+      await message.reply(
+        `You have **${coins}** free spins remaining${
+          freeSpinsBetAmount
+            ? ` with a bet amount of ${freeSpinsBetAmount}.`
+            : `.`
+        }`
+      );
     }
 
     if (message.content.toLowerCase().startsWith("$cleardebt")) {
@@ -1648,6 +1655,11 @@ function startBot() {
   // Handle button interaction
 
   client.on("interactionCreate", async (interaction) => {
+    if (
+      interaction.channel.id === `1293305339743174837` ||
+      interaction.channel.id === `1293268884211896340`
+    )
+      return;
     if (interaction.isModalSubmit()) {
       if (interaction.customId === "custom_bet_modal") {
         // Retrieve the user's input from the modal

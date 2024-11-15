@@ -2,8 +2,10 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
+const User = require("../models/User");
 let gainFromChallenge = 500;
 let gainXpFromChallenge = 150;
+
 function generateRandomGameRequirement() {
   const gamesToPlay = [15, 20, 25];
   return gamesToPlay[Math.floor(Math.random() * gamesToPlay.length)];
@@ -91,9 +93,12 @@ async function getSlotsGameStatus(userChallenge, userId) {
   if (completed) {
     const theirCoinAmount = await wallet.getCoins(userId);
     const precentOfCoins = theirCoinAmount * 0.05;
-    return `🎉 You have played enough slots, finishing the challenge and earning ${gain} coins! You gained 10 free spins with a bet of ${Math.round(
-      precentOfCoins
-    )}`;
+    const freeSpinCoinAmount = await User.findOne({ userId: userId })
+      .freeSpinsBetAmount;
+
+    return `🎉 You have played enough slots, finishing the challenge and earning ${gain} coins! You gained 10 free spins${
+      freeSpinCoinAmount > 0 ? ` with a bet of ${freeSpinCoinAmount}` : `.`
+    }`;
   } else {
     return `🎁 Play ${requiredSlotsGames} games of slots. Progress: ${slotGamesPlayed}/${requiredSlotsGames} games. Will gain 10 free spins.`;
   }
