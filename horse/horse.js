@@ -23,7 +23,7 @@ function addNewGuild(message) {
     countdown: undefined,
     amountOfTimeToWaitInMs: 0,
     timeOfStartCountdown: 0,
-    minutesToStart: 0.1,
+    minutesToStart: 2,
     finishLine: 30,
     someoneFinished: false,
     whoFinishedAtSameTime: [],
