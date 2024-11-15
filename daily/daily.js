@@ -162,7 +162,7 @@ async function initializeDailyChallenge(userId) {
 async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
   const userChallenge = await initializeDailyChallenge(userId);
   let completed = false;
-  let somethingToReturn = false;
+
   for (let i = 0; i < 3; i++) {
     // holy yandere dev
     if (
@@ -240,9 +240,7 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
         userId,
         i
       );
-    somethingToReturn = `slots`;
   }
-  return somethingToReturn;
 }
 
 // DAILY STATUS

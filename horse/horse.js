@@ -1,5 +1,7 @@
+const { addBusinessDays } = require("date-fns");
 const horseRacing = require(`../models/HorseRacing`);
 const wallet = require(`../wallet`);
+const xpSystem = require(`../xp/xp`);
 const horseAmount = 6;
 let guildsAndInfo = [];
 
@@ -21,7 +23,7 @@ function addNewGuild(message) {
     countdown: undefined,
     amountOfTimeToWaitInMs: 0,
     timeOfStartCountdown: 0,
-    minutesToStart: 5,
+    minutesToStart: 0.1,
     finishLine: 30,
     someoneFinished: false,
     whoFinishedAtSameTime: [],
@@ -249,6 +251,7 @@ async function givePayouts(winner, message) {
       let gain = allUsers[i].betAmount * winner.kvota;
       gain = Math.round(gain);
       const coinMessage = await wallet.addCoins(allUsers[i].userId, gain);
+      await xpSystem.addXp(allUsers[i].userId, 20, false);
       await message.channel.send(
         `🐎<@${allUsers[i].userId}>'s horse won ${
           thatRoom.splitDecision ? `by a split decision` : ``
@@ -260,6 +263,7 @@ async function givePayouts(winner, message) {
       await message.channel.send(
         `🐎<@${allUsers[i].userId}>'s horse lost, and they lost -${allUsers[i].betAmount} coins!🐎`
       );
+      await xpSystem.addXp(allUsers[i].userId, 10, false);
     }
     await sleep(1500);
   }

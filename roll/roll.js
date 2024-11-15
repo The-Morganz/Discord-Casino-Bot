@@ -332,12 +332,8 @@ async function roll(userId, betAmount, message, button = false) {
   }
 
   const xpGain = await xpSystem.calculateXpGain(betAmount, normalXpGain);
-  const thatDaily = dailyChallenges.incrementChallenge(userId, `playSlots`);
+  dailyChallenges.incrementChallenge(userId, `playSlots`);
   await xpSystem.addXp(userId, xpGain);
-  if (thatDaily === `slots`) {
-    finalMessage += `You completed your play slots daily challenge and have gotten a reward of 10 free spins! `;
-  }
-
   // Return the final result and payout (if needed)
   return {
     result: finalRollResult,

@@ -57,7 +57,8 @@ async function generateChooseThemeButtons(
   message
 ) {
   let thatUsersInventory = await UserInventory.findOne({ userId: userId });
-
+  console.log(thatUsersInventory);
+  console.log(userId);
   if (!thatUsersInventory || thatUsersInventory.themes.length <= 0) {
     await UserInventory.findOneAndUpdate(
       { userId: userId },
@@ -66,6 +67,7 @@ async function generateChooseThemeButtons(
     );
     thatUsersInventory = await UserInventory.findOne({ userId: userId });
   }
+  console.log(`what the fuck`);
   let doTheyHaveFruits = false;
   for (let i = 0; i < thatUsersInventory.themes.length; i++) {
     if (thatUsersInventory.themes[i].themeName === `Fruits`)
@@ -78,6 +80,7 @@ async function generateChooseThemeButtons(
       { upsert: true }
     );
   }
+  console.log(`huh`);
   thatUsersInventory = await UserInventory.findOne({ userId: userId });
   const rows = [];
   let row = new ActionRowBuilder();
