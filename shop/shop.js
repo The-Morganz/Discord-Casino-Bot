@@ -28,7 +28,8 @@ function getDurationDates(whatDoYouWantBro, howManyHours = 1) {
 // Ovo se najvise koristi u checkIfHaveInInventory, ali moze se i ovako koristiti. Ako je neki item expired, samo ga izbrise i return true, ako ne onda ce return false.
 async function checkIfExpiredItem(userId, endTime, itemName) {
   const rightNow = getDurationDates(`now`);
-  if (endTime <= rightNow) {
+  console.log(endTime, rightNow);
+  if (endTime < rightNow) {
     await removeExpiredItems(userId);
     return true;
   }
@@ -113,6 +114,7 @@ async function checkIfHaveInInventory(item, userId) {
     const entry = usersInventory[i];
     if (entry.itemName === item) {
       expired = await checkIfExpiredItem(userId, entry.endTime, entry.itemName);
+      console.log(expired);
       break;
     }
   }

@@ -96,7 +96,7 @@ let shopItems = [
   },
   {
     name: `Level Jump`,
-    price: 75000,
+    price: 100000,
     startTime: getDurationDates(`now`),
     endTime: Infinity,
     emoji: `⏫`,

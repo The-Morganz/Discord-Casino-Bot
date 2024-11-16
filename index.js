@@ -277,11 +277,7 @@ function startBot() {
 
   client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    if (
-      message.channel.id === `1293305339743174837` ||
-      message.channel.id === `1293268884211896340`
-    )
-      return;
+    if (message.channel.id === `1293305339743174837`) return;
     const userId = message.author.id;
     const channelId = message.channel.id;
 
@@ -992,7 +988,7 @@ function startBot() {
               const theirCoinAmount = await wallet.getCoins(userId);
               const riskThreshold = betAmount * 0.8;
               if (betAmount >= riskThreshold) {
-                riskTakerExtra = amount * 0.2;
+                riskTakerExtra = betAmount * 0.2;
                 riskTakerExtra = Math.round(riskTakerExtra);
                 await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
               }
@@ -1655,11 +1651,7 @@ function startBot() {
   // Handle button interaction
 
   client.on("interactionCreate", async (interaction) => {
-    if (
-      interaction.channel.id === `1293305339743174837` ||
-      interaction.channel.id === `1293268884211896340`
-    )
-      return;
+    if (interaction.channel.id === `1293305339743174837`) return;
     if (interaction.isModalSubmit()) {
       if (interaction.customId === "custom_bet_modal") {
         // Retrieve the user's input from the modal
