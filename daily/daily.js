@@ -186,12 +186,14 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
     if (
       userChallenge.challenges[i].challengeData.challengeType === `voice` &&
       typeOfChallenge === `voice`
-    )
+    ) {
       completed = await voiceChallenge.incrementMinutes(
         userChallenge,
         userId,
         i
       );
+      console.log(`hello!`);
+    }
     if (
       userChallenge.challenges[i].challengeData.challengeType ===
         `playBlackjack` &&

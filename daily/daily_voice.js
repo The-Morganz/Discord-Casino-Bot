@@ -21,7 +21,7 @@ function initializeVoiceChallenge(userId) {
 
 async function incrementMinutes(userChallenge, userId, challengeNumber) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.minutesInVoice += 1;
+    userChallenge.challenges[challengeNumber].challengeData.minutesInVoice += 1;
 
     if (
       userChallenge.challenges[challengeNumber].challengeData.minutesInVoice >=

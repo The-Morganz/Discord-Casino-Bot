@@ -277,11 +277,11 @@ function startBot() {
 
   client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    // if (
-    //   message.channel.id !== `1293305339743174837` ||
-    //   message.channel.id !== `1293268884211896340`
-    // )
-    //   return;
+    if (
+      message.channel.id !== `1293305339743174837` ||
+      message.channel.id !== `1293268884211896340`
+    )
+      return;
     const userId = message.author.id;
     const channelId = message.channel.id;
 
