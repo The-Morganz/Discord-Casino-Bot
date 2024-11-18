@@ -277,7 +277,7 @@ function startBot() {
 
   client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    if (message.channel.id !== `1293305339743174837`) return;
+    if (message.channel.id === `1293305339743174837`) return;
     const userId = message.author.id;
     const channelId = message.channel.id;
 
@@ -1669,7 +1669,7 @@ function startBot() {
   // Handle button interaction
 
   client.on("interactionCreate", async (interaction) => {
-    if (interaction.channel.id !== `1293305339743174837`) return;
+    if (interaction.channel.id === `1293305339743174837`) return;
     if (interaction.isModalSubmit()) {
       if (interaction.customId === "custom_bet_modal") {
         // Retrieve the user's input from the modal
