@@ -355,7 +355,6 @@ async function notify(user, message) {
     user.send(
       `🐎The horse race will start soon... You bet on horse ${areTheyBeingNotified.horseNumber}🐎`
     );
-    console.log(`Notified.`);
     // removeNotifyFromMongo(user);
   }, timeToNotify);
   return `🐎You will be notified some time before the race starts.🐎`;

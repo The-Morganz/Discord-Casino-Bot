@@ -277,7 +277,7 @@ function startBot() {
 
   client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    if (message.channel.id === `1293305339743174837`) return;
+    if (message.channel.id !== `1293305339743174837`) return;
     const userId = message.author.id;
     const channelId = message.channel.id;
 
@@ -292,7 +292,10 @@ function startBot() {
       message.author.send(theHelpMessagePt2);
     }
     // HOOORSE IM HORSING AROUND
-    if (message.content.startsWith(`$horsebet`)) {
+    if (
+      message.content.startsWith(`$horsebet`) ||
+      message.content.startsWith(`$hb`)
+    ) {
       let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
@@ -330,15 +333,24 @@ function startBot() {
       await horse2.theFinalCountdown(message);
     }
     // YES IM STILL HORSING
-    if (message.content.startsWith(`$horserace`)) {
+    if (
+      message.content.startsWith(`$horserace`) ||
+      message.content.startsWith(`$hr`)
+    ) {
       return horse2.whenDoesRaceStart(message);
     }
     // WHAT ARE MY HORSING STATISTICS
-    if (message.content.startsWith(`$horsestats`)) {
+    if (
+      message.content.startsWith(`$horsestats`) ||
+      message.content.startsWith(`$hs`)
+    ) {
       horse2.getHorseStats(message);
     }
     // CAN YOU CALL ME
-    if (message.content.startsWith(`$horsenotify`)) {
+    if (
+      message.content.startsWith(`$horsenotify`) ||
+      message.content.startsWith(`$hn`)
+    ) {
       const user = await client.users.fetch(userId);
       const messageToSend = await horse2.notify(user, message);
       message.reply(messageToSend);
@@ -504,16 +516,16 @@ function startBot() {
         const theirDebt = await wallet.getDebt(user.userId); // Await debt retrieval
         const theirLevel = await xpSystem.xpOverview(user.userId, true); // Ensure this is async if needed
         if (index === 0) {
-          leaderboardFirst += `${index + 1}. ${user.displayName}  (${
-            theirLevel.level
-          }) - **${user.coins}** coins. ${
+          leaderboardFirst += `${index + 1}. ${user.displayName} (${
+            user.originalName
+          })  (${theirLevel.level}) - **${user.coins}** coins. ${
             theirDebt ? `${theirDebt} coins in debt.` : ``
           }`;
           continue;
         }
         leaderboardMessage += `${index + 1}. ${user.displayName} (${
-          theirLevel.level
-        }) - **${user.coins}** coins. ${
+          user.originalName
+        }) (${theirLevel.level}) - **${user.coins}** coins. ${
           theirDebt ? `${theirDebt} coins in debt.` : ``
         }\n`;
       }
@@ -768,7 +780,9 @@ function startBot() {
 
       // Check if the amount is valid
       if (isNaN(amount) || amount <= 0) {
-        return message.reply("Please provide a valid amount of coins to add.");
+        return message.reply(
+          `Please provide a valid amount of coins to add. Remember, "$give [amount] [@person]"`
+        );
       }
 
       // Get the tagged user from the message (the second argument)
@@ -941,8 +955,12 @@ function startBot() {
         `High Roller Pass`,
         userId
       );
+      const doTheyHaveFreeSpinz = await wallet.getFreeSpins(userId);
       if (betAmount > 10000) {
-        if (doTheyHaveHighRollerPass && betAmount <= 1000000) {
+        if (
+          (doTheyHaveHighRollerPass && betAmount <= 1000000) ||
+          doTheyHaveFreeSpinz > 0
+        ) {
           message.reply(
             `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`
           );
@@ -1651,7 +1669,7 @@ function startBot() {
   // Handle button interaction
 
   client.on("interactionCreate", async (interaction) => {
-    if (interaction.channel.id === `1293305339743174837`) return;
+    if (interaction.channel.id !== `1293305339743174837`) return;
     if (interaction.isModalSubmit()) {
       if (interaction.customId === "custom_bet_modal") {
         // Retrieve the user's input from the modal
@@ -1835,8 +1853,12 @@ function startBot() {
         `High Roller Pass`,
         userId
       );
+      const doTheyHaveFreeSpinz = await wallet.getFreeSpins(userId);
       if (betAmount > 10000) {
-        if (doTheyHaveHighRollerPass && betAmount <= 1000000) {
+        if (
+          (doTheyHaveHighRollerPass && betAmount <= 1000000) ||
+          doTheyHaveFreeSpinz > 0
+        ) {
           highRollerMessage = `You show your High Roller Pass to the dealer, and they allow you to make this larger bet`;
         } else {
           return interaction.reply(`You've hit the betting limit!`);
@@ -2558,7 +2580,7 @@ function startBot() {
             "You don't have enough coins to start the grid."
           );
         }
-
+        console.log(gridOwners);
         // Check if the user already has an active grid
         if (
           Object.values(gridOwners).some(

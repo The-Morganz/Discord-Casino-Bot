@@ -94,7 +94,6 @@ async function pickChoice(userId, choice, action) {
 
   // Add suspense: wait for 5 seconds before flipping the coin
   if (action === `flip`) {
-    console.log(message);
     return message;
   }
   await sleep(randomNumber(3000, 6000));

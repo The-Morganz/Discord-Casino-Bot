@@ -311,7 +311,6 @@ async function roll(userId, betAmount, message, button = false) {
   }`;
 
   if (giftPresent && totalMultiplier > 0) {
-    console.log(`Awarding free spins. Bet amount is: ${betAmount}`); // Debugging to check betAmount
     await wallet.addFreeSpins(userId, totalFreeSpins, betAmount);
     finalMessage += `\n🎁 You won ${totalFreeSpins} free spins! Use $fs to display your free spins 🎁`;
   }

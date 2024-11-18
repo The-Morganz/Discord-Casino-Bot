@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
   customName: { type: String, required: true, default: `Unknown User` },
+  originalName: { type: String, required: true, default: `Unknown User` },
   coins: { type: Number, default: 0 },
   debt: { type: Number, default: 0 },
   freeSpins: { type: Number, default: 0 },

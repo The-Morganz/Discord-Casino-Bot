@@ -231,7 +231,23 @@ async function getTopUsers(message) {
 
           await User.findOneAndUpdate(
             { userId: allUsers[i].userId },
-            { customName: member.displayName },
+            {
+              customName: member.displayName,
+              originalName: member.displayName,
+            },
+            { upsert: true }
+          );
+        } catch (error) {}
+      }
+      if (allUsers[i].originalName === "Unknown User") {
+        try {
+          const member = await message.guild.members.fetch(allUsers[i].userId);
+
+          await User.findOneAndUpdate(
+            { userId: allUsers[i].userId },
+            {
+              originalName: member.displayName,
+            },
             { upsert: true }
           );
         } catch (error) {}
@@ -251,12 +267,15 @@ async function getTopUsers(message) {
           const customUserName = await shopAndItems.getCustomName(user.userId);
 
           const displayName = customUserName ? customUserName : "Unknown User";
-
+          const originalName = user.originalName
+            ? user.originalName
+            : `Unknown User`;
           return {
             displayName,
             coins: user.coins,
             userId: user.userId,
             customName: customUserName,
+            originalName: originalName,
             mysteriousMessage: mysteriousMessage,
           };
         } catch (err) {
@@ -269,6 +288,7 @@ async function getTopUsers(message) {
             coins: user.coins,
             userId: user.userId,
             customName: customUserName,
+            originalName: originalName,
             mysteriousMessage: mysteriousMessage,
           };
         }

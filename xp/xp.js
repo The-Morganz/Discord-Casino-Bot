@@ -17,7 +17,6 @@ function readXpData() {
 
 // Helper function to write the updated XP data
 function writeXpData(data) {
-  console.log();
   fs.writeFileSync(filePath, JSON.stringify(data, null, 4)); // Pretty print with 4 spaces
 }
 
@@ -33,7 +32,6 @@ async function addXp(userId, amount, ignoreBooster = false) {
   );
   if (doTheyHaveBooster && !ignoreBooster) {
     amount = amount * 2;
-    console.log(amount);
   }
   userXP.xp += Math.round(amount);
 
@@ -44,9 +42,9 @@ async function addXp(userId, amount, ignoreBooster = false) {
     await userXP.save();
   }
 
-  console.log(
-    `Added ${amount} XP to user ${userId}. They now have ${userXP.xp} XP.`
-  );
+  // console.log(
+  //   `Added ${amount} XP to user ${userId}. They now have ${userXP.xp} XP.`
+  // );
 }
 async function removeXp(userId, amount) {
   let userXp = await UserXP.findOne({ userId });

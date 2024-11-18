@@ -223,7 +223,7 @@ async function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
     );
     const randomCard = thatRoom.deckOfCards[randomNumberFromDeck];
     const unoRandomNumero = Number(randomCard.replace(/\D/g, ""));
-    console.log(unoRandomNumero);
+
     thatRoom.deckOfCards.splice(randomNumberFromDeck, 1);
     thePlayer.sum += unoRandomNumero;
     thePlayer.cards.push(unoRandomNumero);

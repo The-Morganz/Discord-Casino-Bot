@@ -100,7 +100,6 @@ function checkBettingPhase(channelId) {
       // 3 minutes = 180000 milliseconds
       jusGivMeMyMooony(channelId);
       const message = deleteRoom(channelId);
-      console.log(rooms);
       // const channelToSendTo = client.channels.fetch(channelId);
       // client.channels.fetch(channelId);
 
@@ -136,7 +135,7 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   thatRoom.dealer.checkFailed = false;
   thatRoom.dealer.natBlackjack = false;
   changeGameState(channelId, "playing", false);
-  console.log(thatRoom);
+
   eventEmitter.emit(`startBettingPhase`, channelToSendTo);
   // thatRoom.deckOfCards = makeDeck();
 }
