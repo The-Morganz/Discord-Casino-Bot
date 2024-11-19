@@ -92,8 +92,9 @@ async function getGiveStatus(userChallenge, userId) {
   if (doTheyHaveBooster) {
     gain = gain * 2;
   }
+  const formattedGain = wallet.formatNumber(gain);
   if (completed) {
-    return `🎉 You have given enough coins to others,finishing the challenge and earning ${gain} coins!`;
+    return `🎉 You have given enough coins to others,finishing the challenge and earning ${formattedGain} coins!`;
   } else {
     return `🎁 Give ${amountNeededToGive} coins to other players. Progress: ${amountGiven}/${amountNeededToGive} coins.`;
   }

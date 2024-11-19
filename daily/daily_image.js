@@ -88,9 +88,10 @@ async function getImageStatus(userChallenge, userId) {
   if (doTheyHaveBooster) {
     gain = gain * 2;
   }
+  const formattedGain = wallet.formatNumber(gain);
 
   if (completed) {
-    return `🎉 You have completed today's image challenge and earned ${gain} coins!`;
+    return `🎉 You have completed today's image challenge and earned ${formattedGain} coins!`;
   } else {
     return `🎁 Send ${requiredImages} image(s). Progress: ${imagesSent}/${requiredImages} image(s).`;
   }

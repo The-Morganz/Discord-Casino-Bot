@@ -89,8 +89,10 @@ async function getMessageStatus(userChallenge, userId) {
   if (doTheyHaveBooster) {
     gain = gain * 2;
   }
+  const formattedGain = wallet.formatNumber(gain);
+
   if (completed) {
-    return `🎉 You have completed today's message challenge and earned ${gain} coins!`;
+    return `🎉 You have completed today's message challenge and earned ${formattedGain} coins!`;
   } else {
     return `🎁 Send ${requiredMessages} messages. Progress: ${messages}/${requiredMessages} messages.`;
   }

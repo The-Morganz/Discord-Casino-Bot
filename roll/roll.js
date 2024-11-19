@@ -296,11 +296,11 @@ async function roll(userId, betAmount, message, button = false) {
     coinMessage = await wallet.addCoins(userId, payout);
   }
   const freeSpinAmount = await wallet.getFreeSpins(userId);
-
+  const formattedAmount = wallet.formatNumber(payout);
   // Create the final message string
   let finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
     payout > 0
-      ? `You won **${payout}** coins! 🎉${
+      ? `You won **${formattedAmount}** coins! 🎉${
           coinMessage !== `` ? `\n${coinMessage}` : ``
         } ${
           freeSpinAmount ? `You have ${freeSpinAmount} free spins left.` : ``

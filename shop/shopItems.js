@@ -33,7 +33,7 @@ let shopItems = [
   },
   {
     name: `Double Challenge Rewards`,
-    price: 25000,
+    price: 50000,
     startTime: getDurationDates(`now`),
     endTime: Infinity,
     emoji: `⏫`,
@@ -47,7 +47,7 @@ let shopItems = [
   },
   {
     name: `High Roller Pass`,
-    price: 250000,
+    price: 150000,
     startTime: getDurationDates(`now`),
     endTime: Infinity,
     emoji: `🔑`,
@@ -89,14 +89,14 @@ let shopItems = [
   },
   {
     name: `XP Stealer`,
-    price: 100000,
+    price: 50000,
     startTime: getDurationDates(`now`),
     endTime: getDurationDates(`end`),
     emoji: `🐱‍👤`,
   },
   {
     name: `Level Jump`,
-    price: 100000,
+    price: 150000,
     startTime: getDurationDates(`now`),
     endTime: Infinity,
     emoji: `⏫`,

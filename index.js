@@ -277,7 +277,7 @@ function startBot() {
 
   client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    if (message.channel.id === `1293305339743174837`) return;
+    if (message.channel.id !== `1293305339743174837`) return;
     const userId = message.author.id;
     const channelId = message.channel.id;
 
@@ -515,18 +515,20 @@ function startBot() {
       for (const [index, user] of topUsers.entries()) {
         const theirDebt = await wallet.getDebt(user.userId); // Await debt retrieval
         const theirLevel = await xpSystem.xpOverview(user.userId, true); // Ensure this is async if needed
+        const formattedCoins = wallet.formatNumber(user.coins);
+        const formattedDebt = wallet.formatNumber(theirDebt);
         if (index === 0) {
           leaderboardFirst += `${index + 1}. ${user.displayName} (${
             user.originalName
-          })  (${theirLevel.level}) - **${user.coins}** coins. ${
-            theirDebt ? `${theirDebt} coins in debt.` : ``
+          })  (${theirLevel.level}) - **${formattedCoins}** coins. ${
+            theirDebt ? `${formattedDebt} coins in debt.` : ``
           }`;
           continue;
         }
         leaderboardMessage += `${index + 1}. ${user.displayName} (${
           user.originalName
-        }) (${theirLevel.level}) - **${user.coins}** coins. ${
-          theirDebt ? `${theirDebt} coins in debt.` : ``
+        }) (${theirLevel.level}) - **${formattedCoins}** coins. ${
+          theirDebt ? `${formattedDebt} coins in debt.` : ``
         }\n`;
       }
       leaderboardMessage += `\n${topUsers[4].mysteriousMessage}`;
@@ -616,9 +618,9 @@ function startBot() {
       await wallet.removeCoins(userId, Number(amount));
 
       const buttonGrid = grid.createButtonGrid(mineCount); // Pass the mine count to createButtonGrid
-
+      const formattedAmount = wallet.formatNumber(amount);
       const sentMessage = await message.reply({
-        content: `You have started a grid game with **${amount}** coins and **${mineCount}** mines! Click a button to unlock!`,
+        content: `You have started a grid game with **${formattedAmount}** coins and **${mineCount}** mines! Click a button to unlock!`,
         components: buttonGrid,
       });
 
@@ -709,15 +711,15 @@ function startBot() {
     // Command to check wallet balance
     if (message.content === "$w" || message.content === "$wallet") {
       const userId = message.author.id;
-
       try {
         // Make sure to await the database query
         const user = await User.findOne({ userId });
         const theirDebt = await wallet.getDebt(userId);
+        const formattedCoins = wallet.formatNumber(user.coins);
         if (user) {
           // Send the user's coins and free spins as a response
           message.channel.send(
-            `You have **${user.coins}** coins in your wallet 💰.${
+            `You have **${formattedCoins}** coins in your wallet 💰.${
               theirDebt ? `\nYour debt: ${theirDebt}` : ``
             }`
           );
@@ -737,12 +739,10 @@ function startBot() {
     ) {
       const coins = await wallet.getFreeSpins(userId); // Get the user's balance
       const freeSpinsBetAmount = await wallet.getFreeSpinBetAmount(userId);
-
+      const formattedAmount = wallet.formatNumber(freeSpinsBetAmount);
       await message.reply(
         `You have **${coins}** free spins remaining${
-          freeSpinsBetAmount
-            ? ` with a bet amount of ${freeSpinsBetAmount}.`
-            : `.`
+          freeSpinsBetAmount ? ` with a bet amount of ${formattedAmount}.` : `.`
         }`
       );
     }
@@ -807,10 +807,11 @@ function startBot() {
 
       // Fetch and await the debt amount for the mentioned user
       const userDebt = await wallet.getDebt(targetUserId); // Await getDebt to get actual value
-
+      const formattedAmount = wallet.formatNumber(amount);
+      const formattedDebt = wallet.formatNumber(userDebt);
       // Send a confirmation message
       await message.reply(
-        `You have added **${amount}** coins to **${mentionedUser.username}**'s wallet. Their debt: ${userDebt}`
+        `You have added **${formattedAmount}** coins to **${mentionedUser.username}**'s wallet. Their debt: ${formattedDebt}`
       );
     }
 
@@ -855,12 +856,13 @@ function startBot() {
 
       await wallet.addCoins(targetUserId, amount, true, true, true);
       await wallet.addDebt(targetUserId, amount);
+      const theirDebt = await wallet.getDebt(targetUserId);
+      const formattedAmount = wallet.formatNumber(amount);
+      const formattedDebt = wallet.formatNumber(theirDebt);
       await message.reply(
-        `You have added **${amount}** coins to your wallet.${
+        `You have added **${formattedAmount}** coins to your wallet.${
           doTheyHaveDebtEraser ? `*Your debt has been cut in half*` : ``
-        } Your debt: ${await wallet.getDebt(
-          targetUserId
-        )}.You can pay off your debt fully with "$paydebt".`
+        } Your debt: ${formattedDebt}.You can pay off your debt fully with "$paydebt".`
       );
     }
     if (message.content.toLowerCase().startsWith("$paydebt")) {
@@ -916,8 +918,9 @@ function startBot() {
       await wallet.addCoins(targetUserId, amount, true, true, true);
       await wallet.removeCoins(userId, amount, true, true);
       await daily.incrementChallenge(userId, `santaGive`, amount);
+      const formattedAmount = wallet.formatNumber(amount);
       await message.reply(
-        `<@${userId}> has added ${amount} coins to ${mentionedUser.username}'s wallet.`
+        `<@${userId}> has added ${formattedAmount} coins to ${mentionedUser.username}'s wallet.`
       );
     }
 
@@ -1033,7 +1036,10 @@ function startBot() {
     }
 
     // $LEVEL
-    if (message.content.toLowerCase().startsWith("$level")) {
+    if (
+      message.content.toLowerCase().startsWith("$level") ||
+      message.content.toLowerCase().startsWith("$lvl")
+    ) {
       return message.reply(await xpSystem.xpOverview(userId));
     }
 
@@ -1225,7 +1231,7 @@ function startBot() {
           message.channel
         );
         message.channel.send(
-          `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`
+          `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their turn has been skipped. :fireworks:`
         );
         return;
       }
@@ -1390,14 +1396,23 @@ function startBot() {
       );
     }
     if (messageThatWasSent === "bust") {
+      const bustMessages = [
+        `The DEALER **BUSTS** **all ova** the place`,
+        `The DEALER has gone over 21,meaning they have **BUST**`,
+        `The DEALER has gone overboard and have **BUST**`,
+        `The DEALER **BUSTED**`,
+      ];
+      const bustMessage =
+        bustMessages[Math.floor(Math.random() * bustMessages.length)];
+
       channelToSendTo.send(
-        `:bust_in_silhouette: :boom: The DEALER **BUSTS** **all ova** the place :bust_in_silhouette: :boom:`
+        `:bust_in_silhouette: :boom: ${bustMessage} :bust_in_silhouette: :boom:`
       );
       blackjackGame.endGame(channelToSendTo.id, channelToSendTo, eventEmitter);
     }
     if (messageThatWasSent === `aceSave`) {
       channelToSendTo.send(
-        `:bust_in_silhouette: The DEALER was about to bust, but got saved by their **ACE**. Their sum is **${dealer.sum}** :bust_in_silhouette:`
+        `:bust_in_silhouette: The DEALER was about to **BUST**, but got saved by their **ACE**. Their sum is **${dealer.sum}** :bust_in_silhouette:`
       );
     }
   });
@@ -1617,9 +1632,10 @@ function startBot() {
     });
   }
   function generateRollPreviousButton(channel, betAmount, userId) {
+    const formattedPrevBet = wallet.formatNumber(betAmount);
     const rollPrev = new ButtonBuilder()
       .setCustomId(`roll_prev_${betAmount}_${userId}`)
-      .setLabel(`Roll Previous Amount (${betAmount})`)
+      .setLabel(`Roll Previous Amount (${formattedPrevBet})`)
       .setStyle(ButtonStyle.Success);
     const walletButton = generateWalletButton();
     const row = new ActionRowBuilder().addComponents(rollPrev, walletButton);
@@ -1669,7 +1685,7 @@ function startBot() {
   // Handle button interaction
 
   client.on("interactionCreate", async (interaction) => {
-    if (interaction.channel.id === `1293305339743174837`) return;
+    if (interaction.channel.id !== `1293305339743174837`) return;
     if (interaction.isModalSubmit()) {
       if (interaction.customId === "custom_bet_modal") {
         // Retrieve the user's input from the modal
@@ -1796,8 +1812,9 @@ function startBot() {
           });
         }
         if (amount > limit) {
+          const formattedAmount = wallet.formatNumber(limit);
           return interaction.reply({
-            content: `You can't get that many coins. Your limit is ${limit} coins.`,
+            content: `You can't get that many coins. Your limit is ${formattedAmount} coins.`,
             ephemeral: true,
           });
         }
@@ -1807,15 +1824,16 @@ function startBot() {
         );
         await wallet.addCoins(userId, amount, true, true, true);
         await wallet.addDebt(userId, amount);
+        const theirDebt = await wallet.getDebt(userId);
+        const formattedAmount = wallet.formatNumber(amount);
+        const formattedDebt = wallet.formatNumber(theirDebt);
         const row = new ActionRowBuilder().addComponents(
           generateWalletButton()
         );
         await interaction.reply({
-          content: `You have added **${amount}** coins to your wallet.${
+          content: `You have added **${formattedAmount}** coins to your wallet.${
             doTheyHaveDebtEraser ? `*Your debt has been cut in half*.` : ``
-          } Your debt: ${await wallet.getDebt(
-            userId
-          )}.You can pay off your debt fully with "$paydebt" or "$loan".`,
+          } Your debt: ${formattedDebt}.You can pay off your debt fully with "$paydebt" or "$loan".`,
           components: [row],
         });
       }
@@ -2073,9 +2091,11 @@ function startBot() {
       if (action === `wallet`) {
         const coins = await wallet.getCoins(userId); // Get the user's balance
         const debt = await wallet.getDebt(userId);
+        const formattedAmount = wallet.formatNumber(coins);
+        const formattedDebt = wallet.formatNumber(debt);
         await interaction.reply({
-          content: `You have **${coins}** coins in your wallet.${
-            debt > 0 ? `\nYour debt: ${debt}` : ``
+          content: `You have **${formattedAmount}** coins in your wallet.${
+            debt > 0 ? `\nYour debt: ${formattedDebt}` : ``
           }`,
           ephemeral: true,
         });
@@ -2499,15 +2519,12 @@ function startBot() {
         const modal = new ModalBuilder()
           .setCustomId("custom_loan")
           .setTitle("Enter your loan amount");
-
+        const loanlimit = await findLoanLimit(interaction.user.id);
+        const formattedLimit = wallet.formatNumber(loanlimit);
         // Add a text input field to the modal
         const loanInput = new TextInputBuilder()
           .setCustomId("custom_loan_input")
-          .setLabel(
-            `Loan Amount: (Your limit:${await findLoanLimit(
-              interaction.user.id
-            )} coins)`
-          )
+          .setLabel(`Loan Amount: (Your limit:${formattedLimit} coins)`)
           .setStyle(TextInputStyle.Short) // A short text input
           .setRequired(true);
 
@@ -2617,8 +2634,9 @@ function startBot() {
         ); // Use the createButtonGrid function from grid.js
 
         // Send the grid of buttons as a message
+        const formattedAmount = wallet.formatNumber(Number(betAmount));
         const sentMessage = await interaction.update({
-          content: `<@${userId}> have started a grid game with **${betAmount}** coins! Click a button to unlock!`,
+          content: `<@${userId}> have started a grid game with **${formattedAmount}** coins! Click a button to unlock!`,
           components: buttonGrid, // Attach the button grid to the message
         });
 
@@ -2739,13 +2757,13 @@ function startBot() {
       // Add the payout to the user's wallet
       // await wallet.addCoins(gridData.userId, payout);
       gridData.isComplete = true; // Mark the grid as complete
-
+      const formattedBetAmount = wallet.formatNumber(gridData.betAmount);
       const prevButton = new ButtonBuilder()
         .setCustomId(
           `grid_play_${gridData.betAmount}_${gridData.mineCount}_${gridData.userId}`
         ) // Custom ID for button interaction
         .setLabel(
-          `Bet Previous (${gridData.betAmount} bet with ${gridData.mineCount} mines)`
+          `Bet Previous (${formattedBetAmount} bet with ${gridData.mineCount} mines)`
         ) // The text on the button
         .setStyle(ButtonStyle.Success);
       const walletButton = generateWalletButton();
@@ -2753,10 +2771,11 @@ function startBot() {
         prevButton,
         walletButton
       );
+      const formattedPayout = wallet.formatNumber(Number(payout));
       await interaction.reply({
         content: `Game ended! <@${
           interaction.user.id
-        }> earned ${payout} coins.${
+        }> earned ${formattedPayout} coins.${
           coinMessage !== `` ? `\n${coinMessage}` : ``
         }`,
         components: [row],

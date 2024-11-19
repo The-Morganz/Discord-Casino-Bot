@@ -12,7 +12,9 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
     return `This player's information is hidden.`;
   const playerLevel = await xpSystem.getXpData(targetUserId);
   const playerWallet = await wallet.getCoins(targetUserId);
+  const formattedWallet = wallet.formatNumber(playerWallet);
   const playerDebt = await wallet.getDebt(targetUserId);
+  const formattedDebt = wallet.formatNumber(playerDebt);
   const playerUser = await User.findOne({ userId: targetUserId });
   const playerInventory = await shopAndItems.getUserInventory(
     targetUserId,
@@ -22,17 +24,17 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
   if (targetUserId === `1292934767511212042`) {
     playerInfo += `🎲 Player username: ${mentionedUser.displayName}.. Wait... That's me!\n`;
     playerInfo += `🎲 Level: 999\n`;
-    playerInfo += `🎲 Wallet: ${playerWallet} coins ${
-      playerWallet < 0 ? `.But remember, *The house **always** wins*\n` : `\n`
+    playerInfo += `🎲 Wallet: ${formattedWallet} coins${
+      playerWallet < 0 ? `. But remember, *The house **always** wins*\n` : `\n`
     }`;
     playerInfo += `🎲Inventory: "Devil's Blessing"\n`;
   } else {
     playerInfo += `:information: Player username: ${mentionedUser.displayName}\n`;
     playerInfo += `:arrow_up: Level: ${playerLevel.level}\n`;
-    playerInfo += `:coin: Wallet: ${playerWallet} coins\n`;
+    playerInfo += `:coin: Wallet: ${formattedWallet} coins\n`;
     playerInfo += `${
       playerDebt > 0
-        ? `💳 Debt: ${playerDebt} ${
+        ? `💳 Debt: ${formattedDebt} ${
             playerDebt > playerWallet ? `.It's not looking good...` : ``
           }\n`
         : ``

@@ -20,9 +20,10 @@ async function generateRollThemeButtons(
     let canBuy = false;
 
     if (walletAmount > item.price) canBuy = true;
+    const formattedAmount = item.price.toLocaleString();
     const button = new ButtonBuilder()
       .setCustomId(`buy_themesBuy_${item.name}_${userId}`)
-      .setLabel(`${item.emoji} ${item.name} - ${item.price} coins`)
+      .setLabel(`${item.emoji} ${item.name} - ${formattedAmount} coins`)
       .setStyle(canBuy ? ButtonStyle.Success : ButtonStyle.Danger);
     row.addComponents(button);
 

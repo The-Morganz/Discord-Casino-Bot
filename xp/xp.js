@@ -83,7 +83,6 @@ async function xpOverview(userId, value = false) {
   const levelOfPlayer = userXP.level;
   const xpOfPlayer = userXP.xp;
   const xpNeeded = userXP.nextLevelXpReq;
-
   let message = `<@${userId}> is level **${levelOfPlayer}**. They have **${xpOfPlayer} XP**, and need ${
     xpNeeded - xpOfPlayer
   } XP to level up.`;

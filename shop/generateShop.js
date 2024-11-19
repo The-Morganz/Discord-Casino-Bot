@@ -16,10 +16,10 @@ async function generateShop(
     let canBuy = false;
 
     if (walletAmount > item.price) canBuy = true;
-
+    const formattedPrice = item.price.toLocaleString();
     const button = new ButtonBuilder()
       .setCustomId(`buy_${item.name}_${userId}`)
-      .setLabel(`${item.emoji}${item.name} - ${item.price} coins`)
+      .setLabel(`${item.emoji}${item.name} - ${formattedPrice} coins`)
       .setStyle(canBuy ? ButtonStyle.Success : ButtonStyle.Danger);
     row.addComponents(button);
     if ((index + 1) % 5 === 0 || index === shopItems.length - 1) {

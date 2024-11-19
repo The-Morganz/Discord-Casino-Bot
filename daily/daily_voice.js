@@ -85,8 +85,9 @@ async function getVoiceStatus(userChallenge, userId) {
   if (doTheyHaveBooster) {
     gain = gain * 2;
   }
+  const formattedGain = wallet.formatNumber(gain);
   if (completed) {
-    return `🎉 You have completed today's voice challenge and earned ${gain} coins!`;
+    return `🎉 You have completed today's voice challenge and earned ${formattedGain} coins!`;
   } else {
     return `🎁 Spend ${requiredTime} minutes in any voice chat. Progress: ${minutesInVoice}/${requiredTime} minutes.`;
   }

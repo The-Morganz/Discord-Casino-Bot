@@ -25,6 +25,10 @@ async function getCoins(userId) {
   return user.coins;
 }
 
+function formatNumber(number) {
+  return number.toLocaleString(`sr`);
+}
+
 // Get debt of a user
 async function getDebt(userId) {
   const user = await initializeWallet(userId);
@@ -316,4 +320,5 @@ module.exports = {
   useFreeSpin,
   getFreeSpins,
   getFreeSpinBetAmount,
+  formatNumber,
 };

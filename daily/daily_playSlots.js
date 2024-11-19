@@ -42,8 +42,7 @@ async function incrementSlotsGames(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
-      const theirCoinAmount = await wallet.getCoins(userId);
-      const precentOfCoins = theirCoinAmount * 0.1;
+      const precentOfCoins = Math.round(gain);
       console.log(
         `User ${userId} has completed the slots challenge and earned ${gain} coins.`
       );
@@ -95,9 +94,10 @@ async function getSlotsGameStatus(userChallenge, userId) {
     const precentOfCoins = theirCoinAmount * 0.05;
     const freeSpinCoinAmount = await User.findOne({ userId: userId })
       .freeSpinsBetAmount;
-
-    return `🎉 You have played enough slots, finishing the challenge and earning ${gain} coins! You gained 10 free spins${
-      freeSpinCoinAmount > 0 ? ` with a bet of ${freeSpinCoinAmount}` : `.`
+    const formattedGain = wallet.formatNumber(gain);
+    const formattedCoinAmount = wallet.formatNumber(freeSpinCoinAmount);
+    return `🎉 You have played enough slots, finishing the challenge and earning ${formattedGain} coins! You gained 10 free spins${
+      freeSpinCoinAmount > 0 ? ` with a bet of ${formattedCoinAmount}` : `.`
     }`;
   } else {
     return `🎁 Play ${requiredSlotsGames} games of slots. Progress: ${slotGamesPlayed}/${requiredSlotsGames} games. Will gain 10 free spins.`;

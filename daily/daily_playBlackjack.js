@@ -83,8 +83,10 @@ async function getGameStatus(userChallenge, userId) {
   if (doTheyHaveBooster) {
     gain = gain * 2;
   }
+  const formattedGain = wallet.formatNumber(gain);
+
   if (completed) {
-    return `🎉 You have completed enough blackjack games,finishing the challenge and earning ${gain} coins!`;
+    return `🎉 You have completed enough blackjack games,finishing the challenge and earning ${formattedGain} coins!`;
   } else {
     return `🎁 Play ${requiredBjGames} games of blackjack. Progress: ${bjGamesPlayed}/${requiredBjGames} games.`;
   }

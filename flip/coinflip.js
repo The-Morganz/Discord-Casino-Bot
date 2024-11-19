@@ -37,8 +37,8 @@ function startFlipChallenge(challengerId, targetId, amount, message) {
       delete pendingChallenges[targetId];
     }
   }, 60000); // 1 minute timeout
-
-  return `🪙 <@${challengerId}> has challenged <@${targetId}> to a coinflip for **${amount}** coins! <@${targetId}>, type **$confirm** to accept or **$deny** to reject. 🪙`;
+  const formattedAmount = wallet.formatNumber(amount);
+  return `🪙 <@${challengerId}> has challenged <@${targetId}> to a coinflip for **${formattedAmount}** coins! <@${targetId}>, type **$confirm** to accept or **$deny** to reject. 🪙`;
 }
 
 async function confirmChallenge(userId) {
@@ -145,9 +145,10 @@ async function flipCoin(userId) {
 
     await xpSystem.addXp(winnerId, 20);
   }
-  const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${
-    challenge.amount * 2
-  }** coins! 🪙 ${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
+  const formattedWinnings = wallet.formatNumber(challenge.amount * 2);
+  const resultMessage = `🪙 The coin landed on **${flipResult}**! <@${winnerId}> wins 🎉 **${formattedWinnings}** coins! 🪙 ${
+    coinMessage !== `` ? `\n${coinMessage}` : ``
+  }`;
   delete pendingChallenges[userId];
 
   return resultMessage;

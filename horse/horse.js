@@ -45,8 +45,9 @@ async function addHorseBet(userId, amount, horseNumber, message) {
     { upsert: true }
   );
   await wallet.removeCoins(userId, amount, false);
+  const formattedAmount = wallet.formatNumber(amount);
   message.reply(
-    `🐎Your bet (${amount} coins) on **Horse ${horseNumber}** has been placed.🐎`
+    `🐎Your bet (${formattedAmount} coins) on **Horse ${horseNumber}** has been placed.🐎`
   );
 }
 async function removeHorseBets() {
@@ -252,16 +253,18 @@ async function givePayouts(winner, message) {
       gain = Math.round(gain);
       const coinMessage = await wallet.addCoins(allUsers[i].userId, gain);
       await xpSystem.addXp(allUsers[i].userId, 20, false);
+      const formattedGain = wallet.formatNumber(gain);
       await message.channel.send(
         `🐎<@${allUsers[i].userId}>'s horse won ${
           thatRoom.splitDecision ? `by a split decision` : ``
-        }, and they gained ${gain} coins! ${
+        }, and they gained ${formattedGain} coins! ${
           coinMessage === `` ? `` : coinMessage
         }🐎`
       );
     } else {
+      const formattedLoss = wallet.formatNumber(allUsers[i].betAmount);
       await message.channel.send(
-        `🐎<@${allUsers[i].userId}>'s horse lost, and they lost -${allUsers[i].betAmount} coins!🐎`
+        `🐎<@${allUsers[i].userId}>'s horse lost, and they lost -${formattedLoss} coins!🐎`
       );
       await xpSystem.addXp(allUsers[i].userId, 10, false);
     }

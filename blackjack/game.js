@@ -350,12 +350,12 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.userId,
         player.betAmount * 3
       );
-
+      const formattedGain = wallet.formatNumber(player.betAmount * 3);
       message = `:fireworks: <@${
         player.userId
-      }> has gotten a NATURAL BLACKJACK and has won +${
-        player.betAmount * 3
-      } :fireworks:${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
+      }> has gotten a NATURAL BLACKJACK and has won +${formattedGain} :fireworks:${
+        coinMessage !== `` ? `\n${coinMessage}` : ``
+      }`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -365,22 +365,25 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.userId,
         player.betAmount * 2
       );
-      message = `:gem: <@${player.userId}> has won +${
-        player.betAmount * 2
-      } :gem:${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
+      const formattedGain = wallet.formatNumber(player.betAmount * 2);
+      message = `:gem: <@${player.userId}> has won +${formattedGain} :gem:${
+        coinMessage !== `` ? `\n${coinMessage}` : ``
+      }`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
     if (player.sum > 21) {
-      message = `:boom: <@${player.userId}> has BUST! They have lost -${player.betAmount} :boom:`;
+      const formattedLoss = wallet.formatNumber(player.betAmount);
+      message = `:boom: <@${player.userId}> has BUST! They have lost -${formattedLoss} :boom:`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
       // wallet.removeCoins(player.userId, player.betAmount);
     }
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
-      message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${player.betAmount} :performing_arts:`;
+      const formattedLoss = wallet.formatNumber(player.betAmount);
+      message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${formattedLoss} :performing_arts:`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -391,9 +394,10 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.userId,
         player.betAmount * 2
       );
-      message = `:gem: <@${player.userId}> has won +${
-        player.betAmount * 2
-      } :gem:${coinMessage !== `` ? `\n${coinMessage}` : ``}`;
+      const formattedGain = wallet.formatNumber(player.betAmount * 2);
+      message = `:gem: <@${player.userId}> has won +${formattedGain} :gem:${
+        coinMessage !== `` ? `\n${coinMessage}` : ``
+      }`;
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;

@@ -41,13 +41,13 @@ function createButtonGrid(mineCount, customId = ``) {
 function assignMultipliers(mineCount) {
   console.log(mineCount);
   const multiplierMap = {
-    4: [...Array(12).fill(0.25)], // 4 mines => remaining 12 cells are 0.25x
-    5: [...Array(11).fill(0.5)], // 5 mines => remaining 11 cells are 0.5x
+    4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.25x
+    5: [...Array(11).fill(1)], // 5 mines => remaining 11 cells are 0.5x
     6: [...Array(10).fill(1.5)], // 6 mines => remaining 10 cells are 1.5x
-    7: [...Array(9).fill(1)], // 7 mines => remaining 9 cells are 1x
-    8: [...Array(8).fill(2)], // 8 mines => remaining 8 cells are 2x
-    9: [...Array(7).fill(4)], // 9 mines => remaining 7 cells are 4x
-    10: [...Array(6).fill(8)], // 10 mines => remaining 6 cells are 8x
+    7: [...Array(9).fill(2)], // 7 mines => remaining 9 cells are 1x
+    8: [...Array(8).fill(4)], // 8 mines => remaining 8 cells are 2x
+    9: [...Array(7).fill(5)], // 9 mines => remaining 7 cells are 4x
+    10: [...Array(6).fill(6)], // 10 mines => remaining 6 cells are 8x
   };
 
   const multipliers = multiplierMap[mineCount] || multiplierMap[4]; // Default to 4 mines if invalid

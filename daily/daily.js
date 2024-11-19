@@ -192,7 +192,6 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
         userId,
         i
       );
-      console.log(`hello!`);
     }
     if (
       userChallenge.challenges[i].challengeData.challengeType ===
