@@ -18,6 +18,7 @@ function getDurationDates(whatDoYouWantBro, howManyHours = 1) {
       return today.getTime();
     }
     const hourLater = new Date(today.getTime() + howManyHours * 3600000);
+    console.log(hourLater);
     const hourTime = hourLater.getTime();
     return hourTime;
   }

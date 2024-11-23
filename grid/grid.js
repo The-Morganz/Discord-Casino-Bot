@@ -39,7 +39,6 @@ function createButtonGrid(mineCount, customId = ``) {
 }
 
 function assignMultipliers(mineCount) {
-  console.log(mineCount);
   const multiplierMap = {
     4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.25x
     5: [...Array(11).fill(1)], // 5 mines => remaining 11 cells are 0.5x
@@ -68,7 +67,6 @@ function assignMultipliers(mineCount) {
 function revealMultiplier(customId, fromButton = false) {
   // Extract the multiplier from the customId (it's the last part after the last underscore)
   const parts = customId.split("_");
-  console.log(parts);
   if (fromButton) {
     return parseFloat(parts[parts.length - 2]); // Return the hidden multiplier as a float
   } else {

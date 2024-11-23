@@ -196,7 +196,7 @@ async function buyLogic(itemName, userId, wallet) {
         },
       },
     }, // Push new item into the inventory array
-    { upsert: true, new: true } // Return the updated document
+    { upsert: true } // Return the updated document
   );
 
   await wallet.removeCoins(userId, itemInfo.price, true);
