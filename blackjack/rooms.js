@@ -141,6 +141,9 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
 }
 function removePersonFromRoom(userId, channelId) {
   const thatRoom = findRoom(channelId);
+  if (!thatRoom) {
+    return;
+  }
   thatRoom.players.forEach((e, i, arr) => {
     if (e.userId === userId) {
       arr.splice(e.index, 1);
@@ -153,6 +156,9 @@ function removePersonFromRoom(userId, channelId) {
 }
 function updatePlayerIndexes(channelId) {
   const thatRoom = findRoom(channelId);
+  if (!thatRoom) {
+    return;
+  }
   thatRoom.players.forEach((e, i) => {
     e.index = i;
   });
@@ -262,6 +268,10 @@ function changeGameState(channelId, phase, state) {
 }
 function isItYoTurn(userId, channelId) {
   const thatRoom = findRoom(channelId);
+  if (!thatRoom) {
+    return;
+  }
+
   let result = false;
   thatRoom.players.forEach((e) => {
     if (e.userId === userId && e.turn === true) {
@@ -273,6 +283,10 @@ function isItYoTurn(userId, channelId) {
 
 function playerLose(userId, channelId) {
   const thatRoom = findRoom(channelId);
+  if (!thatRoom) {
+    return;
+  }
+
   thatRoom.players.forEach((e) => {
     if (e.userId === userId) {
       e.lost = true;
