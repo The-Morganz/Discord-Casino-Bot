@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const User = require("./models/User"); // Import Mongoose User model
 const shopAndItems = require(`./shop/shop`);
+const xpSystem = require(`./xp/xp`);
 
 // Get or initialize user's wallet in MongoDB
 async function initializeWallet(userId) {
@@ -109,10 +110,17 @@ async function addCoins(
     const doTheyHaveWealthMultiplier =
       await shopAndItems.checkIfHaveInInventory(`Wealth Multiplier`, userId);
     if (doTheyHaveWealthMultiplier && !ignoreWealthMultiplier) {
-      message += `\n*More coins come your way. You earn ${
-        amount * 0.2
-      } extra coins.*`;
+      message += `${
+        message === `` ? `` : `\n`
+      }*More coins come your way. You earn ${amount * 0.2} extra coins.*`;
       amount = amount * 1.2;
+    }
+    const doTheyHaveXPConverter = await shopAndItems.checkIfHaveInInventory(
+      `XP Converter`,
+      userId
+    );
+    if (doTheyHaveXPConverter) {
+      xpSystem.addXp(userId, amount * 0.01);
     }
     const roundedAmount = Math.round(amount);
     user.coins += Math.trunc(roundedAmount);
@@ -141,6 +149,7 @@ async function removeCoins(
     amount = amount * 0.9;
     // shopAndItems.removeSpecificItem(userId, `Coin Shield`);
   }
+
   if (typeof amount === "number" && amount > 0 && user.coins >= amount) {
     const roundedAmount = Math.round(amount);
     user.coins -= Math.trunc(roundedAmount);

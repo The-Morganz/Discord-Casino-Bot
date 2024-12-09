@@ -7,9 +7,10 @@ const { shopItems } = require(`./shopItems`);
 // Mogo sam da exportujem iz shopItems al se plasim da se nesto ne ukenja pa sam samo kopirao opet ovde, koristi se u checkExpiredItem.
 function getDurationDates(whatDoYouWantBro, howManyHours = 1) {
   const today = new Date();
-
   const tomorrow = new Date(today);
-
+  if (whatDoYouWantBro === Infinity) {
+    return Infinity;
+  }
   if (whatDoYouWantBro === `now`) {
     const todayTime = today.getTime();
     return todayTime;
@@ -19,7 +20,14 @@ function getDurationDates(whatDoYouWantBro, howManyHours = 1) {
     const tomorrowTime = tomorrow.getTime();
     return tomorrowTime;
   }
-  if (whatDoYouWantBro === `hour`) {
+  if (whatDoYouWantBro.startsWith(`hour`)) {
+    howManyHours = whatDoYouWantBro.match(/(\d+)/)[0];
+    console.log(howManyHours);
+    if (howManyHours <= 0) {
+      const hourLater = new Date(today.getTime() + 1 * 3600000);
+      const hourTime = hourLater.getTime();
+      return hourTime;
+    }
     const hourLater = new Date(today.getTime() + howManyHours * 3600000);
     const hourTime = hourLater.getTime();
     return hourTime;
@@ -183,6 +191,7 @@ async function buyLogic(itemName, userId, wallet) {
   if (userDebt !== 0 && itemName !== `Debt Eraser`) {
     return `You have to clear your debt before making a purchase!`;
   }
+
   await UserInventory.findOneAndUpdate(
     { userId: userId }, // Find the document by itemName
     {
@@ -190,8 +199,8 @@ async function buyLogic(itemName, userId, wallet) {
         inventory: {
           itemName: itemInfo.name,
           price: itemInfo.price,
-          startTime: itemInfo.startTime,
-          endTime: itemInfo.endTime,
+          startTime: getDurationDates(itemInfo.startTime),
+          endTime: getDurationDates(itemInfo.endTime),
           riskTaker: itemName === `Risk Taker's Badge` ? true : false,
         },
       },
