@@ -27,7 +27,11 @@ async function getCoins(userId) {
 }
 
 function formatNumber(number) {
-  return number.toLocaleString(`sr`);
+  try {
+    return number.toLocaleString(`sr`);
+  } catch (error) {
+    return number;
+  }
 }
 
 // Get debt of a user
