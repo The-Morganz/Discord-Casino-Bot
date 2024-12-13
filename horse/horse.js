@@ -2,8 +2,15 @@ const horseRacing = require(`../models/HorseRacing`);
 const wallet = require(`../wallet`);
 const xpSystem = require(`../xp/xp`);
 const shopAndItems = require(`../shop/shop`);
-const horseAmount = 6;
+const { randomNumber } = require("../blackjack/makeDeck");
+let horseAmount = 6;
+let finishLine = 30;
 let guildsAndInfo = [];
+
+function adminChangeRules(horseAmountIPut = 6, finishLineIPut = 30) {
+  horseAmount = horseAmountIPut;
+  finishLine = finishLineIPut;
+}
 
 function addNewGuild(message) {
   let youAreInARoom = false;
@@ -17,22 +24,23 @@ function addNewGuild(message) {
   guildsAndInfo.push({
     guildId: message.guildId,
     horses: [],
-    horseAmount: 6,
+    horseAmount: horseAmount,
     splitDecision: false,
     raceInProgress: false,
     countdown: undefined,
     amountOfTimeToWaitInMs: 0,
     timeOfStartCountdown: 0,
-    minutesToStart: 2,
-    finishLine: 30,
+    minutesToStart: 0.1,
+    finishLine: finishLine,
     someoneFinished: false,
     whoFinishedAtSameTime: [],
   });
-  generateHorses(6, message);
+  generateHorses(horseAmount, message, finishLine);
 }
 
 async function addHorseBet(userId, amount, horseNumber, message) {
   const didTheyBetSomewhereElse = await horseRacing.findOne({ userId: userId });
+  // const horseNumber = didTheyBetSomewhereElse.horseNumber;
 
   addNewGuild(message);
   await horseRacing.findOneAndUpdate(
@@ -73,7 +81,7 @@ function generateArrayWithSum(length, min = 5, max = 35) {
   let sum = 100;
 
   for (let i = 0; i < length - 1; i++) {
-    // Set a maximum value for the current element so we don't exceed 100 for the entire array
+    // // Set a maximum value for the current element so we don't exceed 100 for the entire array
     let maxValue = Math.min(max, sum - min * (length - i - 1));
 
     // Generate a random number within the specified min and adjusted max
@@ -81,6 +89,7 @@ function generateArrayWithSum(length, min = 5, max = 35) {
 
     arr[i] = value;
     sum -= value;
+    // arr[i] = randomNumber(min, max);
   }
 
   // Assign the remaining sum to the last element, ensuring it's within the min and max bounds
@@ -101,8 +110,10 @@ async function isBetValid(
   message
 ) {
   const thatRoom = findHorseRoom(message);
-
+  // const user = await horseRacing.findOne({ userId: userId });
+  // const horseNumber = user.horseNumber;
   const theirWallet = await wallet.getCoins(userId);
+  // console.log(userId);
   if (thatRoom.raceInProgress) {
     return `A race is in progress.`;
   }
@@ -143,12 +154,13 @@ function findHorseRoom(message) {
   }
   return theRoom;
 }
-function generateHorses(howMany, message) {
+function generateHorses(howMany, message, finishLine = 30) {
   const thatRoom = findHorseRoom(message);
-
+  thatRoom.finishLine = finishLine;
   thatRoom.horses = [];
   thatRoom.splitDecision = false;
   const horseChancesArray = getHorseChances();
+  console.log(horseChancesArray);
   for (let i = 0; i < howMany; i++) {
     thatRoom.horses.push({
       horseNumber: i + 1,
@@ -273,7 +285,7 @@ async function givePayouts(winner, message) {
   thatRoom.raceInProgress = false;
   thatRoom.countdown = undefined;
   await removeHorseBets();
-  generateHorses(thatRoom.horseAmount, message);
+  generateHorses(horseAmount, message, finishLine);
 }
 
 function decideWinner(whoFinishedAtSameTime, message) {
@@ -392,4 +404,5 @@ module.exports = {
   whenDoesRaceStart,
   getHorseStats,
   notify,
+  adminChangeRules,
 };

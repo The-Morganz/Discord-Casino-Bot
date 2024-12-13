@@ -40,6 +40,9 @@ function createButtonGrid(mineCount, customId = ``) {
 
 function assignMultipliers(mineCount) {
   const multiplierMap = {
+    1: [...Array(15).fill(0.2)],
+    2: [...Array(14).fill(0.25)],
+    3: [...Array(13).fill(0.3)],
     4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.25x
     5: [...Array(11).fill(0.8)], // 5 mines => remaining 11 cells are 0.5x
     6: [...Array(10).fill(1)], // 6 mines => remaining 10 cells are 1.5x
@@ -64,23 +67,35 @@ function assignMultipliers(mineCount) {
 }
 
 // Function to reveal the multiplier on a clicked button
-function revealMultiplier(customId, fromButton = false, revealedMultipliers) {
+function revealMultiplier(
+  customId,
+  fromButton = false,
+  revealedMultipliers,
+  mineCount = 4
+) {
   // Extract the multiplier from the customId (it's the last part after the last underscore)
   const parts = customId.split("_");
+  let bonusAmount = 0.25;
 
+  if (mineCount < 4) {
+    bonusAmount = 0;
+  }
   if (fromButton) {
     if (parseFloat(parts[parts.length - 2]) === 0) {
       return parseFloat(parts[parts.length - 2]);
     }
+
     return (
-      parseFloat(parts[parts.length - 2]) + revealedMultipliers.length * 0.25
+      parseFloat(parts[parts.length - 2]) +
+      revealedMultipliers.length * bonusAmount
     );
   } else {
     if (parseFloat(parts[parts.length - 1]) === 0) {
       return parseFloat(parts[parts.length - 1]);
     }
     return (
-      parseFloat(parts[parts.length - 1]) + revealedMultipliers.length * 0.25
+      parseFloat(parts[parts.length - 1]) +
+      revealedMultipliers.length * bonusAmount
     );
   }
 }

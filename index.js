@@ -41,6 +41,7 @@ const shop = require("./shop/shop");
 const { generateShop } = require(`./shop/generateShop`);
 const playerInfo = require(`./playerinfo`);
 const horse2 = require(`./horse/horse`);
+const horseBetting = require(`./horse/horsebetting`);
 const {
   generateRollThemeButtons,
   generateChooseThemeButtons,
@@ -292,10 +293,26 @@ function startBot() {
       message.author.send(theHelpMessagePt2);
     }
     // HOOORSE IM HORSING AROUND
+    if (message.content.startsWith(`$horseracechange`)) {
+      if (message.author.id !== ownerId && message.author.id !== ownerId2) {
+        return message.reply("You don't have permission to use this command.");
+      }
+      let args = message.content.split(" ");
+      let amount = parseInt(args[1]);
+      let horseNumber = parseInt(args[2]);
+      horse2.adminChangeRules(amount, horseNumber);
+      message.reply(`Yes sir!`);
+      return;
+    }
     if (
       message.content.startsWith(`$horsebet`) ||
       message.content.startsWith(`$hb`)
     ) {
+      // const row = generateHorseBetButtons();
+      // message.channel.send({
+      //   content: `Welcome to the world of horse betting! To get started, do you want to place a bet on a single horse, or a connected bet on multiple horses?`,
+      //   components: [row],
+      // });
       let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
@@ -318,7 +335,6 @@ function startBot() {
       let riskTakerExtra = 0;
       if (doTheyHaveRiskTaker) {
         const theirCoinAmount = await wallet.getCoins(userId);
-
         // Define the threshold (80% of their total coins)
         const riskThreshold = theirCoinAmount * 0.8;
         // Check if the bet amount is greater than or equal to the threshold
@@ -562,11 +578,11 @@ function startBot() {
         isNaN(amount) ||
         amount <= 0 ||
         isNaN(mineCount) ||
-        mineCount < 4 ||
+        mineCount < 1 ||
         mineCount > 10 // Updated max mines to 10
       ) {
         return message.reply(
-          "Please provide a valid amount of coins and a number of mines between 4 and 10."
+          "Please provide a valid amount of coins and a number of mines between 1 and 10."
         );
       }
 
@@ -1556,6 +1572,52 @@ function startBot() {
       .setLabel(`Wallet`)
       .setStyle(ButtonStyle.Primary);
   }
+  function generateHorseBetButtons() {
+    const oneHorseButton = new ButtonBuilder()
+      .setCustomId(`hb_one`)
+      .setLabel(`Bet on One Horse`)
+      .setStyle(ButtonStyle.Success);
+    const multipleHorses = new ButtonBuilder()
+      .setCustomId(`hb_multiple`)
+      .setLabel(`Bet on Multiple Horses`)
+      .setStyle(ButtonStyle.Primary);
+    const row = new ActionRowBuilder().addComponents(
+      oneHorseButton,
+      multipleHorses
+    );
+    return row;
+  }
+  function generateWinPlaceButtons() {
+    const winBetButton = new ButtonBuilder()
+      .setCustomId(`hb_win`)
+      .setLabel(`Win Bet`)
+      .setStyle(ButtonStyle.Success);
+    const placeBetButton = new ButtonBuilder()
+      .setCustomId(`hb_place`)
+      .setLabel(`Place Bet`)
+      .setStyle(ButtonStyle.Primary);
+    const row = new ActionRowBuilder().addComponents(
+      winBetButton,
+      placeBetButton
+    );
+    return row;
+  }
+  function generateHorseModalButton() {
+    const placeBetButton = new ButtonBuilder()
+      .setCustomId(`hb_betAmount`)
+      .setLabel(`Place Bet`)
+      .setStyle(ButtonStyle.Success);
+    const row = new ActionRowBuilder().addComponents(placeBetButton);
+    return row;
+  }
+  function generateHorseNumberModalButton() {
+    const placeBetButton = new ButtonBuilder()
+      .setCustomId(`hb_horseNumber`)
+      .setLabel(`Place Horse Number`)
+      .setStyle(ButtonStyle.Success);
+    const row = new ActionRowBuilder().addComponents(placeBetButton);
+    return row;
+  }
 
   function generateBetButtons(channel, start = false) {
     const betPrevButton = new ButtonBuilder()
@@ -1837,9 +1899,114 @@ function startBot() {
           components: [row],
         });
       }
+      if (interaction.customId === `hb_horseNumber_modal`) {
+        const inputAmount = interaction.fields.getTextInputValue(
+          "hb_horseNumber_input"
+        );
+        await horseBetting.betOnOneHorse(interaction, inputAmount);
+        const againARow = generateHorseModalButton();
+        await interaction.update({
+          content: `And what amount are you betting?`,
+          components: [againARow],
+        });
+        // const isBetValid = await horse2.isBetValid(
+        //     inputAmount,
+        //     horseNumber,
+        //     userId,
+        //     doTheyHaveHighRollerPass,
+        //     message
+        //   );
+        //   if (isBetValid !== true) return message.reply(isBetValid);
+        //   const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
+        //     `Risk Taker's Badge`,
+        //     userId
+        //   );
+        //   let riskTakerExtra = 0;
+        //   if (doTheyHaveRiskTaker) {
+        //     const theirCoinAmount = await wallet.getCoins(userId);
+        //     // Define the threshold (80% of their total coins)
+        //     const riskThreshold = theirCoinAmount * 0.8;
+        //     // Check if the bet amount is greater than or equal to the threshold
+        //     if (amount >= riskThreshold) {
+        //       // Increase bet amount by 20% of their total coins
+        //       riskTakerExtra = amount * 0.2;
+        //       riskTakerExtra = Math.round(riskTakerExtra);
+        //       await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
+        //     }
+        //   }
+        //   await horse2.addHorseBet(userId, amount, horseNumber, message);
+        //   await horse2.theFinalCountdown(message);
+      }
+      if (interaction.customId === `hb_betAmount_modal`) {
+        const inputAmount =
+          interaction.fields.getTextInputValue("hb_betAmount_input");
+        await horseBetting.betOnOneHorse(interaction, inputAmount);
+      }
     }
     if (!interaction.isButton()) return;
 
+    if (interaction.customId.startsWith(`hb_`)) {
+      const action = interaction.customId.split(`_`);
+      console.log(action);
+      if (action[1] === `one`) {
+        const row = generateWinPlaceButtons();
+        await interaction.update({
+          content: `Okay, one horse. What bet exactly? You cash a win bet only if your horse finishes first. You cash a place bet if your horse finishes first or second. `,
+          components: [row],
+        });
+      }
+      if (action[1] === `win` || action[1] === `place`) {
+        await horseBetting.betOnOneHorse(interaction);
+
+        const anotherRow = generateHorseNumberModalButton();
+        interaction.update({
+          content: `On which horse are you placing this bet?`,
+          components: [anotherRow],
+        });
+      }
+      if (action[1] === `multiple`) {
+        horseBetting.betOnMultiplehorses(interaction);
+      }
+      if (action[1] === `betAmount`) {
+        const modal = new ModalBuilder()
+          .setCustomId("hb_betAmount_modal")
+          .setTitle("Enter Your Bet");
+
+        // Add a text input field to the modal
+        const betInput = new TextInputBuilder()
+          .setCustomId("hb_betAmount_input")
+          .setLabel("Your Bet")
+          .setStyle(TextInputStyle.Short) // A short text input
+          .setRequired(true);
+
+        const actionRow = new ActionRowBuilder().addComponents(betInput);
+        modal.addComponents(actionRow);
+
+        // Show the modal to the user
+        await interaction.showModal(modal);
+        return;
+      }
+      if (action[1] === `horseNumber`) {
+        const modal = new ModalBuilder()
+          .setCustomId("hb_horseNumber_modal")
+          .setTitle("Which Horse Are You Betting On?");
+
+        // Add a text input field to the modal
+        const betInput = new TextInputBuilder()
+          .setCustomId("hb_horseNumber_input")
+          .setLabel("Your Desired Horse Number")
+          .setStyle(TextInputStyle.Short) // A short text input
+          .setRequired(true);
+
+        const actionRow = new ActionRowBuilder().addComponents(betInput);
+        modal.addComponents(actionRow);
+
+        // Show the modal to the user
+        await interaction.showModal(modal);
+        return;
+      }
+      return;
+    }
     if (interaction.customId.startsWith("roll")) {
       let match = interaction.customId.match(/\d+/);
       let [action, amount, usersButton] = interaction.customId
@@ -1949,10 +2116,7 @@ function startBot() {
             );
             generateWalletButton();
           } catch (err) {
-            return await interaction.reply({
-              content: `Something went wrong... Try again. (Error:${err})`,
-              ephemeral: true,
-            });
+            return console.log(`Something went wrong ${err}`);
           }
         } else {
           return await interaction.reply({
@@ -2685,10 +2849,7 @@ function startBot() {
         console.log(`Something went wrong...`);
       }
       try {
-        return interaction.reply({
-          content: "Something went wrong with the grid data.",
-          ephemeral: true,
-        });
+        console.log(`SOMETHING IS GOING WRONG!`);
       } catch (err) {
         console.log(`Something went veery wrong`);
       }
@@ -2795,13 +2956,15 @@ function startBot() {
       multiplier = grid.revealMultiplier(
         interaction.customId,
         true,
-        gridData.revealedMultipliers
+        gridData.revealedMultipliers,
+        gridData.mineCount
       );
     } else {
       multiplier = grid.revealMultiplier(
         interaction.customId,
         false,
-        gridData.revealedMultipliers
+        gridData.revealedMultipliers,
+        gridData.mineCount
       );
     }
 
@@ -2849,10 +3012,7 @@ function startBot() {
         });
         await interaction.message.delete(); // Remove the grid message after the delay
       } catch (err) {
-        await interaction.reply({
-          content: `Something went wrong.`,
-          ephemeral: true,
-        });
+        console.log(`Something went wrong: ${err}`);
       }
       return;
     }
