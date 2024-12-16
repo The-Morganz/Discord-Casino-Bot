@@ -42,7 +42,7 @@ async function incrementSlotsGames(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
-      const precentOfCoins = Math.round(gain);
+      const precentOfCoins = theirXP.level * 100;
       console.log(
         `User ${userId} has completed the slots challenge and earned ${gain} coins.`
       );
@@ -90,8 +90,6 @@ async function getSlotsGameStatus(userChallenge, userId) {
     gain = gain * 2;
   }
   if (completed) {
-    const theirCoinAmount = await wallet.getCoins(userId);
-    const precentOfCoins = theirCoinAmount * 0.05;
     const freeSpinCoinAmount = await User.findOne({ userId: userId })
       .freeSpinsBetAmount;
     const formattedGain = wallet.formatNumber(gain);
