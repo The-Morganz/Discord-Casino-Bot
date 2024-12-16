@@ -2032,7 +2032,6 @@ function startBot() {
         console.log(`Can't find bet amount!`);
         return;
       }
-
       let highRollerMessage = ``;
       const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
         `High Roller Pass`,
@@ -2063,10 +2062,18 @@ function startBot() {
         // );
 
         if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
-          // await interaction.reply({
-          //  content: `You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`,
-          //  ephemeral: true,
-          // });
+          try {
+            await interaction.reply({
+              content: `You have free spins available with a bet amount of ${freeSpinBetAmount}. Use this amount to roll with your free spins.`,
+              ephemeral: true,
+            });
+            return;
+          } catch (error) {
+            console.log(
+              `They had free spins available. And rolled with some other value, but some error happened ${error}`
+            );
+            return;
+          }
           return;
         }
         const doTheyHaveRiskTaker = await shop.checkIfHaveInInventory(
