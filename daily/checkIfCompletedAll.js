@@ -59,6 +59,11 @@ async function checkIfCompletedAll(userId) {
         { userId: userId },
         { streak: userChallenge.streak + 1, streakDate: getNextDay(today) }
       );
+      userChallenge = await DailyChallenge.findOne({ userId: userId });
+      const xpForUser = await xpSystem.getXpData(userId);
+      const howManyCoinsToGive =
+        coinGain * xpForUser.level + coinGain * userChallenge.streak * bonus;
+      await wallet.addCoins(userId, howManyCoinsToGive, false, false, true);
     }
   }
   if (!isFutureDate(userChallenge.streakDate)) {
@@ -67,11 +72,6 @@ async function checkIfCompletedAll(userId) {
       { streak: 0, streakDate: getNextDay(today) }
     );
   }
-  userChallenge = await DailyChallenge.findOne({ userId: userId });
-  const xpForUser = await xpSystem.getXpData(userId);
-  const howManyCoinsToGive =
-    coinGain * xpForUser.level + coinGain * userChallenge.streak * bonus;
-  await wallet.addCoins(userId, howManyCoinsToGive, false, false, true);
 }
 
 module.exports = { checkIfCompletedAll };
