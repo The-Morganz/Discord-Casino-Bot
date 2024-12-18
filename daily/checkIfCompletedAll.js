@@ -2,6 +2,7 @@
 
 const DailyChallenge = require("../models/DailyChallenge");
 const wallet = require(`../wallet`);
+const shopAndItems = require(`../shop/shop`);
 const xpSystem = require(`../xp/xp`);
 const numberOfChallenges = 3;
 const coinGain = 300;
@@ -23,8 +24,6 @@ function isFutureDate(dateString) {
   // Strip the time portion of today's date for a fair comparison
   today.setHours(0, 0, 0, 0);
   inputDate.setHours(0, 0, 0, 0);
-  console.log(today);
-  console.log(inputDate);
   return inputDate >= today;
 }
 async function checkIfCompletedAll(userId) {
@@ -47,7 +46,6 @@ async function checkIfCompletedAll(userId) {
   }
   if (userChallenge.streakDate === today) {
     let completedAll = 0;
-    console.log(userChallenge.challenges);
     for (let i = 0; i < numberOfChallenges; i++) {
       if (userChallenge.challenges[i].challengeData.completed) {
         completedAll++;
@@ -61,9 +59,20 @@ async function checkIfCompletedAll(userId) {
       );
       userChallenge = await DailyChallenge.findOne({ userId: userId });
       const xpForUser = await xpSystem.getXpData(userId);
+      const doTheyHaveDoubleChallenge =
+        await shopAndItems.checkIfHaveInInventory(
+          `Double Challenge Rewards`,
+          userId
+        );
+      let gain = coinGain;
       const howManyCoinsToGive =
-        coinGain * xpForUser.level + coinGain * userChallenge.streak * bonus;
-      await wallet.addCoins(userId, howManyCoinsToGive, false, false, true);
+        gain * xpForUser.multiplier + gain * userChallenge.streak * bonus;
+
+      gain = howManyCoinsToGive;
+      if (doTheyHaveDoubleChallenge) {
+        gain = howManyCoinsToGive * 2;
+      }
+      await wallet.addCoins(userId, gain, false, false, true);
     }
   }
   if (!isFutureDate(userChallenge.streakDate)) {

@@ -10,6 +10,7 @@ const playGridChallenge = require(`./daily_playGrid`);
 const santaGiveChallenge = require(`./daily_give`);
 const winFlipChallenge = require(`./daily_winFlip`);
 const xpSystem = require("../xp/xp");
+const shopAndItems = require(`../shop/shop`);
 
 // Path to store daily challenge progress
 const dailyFilePath = path.join(__dirname, "daily.json");
@@ -312,9 +313,18 @@ async function getDailyStatus(userId) {
     if (userChallenge.challenges[i].challengeData.completed) completed++;
   }
   if (completed === numberOfChallenges) {
+    const doTheyHaveDoubleChallenge = await shopAndItems.checkIfHaveInInventory(
+      `Double Challenge Rewards`,
+      userId
+    );
+    let gain = coinGain;
     const howManyCoinsToGive =
-      coinGain * userXP.level + coinGain * userChallenge.streak * bonus;
-    statusMessage += `You have completed all of the daily challenges! Your Bonus: ${howManyCoinsToGive} coins!\n\n`;
+      gain * userXP.multiplier + gain * userChallenge.streak * bonus;
+    gain = howManyCoinsToGive;
+    if (doTheyHaveDoubleChallenge) {
+      gain = howManyCoinsToGive * 2;
+    }
+    statusMessage += `You have completed all of the daily challenges! Your Bonus: ${gain} coins!\n\n`;
   }
 
   // Get XP data for the user and include it in the message
