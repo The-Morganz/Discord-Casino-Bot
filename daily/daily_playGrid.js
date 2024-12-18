@@ -2,6 +2,8 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
+const dailies = require(`./checkIfCompletedAll`);
+
 let gainFromChallenge = 500;
 let gainXpFromChallenge = 150;
 function generateRandomGameRequirement() {
@@ -68,6 +70,7 @@ async function incrementGridGames(userChallenge, userId, challengeNumber) {
       upsert: true,
     }
   );
+  await dailies.checkIfCompletedAll(userId);
 
   // Return the updated userChallenge object
   return userChallenge;

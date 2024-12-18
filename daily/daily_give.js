@@ -2,6 +2,7 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
+const dailies = require(`./checkIfCompletedAll`);
 let gainFromChallenge = 500;
 let gainXpFromChallenge = 150;
 let amountToGive = 1000;
@@ -47,6 +48,7 @@ async function incrementAmount(
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
+
       console.log(
         `User ${userId} has completed the santa challenge and earned ${gain} coins.`
       );
@@ -75,7 +77,7 @@ async function incrementAmount(
       upsert: true,
     }
   );
-
+  await dailies.checkIfCompletedAll(userId);
   // Return the updated userChallenge object
   return userChallenge;
 }

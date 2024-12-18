@@ -2,6 +2,7 @@ const wallet = require("../wallet");
 const xpSystem = require(`../xp/xp`);
 const DailyChallenge = require("../models/DailyChallenge");
 const shopAndItems = require(`../shop/shop`);
+const dailies = require(`./checkIfCompletedAll`);
 const gainFromChallenge = 250;
 const gainXpFromChallenge = 50;
 // Initialize an image challenge for a user
@@ -42,6 +43,7 @@ async function incrementImageCount(userChallenge, userId, challengeNumber) {
         false,
         true
       ); // Reward the user with coins
+
       console.log(
         `User ${userId} has completed the image challenge and earned ${gain} coins.${
           coinMessage !== `` ? `\n${coinMessage}` : ``
@@ -72,6 +74,7 @@ async function incrementImageCount(userChallenge, userId, challengeNumber) {
       upsert: true,
     }
   );
+  await dailies.checkIfCompletedAll(userId);
   return userChallenge;
 }
 

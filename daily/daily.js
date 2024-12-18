@@ -14,6 +14,9 @@ const xpSystem = require("../xp/xp");
 // Path to store daily challenge progress
 const dailyFilePath = path.join(__dirname, "daily.json");
 let dailyChallenges = {};
+const numberOfChallenges = 3;
+const coinGain = 300;
+const bonus = 0.5;
 
 // Load daily challenge progress
 function loadDailyChallenges() {
@@ -77,7 +80,7 @@ async function initializeDailyChallenge(userId) {
     );
   }
   if (!userChallenge) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < numberOfChallenges; i++) {
       const challengeType = assignRandomChallenge(challengeTypes);
       let challengeData = {
         userId: userId,
@@ -163,7 +166,7 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
   const userChallenge = await initializeDailyChallenge(userId);
   let completed = false;
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < numberOfChallenges; i++) {
     // holy yandere dev
     if (
       userChallenge.challenges[i].challengeData.challengeType === `message` &&
@@ -247,9 +250,8 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
 // DAILY STATUS
 async function getDailyStatus(userId) {
   const userChallenge = await initializeDailyChallenge(userId);
-
-  let statusMessage = ``;
-  for (let i = 0; i < 3; i++) {
+  let statusMessage = `🔥Daily Challenge Streak: ${userChallenge.streak}\n\n`;
+  for (let i = 0; i < numberOfChallenges; i++) {
     switch (userChallenge.challenges[i].challengeData.challengeType) {
       case `message`:
         statusMessage += await messageChallenge.getMessageStatus(
@@ -304,9 +306,19 @@ async function getDailyStatus(userId) {
     }
     statusMessage += `\n\n`;
   }
+  let completed = 0;
+  const userXP = await xpSystem.getXpData(userId);
+  for (let i = 0; i < numberOfChallenges; i++) {
+    if (userChallenge.challenges[i].challengeData.completed) completed++;
+  }
+  if (completed === numberOfChallenges) {
+    const howManyCoinsToGive =
+      coinGain * userXP.level + coinGain * userChallenge.streak * bonus;
+    statusMessage += `You have completed all of the daily challenges! Your Bonus: ${howManyCoinsToGive} coins!\n\n`;
+  }
 
   // Get XP data for the user and include it in the message
-  const userXP = await xpSystem.getXpData(userId);
+
   statusMessage += `You currently have ${userXP.xp} XP and are at level ${userXP.level}.`;
 
   return statusMessage;

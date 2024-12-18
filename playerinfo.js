@@ -23,7 +23,7 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
 
   if (targetUserId === `1292934767511212042`) {
     playerInfo += `🎲 Player username: ${mentionedUser.displayName}.. Wait... That's me!\n`;
-    playerInfo += `🎲 Level: 999\n`;
+    playerInfo += `🎲 Level: 666\n`;
     playerInfo += `🎲 Wallet: ${formattedWallet} coins${
       playerWallet < 0 ? `. But remember, *The house **always** wins*\n` : `\n`
     }`;
