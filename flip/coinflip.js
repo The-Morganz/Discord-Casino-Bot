@@ -132,7 +132,7 @@ async function flipCoin(userId) {
   const coinMessage = await wallet.addCoins(winnerId, challenge.amount * 2);
 
   await dailyChallenges.incrementChallenge(winnerId, `winFlip`);
-
+  await dailyChallenges.incrementChallenge(loserId, `winFlip`);
   const doTheyHaveXPStealer = await shopAndItems.checkIfHaveInInventory(
     `XP Stealer`,
     winnerId

@@ -42,9 +42,9 @@ async function incrementGridGames(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
-      console.log(
-        `User ${userId} has completed the grid challenge and earned ${gain} coins.`
-      );
+      // console.log(
+      //   `User ${userId} has completed the grid challenge and earned ${gain} coins.`
+      // );
     }
   }
   if (

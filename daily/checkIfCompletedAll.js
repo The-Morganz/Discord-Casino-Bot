@@ -37,7 +37,6 @@ async function checkIfCompletedAll(userId) {
     userChallenge = await DailyChallenge.findOne({ userId: userId });
     if (!userChallenge) return;
   }
-  console.log(userChallenge.streakDate);
   let letHimSkipStreakVerification = false;
   if (!userChallenge.streakDate) {
     await DailyChallenge.updateOne({ userId: userId }, { streakDate: today });
@@ -52,7 +51,6 @@ async function checkIfCompletedAll(userId) {
       }
     }
     if (completedAll === numberOfChallenges) {
-      console.log(`You (${userId}) completed all of the challenges for today!`);
       await DailyChallenge.updateOne(
         { userId: userId },
         { streak: userChallenge.streak + 1, streakDate: getNextDay(today) }

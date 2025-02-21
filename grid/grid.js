@@ -5,7 +5,7 @@ function createButtonGrid(mineCount, customId = ``) {
   const multipliers = assignMultipliers(mineCount); // Now using mineCount for multipliers
   const rows = [];
   let multiplierIndex = 0;
-  console.log(multipliers);
+  // console.log(multipliers);
   // Create 4 rows, each with 4 buttons
   for (let i = 0; i < 4; i++) {
     const row = new ActionRowBuilder();

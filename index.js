@@ -287,7 +287,7 @@ function startBot() {
 
     //
     if (message.content.toLowerCase() === "$help") {
-      const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned daily challenges for some quick coins.📅\n:information:Doing all of the challenges increases your daily streak! Your daily streak increases the bonus you get when completing all challenges.:information:\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n 🎁**"$fs"**- See how many free spins you have, and with what amount!🎁\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the server.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n🏇**"$horsebet [bet amount] [horse number]"**- Place a bet in a horse race. This also starts the horse race.🏇\n🏇**"$horsestats"**- Shows you the odds of each horse winning, the lower the odds, the higher the chance to win.🏇\n`;
+      const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned daily challenges for some quick coins.📅\n:information:Doing all of the challenges increases your daily streak! Your daily streak increases the bonus you get when completing all challenges.:information:\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n 🎁**"$fs"**- See how many free spins you have, and with what amount!🎁\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"$flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the world.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n🏇**"$horsebet [bet amount] [horse number]"**- Place a bet in a horse race. This also starts the horse race.🏇\n🏇**"$horsestats"**- Shows you the odds of each horse winning, the lower the odds, the higher the chance to win.🏇\n`;
       const theHelpMessagePt2 = `🏇**"$horserace"**- See when the horse race is starting.🏇\n🏇**"$horsenotify"**-Get notified via direct message a few moments before the race starts.🏇\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:\n\n:information:**"$playerinfo [@User]"**- Display information about tagged player.:information:\n\n🛒**"$shop"**- Go to the shop.🛒\n🛒**"$shophelp"**- Get details about items in the shop.🛒`;
       message.author.send(theHelpMessagePt1);
       message.author.send(theHelpMessagePt2);
@@ -386,7 +386,7 @@ function startBot() {
     }
     // SHOP
     if (message.content.toLowerCase() === `$shophelp`) {
-      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.\n**"XP Converter"**- Gain xp when gaining coins.\n\n**"Roll Themes"**- Enter a new part of the shop, where you can buy themes for the slot machines!`;
+      const theHelpMessage = `Hi, and welcome to the shop! Oh? You need some help? Okay, i'll tell you what the items do.\n\n**"XP Booster"**- Doubles your xp gain for a day.\n**"Double Challenge Rewards"**- Doubles your daily challenge earnings forever.\n**"Coin Shield"**- Keep 10% of your bet after a loss. Removes after two hours.\n**"High Roller Pass"**- Raises the betting limit on all games by a significant amount.\n**"Custom Name License"**- Set your own custom name that will show up on the leaderboards! Usage: "$customname [your custom name]". Your custom name can have up to 5 words. Becomes invalid after one use.\n**"Change Custom Name"**- Changes another players' custom name on the leaderboards to whatever you want! Usage: "$changename [@user] [new custom name]". The custom name can have up to 5 words. Becomes invalid after one use.\n**"Wealth Multiplier"**- Earn x1.2 more coins on every win! Expires after an hour\n**"Interest-Free Loan"**- When taking a loan, remove the 5% interest rate. Becomes invalid after one use.\n**"Invisible Player"**- You will not appear on the leaderboards for two hours. "$playerinfo" also doesn't work on you.\n**"XP Stealer"**- In PVP modes (like coinflip), when you win, also take 20xp from the opponent. Becomes invalid after a day.\n**"Level Jump"**- Instantly ups your level by 1. Removes after use.\n**"Risk Taker's Badge"**- If you bet 80% or more of your wallet, 20% of your bet will be added extra to the bet amount. Removes after one use, win or loss.\n**"XP Converter"**- Gain xp when gaining coins. Lasts for two hours.\n\n**"Roll Themes"**- Enter a new part of the shop, where you can buy themes for the slot machines!`;
       // **"Debt Eraser"**- Cuts your debt in half. You can buy this item while you have debt, which will use the item instantly.Removes after one use.
       message.author.send(theHelpMessage);
       return;
@@ -969,7 +969,6 @@ function startBot() {
       const args = message.content.split(" ");
       let betAmount = parseInt(args[1]);
 
-      // console.log(`Received $roll command with bet amount: ${betAmount}`);
       const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
         `High Roller Pass`,
         userId
@@ -994,11 +993,6 @@ function startBot() {
           (await wallet.getFreeSpins(userId)) > 0
             ? await wallet.getFreeSpinBetAmount(userId)
             : null;
-
-        // console.log(`User's balance before betting: ${coins}`);
-        // console.log(
-        //   `Free spins available with bet amount: ${freeSpinBetAmount}`
-        // );
 
         // Restrict roll if user has free spins and the bet amount doesn’t match the free spin's bet amount
         if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
@@ -1030,9 +1024,6 @@ function startBot() {
                 await shop.removeSpecificItem(userId, `Risk Taker's Badge`);
               }
             }
-            // console.log(
-            //   `User has enough coins. Attempting to remove ${betAmount} coins...`
-            // );
             await wallet.removeCoins(userId, betAmount);
           }
 
@@ -1947,7 +1938,7 @@ function startBot() {
 
     if (interaction.customId.startsWith(`hb_`)) {
       const action = interaction.customId.split(`_`);
-      console.log(action);
+
       if (action[1] === `one`) {
         const row = generateWinPlaceButtons();
         await interaction.update({
@@ -2023,7 +2014,6 @@ function startBot() {
       }
       if (match) {
         betAmount = parseInt(match[0], 10);
-        // console.log(`Button roll with bet amount: ${betAmount}`);
       } else {
         await interaction.reply({
           content: `Can't find previous roll amount!`,
@@ -2056,11 +2046,6 @@ function startBot() {
             ? await wallet.getFreeSpinBetAmount(userId)
             : null;
 
-        // console.log(`User's balance before betting: ${coins}`);
-        // console.log(
-        //   `Free spins available with bet amount: ${freeSpinBetAmount}`
-        // );
-
         if (freeSpinBetAmount !== null && betAmount !== freeSpinBetAmount) {
           try {
             await interaction.reply({
@@ -2091,9 +2076,6 @@ function startBot() {
             //});
             await wallet.useFreeSpin(userId); // Only consume one free spin here
           } else {
-            // console.log(
-            //   `User has enough coins. Attempting to remove ${betAmount} coins...`
-            // );
             if (doTheyHaveRiskTaker) {
               const theirCoinAmount = await wallet.getCoins(userId);
 
@@ -2771,7 +2753,7 @@ function startBot() {
             "You don't have enough coins to start the grid."
           );
         }
-        console.log(gridOwners);
+
         // Check if the user already has an active grid
         if (
           Object.values(gridOwners).some(

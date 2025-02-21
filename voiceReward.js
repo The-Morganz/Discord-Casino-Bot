@@ -39,9 +39,6 @@ async function rewardUserForVoice(userId) {
   const gain = passiveIncomeGain * theirXP.multiplier;
 
   await wallet.addCoins(userId, gain, false, false, true); // Reward 10 coins
-  // console.log(
-  //   `User ${userId} has been rewarded ${gain} coins for being in voice.`
-  // );
 }
 
 module.exports = {

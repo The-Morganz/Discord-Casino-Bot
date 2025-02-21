@@ -39,9 +39,9 @@ async function incrementMinutes(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
-      console.log(
-        `User ${userId} has completed the voice challenge and earned ${gain} coins.`
-      );
+      // console.log(
+      //   `User ${userId} has completed the voice challenge and earned ${gain} coins.`
+      // );
     }
 
     // Save the updated challenge back to MongoDB

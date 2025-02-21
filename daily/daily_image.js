@@ -44,11 +44,11 @@ async function incrementImageCount(userChallenge, userId, challengeNumber) {
         true
       ); // Reward the user with coins
 
-      console.log(
-        `User ${userId} has completed the image challenge and earned ${gain} coins.${
-          coinMessage !== `` ? `\n${coinMessage}` : ``
-        }`
-      );
+      // console.log(
+      //   `User ${userId} has completed the image challenge and earned ${gain} coins.${
+      //     coinMessage !== `` ? `\n${coinMessage}` : ``
+      //   }`
+      // );
     } // Save the updated challenge to MongoDB
   }
   if (

@@ -40,9 +40,9 @@ async function incrementFlipWins(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
-      console.log(
-        `User ${userId} has completed the flip challenge and earned ${gain} coins.`
-      );
+      // console.log(
+      //   `User ${userId} has completed the flip challenge and earned ${gain} coins.`
+      // );
     }
   }
   if (
@@ -88,9 +88,9 @@ async function getWinFlipStatus(userChallenge, userId) {
   }
   const formattedGain = wallet.formatNumber(gain);
   if (completed) {
-    return `🎉 You have won enough coinflip games,finishing the challenge and earning ${formattedGain} coins!`;
+    return `🎉 You have played enough coinflip games,finishing the challenge and earning ${formattedGain} coins!`;
   } else {
-    return `🎁 Win ${requiredFlipWins} games of coinflip. Progress: ${flipsWon}/${requiredFlipWins} flips won.`;
+    return `🎁 Play ${requiredFlipWins} games of coinflip. Progress: ${flipsWon}/${requiredFlipWins} flips won.`;
   }
 }
 
