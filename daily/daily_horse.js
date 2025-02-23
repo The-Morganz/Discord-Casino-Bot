@@ -1,31 +1,37 @@
 const wallet = require("../wallet");
-const xpSystem = require(`../xp/xp`);
-const DailyChallenge = require("../models/DailyChallenge");
+const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
-const dailies = require(`./checkIfCompletedAll`);
+const DailyChallenge = require("../models/DailyChallenge");
 const UserStats = require(`../models/UserStats`);
-const gainFromChallenge = 250;
-const gainXpFromChallenge = 50;
-// Initialize an image challenge for a user
-function initializeImageChallenge(userId) {
+const dailies = require(`./checkIfCompletedAll`);
+
+let gainFromChallenge = 500;
+let gainXpFromChallenge = 150;
+function generateRandomGameRequirement() {
+  const gamesToPlay = [1, 2];
+  return gamesToPlay[Math.floor(Math.random() * gamesToPlay.length)];
+}
+
+// Initialize a message challenge
+function initializePlayHorseChallenge(userId) {
   return {
-    challengeType: "image",
-    imagesSent: 0,
-    requiredImages: 1,
+    challengeType: "playHorse",
+    horseGamesPlayed: 0,
+    requiredHorseGames: generateRandomGameRequirement(),
     completed: false,
     gainedXpReward: false,
   };
 }
 
-// Increment image count and check if the challenge is completed
-async function incrementImageCount(userChallenge, userId, challengeNumber) {
+async function incrementGames(userChallenge, userId, challengeNumber) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.challenges[challengeNumber].challengeData.imagesSent += 1;
-
-    // Check if the required number of images has been sent
+    userChallenge.challenges[
+      challengeNumber
+    ].challengeData.horseGamesPlayed += 1;
     if (
-      userChallenge.challenges[challengeNumber].challengeData.imagesSent >=
-      userChallenge.challenges[challengeNumber].challengeData.requiredImages
+      userChallenge.challenges[challengeNumber].challengeData
+        .horseGamesPlayed >=
+      userChallenge.challenges[challengeNumber].challengeData.requiredHorseGames
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       await UserStats.findOneAndUpdate(
@@ -42,26 +48,17 @@ async function incrementImageCount(userChallenge, userId, challengeNumber) {
       if (doTheyHaveBooster) {
         gain = gain * 2;
       }
-      const coinMessage = await wallet.addCoins(
-        userId,
-        gain,
-        false,
-        false,
-        true
-      ); // Reward the user with coins
-
+      await wallet.addCoins(userId, gain, false, false, true);
       // console.log(
-      //   `User ${userId} has completed the image challenge and earned ${gain} coins.${
-      //     coinMessage !== `` ? `\n${coinMessage}` : ``
-      //   }`
+      //   `User ${userId} has completed the horse challenge and earned ${gain} coins.`
       // );
-    } // Save the updated challenge to MongoDB
+    }
   }
   if (
     userChallenge.challenges[challengeNumber].challengeData.completed &&
     !userChallenge.challenges[challengeNumber].challengeData.gainedXpReward
   ) {
-    await xpSystem.addXp(userId, gainXpFromChallenge); // Reward 100 XP for completing the image challenge
+    await xpSystem.addXp(userId, gainXpFromChallenge);
     userChallenge.challenges[
       challengeNumber
     ].challengeData.gainedXpReward = true;
@@ -81,14 +78,15 @@ async function incrementImageCount(userChallenge, userId, challengeNumber) {
     }
   );
   await dailies.checkIfCompletedAll(userId);
+
+  // Return the updated userChallenge object
   return userChallenge;
 }
 
-// Get status of the image challenge
-async function getImageStatus(userChallenge, userId) {
-  const { imagesSent, requiredImages, completed } = userChallenge;
+// Get the message challenge status
+async function getGameStatus(userChallenge, userId) {
+  const { horseGamesPlayed, requiredHorseGames, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
-
   let gain = gainFromChallenge * theirXP.multiplier;
   const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
     `Double Challenge Rewards`,
@@ -100,14 +98,14 @@ async function getImageStatus(userChallenge, userId) {
   const formattedGain = wallet.formatNumber(gain);
 
   if (completed) {
-    return `🎉 You have completed today's image challenge and earned ${formattedGain} coins!`;
+    return `🎉 You have completed enough horse races,finishing the challenge and earning ${formattedGain} coins!`;
   } else {
-    return `🎁 Send ${requiredImages} image(s). Progress: ${imagesSent}/${requiredImages} image(s).`;
+    return `🎁 Partake in ${requiredHorseGames} horse races. Progress: ${horseGamesPlayed}/${requiredHorseGames} horse races.`;
   }
 }
 
 module.exports = {
-  initializeImageChallenge,
-  incrementImageCount,
-  getImageStatus,
+  initializePlayHorseChallenge,
+  incrementGames,
+  getGameStatus,
 };

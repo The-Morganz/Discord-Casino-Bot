@@ -1,12 +1,14 @@
 const fs = require("fs");
 const path = require("path");
 const User = require("./models/User"); // Import Mongoose User model
+const UserStats = require(`./models/UserStats`);
 const shopAndItems = require(`./shop/shop`);
 const xpSystem = require(`./xp/xp`);
 
 // Get or initialize user's wallet in MongoDB
 async function initializeWallet(userId) {
   let user = await User.findOne({ userId });
+  let userStats = await UserStats.findOne({ userId });
   if (!user) {
     user = new User({
       userId,
@@ -17,6 +19,13 @@ async function initializeWallet(userId) {
     });
     await user.save();
   }
+  if (!userStats) {
+    userStats = new UserStats({
+      userId,
+      bjGamesPlayed: 0,
+    });
+    await userStats.save();
+  }
   return user;
 }
 
@@ -25,7 +34,10 @@ async function getCoins(userId) {
   const user = await initializeWallet(userId);
   return user.coins;
 }
-
+async function getHighestCoins(userId) {
+  const user = await initializeWallet(userId);
+  return user.highestCoinAmount;
+}
 function formatNumber(number) {
   try {
     return number.toLocaleString(`sr`);
@@ -128,6 +140,9 @@ async function addCoins(
     }
     const roundedAmount = Math.round(amount);
     user.coins += Math.trunc(roundedAmount);
+    if (user.coins > user.highestCoinAmount) {
+      user.highestCoinAmount = user.coins;
+    }
     if (!dontGiveToDealer) await removeDealerCoins(roundedAmount);
     await user.save();
     return message;
@@ -168,6 +183,9 @@ async function addDealerCoins(amount) {
   const dealer = await initializeWallet(`1292934767511212042`);
   const roundedAmount = Math.round(amount);
   dealer.coins += Math.trunc(roundedAmount);
+  if (dealer.coins > dealer.highestCoinAmount) {
+    dealer.highestCoinAmount = dealer.coins;
+  }
   await dealer.save();
 }
 async function removeDealerCoins(amount) {
@@ -232,6 +250,17 @@ async function getTopUsers(message) {
     const allUsers = await User.find().sort({ coins: -1 });
     // // const topUsersAfterHidingSome = [];
     // const topUsers = await User.find().sort({ coins: -1 }).limit(5);
+    const bulkOps = allUsers.map((user, index) => ({
+      updateOne: {
+        filter: { userId: user.userId }, // Make sure the userId matches in UserStats
+        update: { $set: { leaderboardSpot: index + 1 } }, // Set leaderboard spot
+        upsert: true,
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await UserStats.bulkWrite(bulkOps); // Perform all updates in UserStats schema
+    }
     let mysteriousMessage = ``;
     let topUsers = [];
     for (let i = 0; i < allUsers.length; i++) {
@@ -239,7 +268,6 @@ async function getTopUsers(message) {
         `Invisible Player`,
         allUsers[i].userId
       );
-
       if (doTheyHaveInvis)
         mysteriousMessage = `*seems like someone is missing...*`;
       if (allUsers[i].customName === "Unknown User") {
@@ -269,12 +297,14 @@ async function getTopUsers(message) {
           );
         } catch (error) {}
       }
+
       if (doTheyHaveInvis || allUsers[i].userId === `1292934767511212042`) {
         continue;
       }
       if (topUsers.length === 5) {
         break;
       }
+
       topUsers.push(allUsers[i]);
     }
     //Retrieve the display names from Discord for each user
@@ -282,7 +312,6 @@ async function getTopUsers(message) {
       topUsers.map(async (user, index) => {
         try {
           const customUserName = await shopAndItems.getCustomName(user.userId);
-
           const displayName = customUserName ? customUserName : "Unknown User";
           const originalName = user.originalName
             ? user.originalName
@@ -322,6 +351,7 @@ async function getTopUsers(message) {
 module.exports = {
   initializeWallet,
   getCoins,
+  getHighestCoins,
   addCoins,
   addDebt,
   payDebt,

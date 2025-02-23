@@ -44,11 +44,11 @@ function assignMultipliers(mineCount) {
     2: [...Array(14).fill(0.25)],
     3: [...Array(13).fill(0.3)],
     4: [...Array(12).fill(0.5)], // 4 mines => remaining 12 cells are 0.25x
-    5: [...Array(11).fill(0.8)], // 5 mines => remaining 11 cells are 0.5x
-    6: [...Array(10).fill(1)], // 6 mines => remaining 10 cells are 1.5x
-    7: [...Array(9).fill(1.5)], // 7 mines => remaining 9 cells are 1x
-    8: [...Array(8).fill(2)], // 8 mines => remaining 8 cells are 2x
-    9: [...Array(7).fill(3)], // 9 mines => remaining 7 cells are 4x
+    5: [...Array(11).fill(1)], // 5 mines => remaining 11 cells are 0.5x
+    6: [...Array(10).fill(2)], // 6 mines => remaining 10 cells are 1.5x
+    7: [...Array(9).fill(2.5)], // 7 mines => remaining 9 cells are 1x
+    8: [...Array(8).fill(3)], // 8 mines => remaining 8 cells are 2x
+    9: [...Array(7).fill(3.5)], // 9 mines => remaining 7 cells are 4x
     10: [...Array(6).fill(4)], // 10 mines => remaining 6 cells are 8x
   };
 

@@ -1,8 +1,10 @@
 const rooms = require(`./rooms`);
 const wallet = require(`../wallet`);
 const { makeDeck } = require("./makeDeck");
+const User = require(`../models/UserStats`);
 const xpSystem = require("../xp/xp");
 const dailyChallenges = require(`../daily/daily`);
+const UserStats = require("../models/UserStats");
 const xpGain = 15;
 function startBettingPhase(channelId, eventEmitter, channelToSendTo) {
   rooms.changeGameState(channelId, "betting", true);
@@ -54,7 +56,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
       player.played = true;
       player.natBlackjack = true;
       message = `:fireworks: <@${player.userId}> has gotten ${unoRandomNumero}, which means they got a **BLACKJACK!** :fireworks:`;
-      await sleep(1000);
+      // await sleep(1000);
       // message = `:fireworks: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum}. **BLACKJACK** :fireworks:`;
     }
     eventEmitter.emit("beginningBJ", message, channelToSendTo);
@@ -335,12 +337,18 @@ async function dealerTurn(channelId, eventEmitter, channelToSendTo) {
 async function endGame(channelId, channelToSendTo, eventEmitter) {
   const thatRoom = rooms.findRoom(channelId);
   let message;
+  let dealerBeatAmount = 0;
   await sleep(1000);
   for (let i = 0; i < thatRoom.players.length; i++) {
     const player = thatRoom.players[i];
     if (player.natBlackjack && thatRoom.dealer.natBlackjack) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has gotten a NATURAL **BLACKJACK**, but the DEALER also got a NATURAL **BLACKJACK**, resulting in a push. *You notice that the DEALER smiles at you.* :rightwards_pushing_hand:`;
       await wallet.addCoins(player.userId, player.betAmount, true);
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        { $inc: { "games.blackjack.gamesPushed": 1 } },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -356,6 +364,16 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       }> has gotten a NATURAL BLACKJACK and has won +${formattedGain} :fireworks:${
         coinMessage !== `` ? `\n${coinMessage}` : ``
       }`;
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        {
+          $inc: {
+            "games.blackjack.gamesBlackjack": 1,
+            "games.blackjack.coinsWon": player.betAmount * 2,
+          },
+        },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -369,6 +387,16 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       message = `:gem: <@${player.userId}> has won +${formattedGain} :gem:${
         coinMessage !== `` ? `\n${coinMessage}` : ``
       }`;
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        {
+          $inc: {
+            "games.blackjack.gamesWon": 1,
+            "games.blackjack.coinsWon": player.betAmount,
+          },
+        },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -376,6 +404,19 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     if (player.sum > 21) {
       const formattedLoss = wallet.formatNumber(player.betAmount);
       message = `:boom: <@${player.userId}> has BUST! They have lost -${formattedLoss} :boom:`;
+      if (thatRoom.dealer.sum <= 21) {
+        dealerBeatAmount++;
+      }
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        {
+          $inc: {
+            "games.blackjack.gamesLost": 1,
+            "games.blackjack.coinsLost": player.betAmount,
+          },
+        },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -384,6 +425,17 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
       const formattedLoss = wallet.formatNumber(player.betAmount);
       message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${formattedLoss} :performing_arts:`;
+      dealerBeatAmount++;
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        {
+          $inc: {
+            "games.blackjack.gamesLost": 1,
+            "games.blackjack.coinsLost": player.betAmount,
+          },
+        },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -398,6 +450,16 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       message = `:gem: <@${player.userId}> has won +${formattedGain} :gem:${
         coinMessage !== `` ? `\n${coinMessage}` : ``
       }`;
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        {
+          $inc: {
+            "games.blackjack.gamesWon": 1,
+            "games.blackjack.coinsWon": player.betAmount,
+          },
+        },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
@@ -405,10 +467,44 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     if (thatRoom.dealer.sum === player.sum && player.sum <= 21) {
       message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
       await wallet.addCoins(player.userId, player.betAmount, true);
+      await UserStats.findOneAndUpdate(
+        { userId: player.userId },
+        { $inc: { "games.blackjack.gamesPushed": 1 } },
+        { upsert: true }
+      );
       eventEmitter.emit("endGame", message, channelToSendTo);
       await sleep(1000);
       continue;
     }
+  }
+  if (dealerBeatAmount === thatRoom.players.length && dealerBeatAmount > 1) {
+    await sleep(1000);
+    const tauntMessages = [
+      `*Did you guys even try?*`,
+      `*It was that easy.*`,
+      `*Come on, I expected more of a challenge.*`,
+      `*I could do this all day!*`,
+      `*Normally I don't take donations.*`,
+      `*I'm starting to think you guys enjoy losing.*`,
+      `*Are you sure you guys know how to play this game?*`,
+      `*I wasn't even paying attention and you guys still lost?*`,
+      `*Thank you for making my job this easy.*`,
+      `*Oh wow, you **all** lost? Again? I am shocked.*`,
+      `*Man, I almost feel bad for you guys.*`,
+      `*Honestly, this feels unfair. I mean, for you.*`,
+      `*I'd offer some advice, but I doubt it would help you.*`,
+      `*Wait, you were actually trying?*`,
+      `*Wow. Just… wow. I've never seen a group so **unqualified** for this game.*`,
+      `*Just like that.*`,
+    ];
+    const tauntMessage =
+      tauntMessages[Math.floor(Math.random() * tauntMessages.length)];
+    eventEmitter.emit(
+      "endGame",
+      `:bust_in_silhouette: ${tauntMessage} :bust_in_silhouette:`,
+      channelToSendTo
+    );
+    await sleep(1000);
   }
   for (let i = 0; i < thatRoom.players.length; i++) {
     const xpGainAfterCut = await xpSystem.calculateXpGain(
@@ -420,7 +516,17 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       thatRoom.players[i].userId,
       `playBlackjack`
     );
+    await UserStats.findOneAndUpdate(
+      { userId: thatRoom.players[i].userId },
+      { $inc: { "games.blackjack.gamesPlayed": 1 } },
+      { upsert: true }
+    );
   }
+  await UserStats.findOneAndUpdate(
+    { userId: `1292934767511212042` },
+    { $inc: { "games.blackjack.gamesPlayed": 1 } },
+    { upsert: true }
+  );
   eventEmitter.emit("restartGame", channelToSendTo);
   resetDeckCounter(channelId);
 }

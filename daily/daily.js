@@ -7,6 +7,7 @@ const voiceChallenge = require(`./daily_voice`);
 const playBlackjackChallenge = require(`./daily_playBlackjack`);
 const playSlotsChallenge = require(`./daily_playSlots`);
 const playGridChallenge = require(`./daily_playGrid`);
+const playHorseChallenge = require(`./daily_horse`);
 const santaGiveChallenge = require(`./daily_give`);
 const winFlipChallenge = require(`./daily_winFlip`);
 const xpSystem = require("../xp/xp");
@@ -60,6 +61,7 @@ function getChallengeTypes() {
     `playBlackjack`,
     `playSlots`,
     `playGrid`,
+    `playHorse`,
     `santaGive`,
     `winFlip`,
   ];
@@ -126,6 +128,12 @@ async function initializeDailyChallenge(userId) {
           challengeData = {
             ...challengeData,
             ...playGridChallenge.initializePlayGridChallenge(userId),
+          };
+          break;
+        case `playHorse`:
+          challengeData = {
+            ...challengeData,
+            ...playHorseChallenge.initializePlayHorseChallenge(userId),
           };
           break;
         case `santaGive`:
@@ -218,6 +226,15 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
         i
       );
     if (
+      userChallenge.challenges[i].challengeData.challengeType === `playHorse` &&
+      typeOfChallenge === `playHorse`
+    )
+      completed = await playHorseChallenge.incrementGames(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
       userChallenge.challenges[i].challengeData.challengeType === `santaGive` &&
       typeOfChallenge === `santaGive`
     )
@@ -286,6 +303,12 @@ async function getDailyStatus(userId) {
         break;
       case `playGrid`:
         statusMessage += await playGridChallenge.getGameStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `playHorse`:
+        statusMessage += await playHorseChallenge.getGameStatus(
           userChallenge.challenges[i].challengeData,
           userId
         );

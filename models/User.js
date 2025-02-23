@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema({
   freeSpins: { type: Number, default: 0 },
   freeSpinsBetAmount: { type: Number, default: 0 }, // Ensure this field is defined here
   selectedTheme: { type: String, default: `Fruits` },
+  highestCoinAmount: { type: Number, default: 0 },
+  bjGamesPlayed: { type: Number, default: 0 },
 });
 userSchema.pre("save", function (next) {
   const customNameChangeDefault = this.customName === `Unknown User`;

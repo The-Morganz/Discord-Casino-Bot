@@ -2,6 +2,7 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const dailyChallenges = require(`../daily/daily`);
 const User = require(`../models/User`);
+const UserStats = require(`../models/UserStats`);
 const normalXpGain = 5;
 let rollType = 0;
 // Define emoji set with rarity, payout, and multiplier for betting
@@ -297,6 +298,10 @@ async function roll(userId, betAmount, message, button = false) {
   }
   const freeSpinAmount = await wallet.getFreeSpins(userId);
   const formattedAmount = wallet.formatNumber(payout);
+  await UserStats.findOneAndUpdate(
+    { userId: userId },
+    { $inc: { "games.rolls.gamesPlayed": 1 } }
+  );
   // Create the final message string
   let finalMessage = `🎰 <@${userId}> rolled:\n${finalRollResult}\n${
     payout > 0
@@ -310,6 +315,31 @@ async function roll(userId, betAmount, message, button = false) {
         }`
   }`;
 
+  if (payout > 0) {
+    await UserStats.findOneAndUpdate(
+      { userId: userId },
+      {
+        $inc: {
+          "games.rolls.gamesWon": 1,
+          "games.rolls.coinsWon": payout - betAmount,
+        },
+      },
+      { upsert: true }
+    );
+  } else {
+    if (freeSpinAmount <= 0) {
+      await UserStats.findOneAndUpdate(
+        { userId: userId },
+        { $inc: { "games.rolls.coinsLost": betAmount } },
+        { upsert: true }
+      );
+    }
+    await UserStats.findOneAndUpdate(
+      { userId: userId },
+      { $inc: { "games.rolls.gamesLost": 1 } },
+      { upsert: true }
+    );
+  }
   if (giftPresent && totalMultiplier > 0) {
     await wallet.addFreeSpins(userId, totalFreeSpins, betAmount);
     finalMessage += `\n🎁 You won ${totalFreeSpins} free spins! Use $fs to display your free spins 🎁`;

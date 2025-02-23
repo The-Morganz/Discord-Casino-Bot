@@ -3,6 +3,7 @@ const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
 const dailies = require(`./checkIfCompletedAll`);
+const UserStats = require(`../models/UserStats`);
 
 const User = require("../models/User");
 let gainFromChallenge = 500;
@@ -34,6 +35,11 @@ async function incrementSlotsGames(userChallenge, userId, challengeNumber) {
       userChallenge.challenges[challengeNumber].challengeData.requiredSlotsGames
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
+      await UserStats.findOneAndUpdate(
+        { userId },
+        { $inc: { dailiesDone: 1 } },
+        { upsert: true }
+      );
       const theirXP = await xpSystem.getXpData(userId);
       let gain = gainFromChallenge * theirXP.multiplier;
       const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
@@ -97,6 +103,7 @@ async function getSlotsGameStatus(userChallenge, userId) {
       .freeSpinsBetAmount;
     const formattedGain = wallet.formatNumber(gain);
     const formattedCoinAmount = wallet.formatNumber(freeSpinCoinAmount);
+
     return `🎉 You have played enough slots, finishing the challenge and earning ${formattedGain} coins! You gained 10 free spins${
       freeSpinCoinAmount > 0 ? ` with a bet of ${formattedCoinAmount}` : `.`
     }`;

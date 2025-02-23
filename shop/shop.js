@@ -1,6 +1,7 @@
 // const wallet = require(`../wallet`);
 const ShopInventory = require(`../models/ShopInventory`);
 const User = require("../models/User");
+const UserStats = require(`../models/UserStats`);
 const UserInventory = require(`../models/UserInventory`);
 const { getAllEmojiThemes } = require("../roll/getAllEmojiThemes");
 const { shopItems } = require(`./shopItems`);
@@ -207,7 +208,10 @@ async function buyLogic(itemName, userId, wallet) {
     }, // Push new item into the inventory array
     { upsert: true } // Return the updated document
   );
-
+  await UserStats.findOneAndUpdate(
+    { userId: userId },
+    { $inc: { "shop.itemsBought": 1, "shop.coinsLost": itemInfo.price } }
+  );
   await wallet.removeCoins(userId, itemInfo.price, true);
   return `You bought the ${itemName}!`;
 }

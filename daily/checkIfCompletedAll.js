@@ -3,6 +3,7 @@
 const DailyChallenge = require("../models/DailyChallenge");
 const wallet = require(`../wallet`);
 const shopAndItems = require(`../shop/shop`);
+const UserStats = require(`../models/UserStats`);
 const xpSystem = require(`../xp/xp`);
 const numberOfChallenges = 3;
 const coinGain = 300;
@@ -55,6 +56,16 @@ async function checkIfCompletedAll(userId) {
         { userId: userId },
         { streak: userChallenge.streak + 1, streakDate: getNextDay(today) }
       );
+      const userStats = await UserStats.findOne({ userId });
+      const dailyChal = await DailyChallenge.findOne({ userId });
+      console.log(dailyChal);
+      if (userStats.highestStreak < dailyChal.streak) {
+        await UserStats.findOneAndUpdate(
+          { userId: userId },
+          { highestStreak: dailyChal.streak },
+          { upsert: true }
+        );
+      }
       userChallenge = await DailyChallenge.findOne({ userId: userId });
       const xpForUser = await xpSystem.getXpData(userId);
       const doTheyHaveDoubleChallenge =

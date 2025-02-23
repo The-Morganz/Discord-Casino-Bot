@@ -1,6 +1,7 @@
 const wallet = require("../wallet");
 const shopAndItems = require(`../shop/shop`);
 const xpSystem = require(`../xp/xp`);
+const UserStats = require(`../models/UserStats`);
 const dailyChallenges = require(`../daily/daily`);
 
 // Utility function to create a delay
@@ -133,6 +134,28 @@ async function flipCoin(userId) {
 
   await dailyChallenges.incrementChallenge(winnerId, `winFlip`);
   await dailyChallenges.incrementChallenge(loserId, `winFlip`);
+  await UserStats.findOneAndUpdate(
+    { userId: winnerId },
+    {
+      $inc: {
+        "games.coinflip.gamesPlayed": 1,
+        "games.coinflip.gamesWon": 1,
+        "games.coinflip.coinsWon": challenge.amount,
+      },
+    },
+    { upsert: true }
+  );
+  await UserStats.findOneAndUpdate(
+    { userId: loserId },
+    {
+      $inc: {
+        "games.coinflip.gamesPlayed": 1,
+        "games.coinflip.gamesLost": 1,
+        "games.coinflip.coinsLost": challenge.amount,
+      },
+    },
+    { upsert: true }
+  );
   const doTheyHaveXPStealer = await shopAndItems.checkIfHaveInInventory(
     `XP Stealer`,
     winnerId

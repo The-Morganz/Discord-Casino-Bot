@@ -3,6 +3,7 @@ const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
 const dailies = require(`./checkIfCompletedAll`);
+const UserStats = require(`../models/UserStats`);
 
 let gainFromChallenge = 250;
 let gainXpFromChallenge = 50;
@@ -32,6 +33,11 @@ async function incrementMessageCount(userChallenge, userId, challengeNumber) {
       userChallenge.challenges[challengeNumber].challengeData.requiredMessages
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
+      await UserStats.findOneAndUpdate(
+        { userId },
+        { $inc: { dailiesDone: 1 } },
+        { upsert: true }
+      );
       const theirXP = await xpSystem.getXpData(userId);
       let gain = gainFromChallenge * theirXP.multiplier;
 

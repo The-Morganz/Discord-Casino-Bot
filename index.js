@@ -34,6 +34,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const fs = require("fs");
 const User = require("./models/User");
+const UserStats = require(`./models/UserStats`);
 const DailyChallenge = require("./models/DailyChallenge");
 const UserXP = require("./models/UserXP");
 const { format } = require("date-fns");
@@ -288,7 +289,7 @@ function startBot() {
     //
     if (message.content.toLowerCase() === "$help") {
       const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned daily challenges for some quick coins.📅\n:information:Doing all of the challenges increases your daily streak! Your daily streak increases the bonus you get when completing all challenges.:information:\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n 🎁**"$fs"**- See how many free spins you have, and with what amount!🎁\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"$flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the world.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n🏇**"$horsebet [bet amount] [horse number]"**- Place a bet in a horse race. This also starts the horse race.🏇\n🏇**"$horsestats"**- Shows you the odds of each horse winning, the lower the odds, the higher the chance to win.🏇\n`;
-      const theHelpMessagePt2 = `🏇**"$horserace"**- See when the horse race is starting.🏇\n🏇**"$horsenotify"**-Get notified via direct message a few moments before the race starts.🏇\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:\n\n:information:**"$playerinfo [@User]"**- Display information about tagged player.:information:\n\n🛒**"$shop"**- Go to the shop.🛒\n🛒**"$shophelp"**- Get details about items in the shop.🛒`;
+      const theHelpMessagePt2 = `🏇**"$horserace"**- See when the horse race is starting.🏇\n🏇**"$horsenotify"**-Get notified via direct message a few moments before the race starts.🏇\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:\n\n:information:**"$playerinfo [@User]" or $stats [@User]**- Display information about tagged player. You can also view your stats by not tagging anybody.:information:\n\n🛒**"$shop"**- Go to the shop.🛒\n🛒**"$shophelp"**- Get details about items in the shop.🛒`;
       message.author.send(theHelpMessagePt1);
       message.author.send(theHelpMessagePt2);
     }
@@ -484,10 +485,14 @@ function startBot() {
       return;
     }
 
-    if (message.content.toLowerCase().startsWith(`$playerinfo`)) {
+    if (
+      message.content.toLowerCase().startsWith(`$playerinfo`) ||
+      message.content.toLowerCase().startsWith(`$stats`)
+    ) {
       const args = message.content.split(" ");
       // Get the tagged user from the message (the second argument)
-      const mentionedUser = message.mentions.users.first();
+      const mentionedUser = message.mentions.users.first() || message.author;
+
       // Check if a user is tagged
       if (!mentionedUser) {
         return message.reply("Please mention a valid user.");
@@ -934,6 +939,11 @@ function startBot() {
       await wallet.addCoins(targetUserId, amount, true, true, true);
       await wallet.removeCoins(userId, amount, true, true);
       await daily.incrementChallenge(userId, `santaGive`, amount);
+      await UserStats.findOneAndUpdate(
+        { userId: userId },
+        { $inc: { coinsGiven: amount } },
+        { upsert: true }
+      );
       const formattedAmount = wallet.formatNumber(amount);
       await message.reply(
         `<@${userId}> has added ${formattedAmount} coins to ${mentionedUser.username}'s wallet.`
@@ -1217,11 +1227,13 @@ function startBot() {
         !blackjackRooms.areWePlaying(channelId) ||
         !blackjackRooms.checkIfAlreadyInRoom(userId)
       ) {
-        message.channel.send(`pa gde si krenuo buraz`);
+        message.channel.send(
+          `It's not your turn to act in the blackjack game.`
+        );
         return;
       }
       if (!blackjackRooms.isItYoTurn(userId, channelId)) {
-        message.reply(`pa gde si krenuo buraz`);
+        message.reply(`It's not your turn to act in the blackjack game.`);
         return;
       }
       const infoAboutPlayer = blackjackGame.hit(
@@ -1265,11 +1277,13 @@ function startBot() {
         !blackjackRooms.areWePlaying(channelId) ||
         !blackjackRooms.checkIfAlreadyInRoom(userId)
       ) {
-        message.channel.send(`pa gde si krenuo buraz`);
+        message.channel.send(
+          `It's not your turn to act in the blackjack game.`
+        );
         return;
       }
       if (!blackjackRooms.isItYoTurn(userId, channelId)) {
-        message.reply(`pa gde si krenuo buraz`);
+        message.reply(`It's not your turn to act in the blackjack game.`);
         return;
       }
       const infoAboutPlayer = await blackjackGame.doubleDown(
@@ -1308,11 +1322,15 @@ function startBot() {
         !blackjackRooms.areWePlaying(channelId) ||
         !blackjackRooms.checkIfAlreadyInRoom(userId)
       ) {
-        message.channel.send(`:question: pa gde si krenuo buraz :question:`);
+        message.channel.send(
+          `:question: It's not your turn to act in the blackjack game. :question:`
+        );
         return;
       }
       if (!blackjackRooms.isItYoTurn(userId, channelId)) {
-        message.reply(`:question: pa gde si krenuo buraz :question:`);
+        message.reply(
+          `:question: It's not your turn to act in the blackjack game. :question:`
+        );
         return;
       }
       const messageszzz = blackjackGame.stand(
@@ -2508,14 +2526,14 @@ function startBot() {
           !blackjackRooms.checkIfAlreadyInRoom(userId)
         ) {
           await interaction.reply({
-            content: `pa gde si krenuo buraz`,
+            content: `It's not your turn to act in the blackjack game.`,
             ephemeral: true,
           });
           return;
         }
         if (!blackjackRooms.isItYoTurn(userId, channelId)) {
           await interaction.reply({
-            content: `pa gde si krenuo buraz`,
+            content: `It's not your turn to act in the blackjack game.`,
             ephemeral: true,
           });
           return;
@@ -2576,14 +2594,14 @@ function startBot() {
           !blackjackRooms.checkIfAlreadyInRoom(userId)
         ) {
           interaction.reply({
-            content: `:question: pa gde si krenuo buraz :question:`,
+            content: `:question: It's not your turn to act in the blackjack game. :question:`,
             ephemeral: true,
           });
           return;
         }
         if (!blackjackRooms.isItYoTurn(userId, channelId)) {
           interaction.reply({
-            content: `:question: pa gde si krenuo buraz :question:`,
+            content: `:question: It's not your turn to act in the blackjack game. :question:`,
             ephemeral: true,
           });
           return;
@@ -2605,14 +2623,14 @@ function startBot() {
           !blackjackRooms.checkIfAlreadyInRoom(userId)
         ) {
           await interaction.reply({
-            content: `:question: pa gde si krenuo buraz :question:`,
+            content: `:question: It's not your turn to act in the blackjack game. :question:`,
             ephemeral: true,
           });
           return;
         }
         if (!blackjackRooms.isItYoTurn(userId, channelId)) {
           await interaction.reply({
-            content: `:question: pa gde si krenuo buraz :question:`,
+            content: `:question: It's not your turn to act in the blackjack game. :question:`,
             ephemeral: true,
           });
           return;
@@ -2934,9 +2952,18 @@ function startBot() {
         }`,
         components: [row],
       });
+      await UserStats.findOneAndUpdate(
+        { userId: interaction.user.id },
+        {
+          $inc: {
+            "games.grid.gamesPlayed": 1,
+            "games.grid.gamesWon": 1,
+            "games.grid.coinsWon": gridData.betAmount,
+          },
+        }
+      );
       await interaction.message.delete(); // Remove the grid message
       delete gridOwners[idOfGridData];
-
       return;
     }
     let multiplier;
@@ -2999,6 +3026,16 @@ function startBot() {
           content: `Game over! <@${interaction.user.id}> lost everything!`,
           components: [row],
         });
+        await UserStats.findOneAndUpdate(
+          { userId: interaction.user.id },
+          {
+            $inc: {
+              "games.grid.gamesPlayed": 1,
+              "games.grid.gamesLost": 1,
+              "games.grid.coinsLost": gridData.betAmount,
+            },
+          }
+        );
         await interaction.message.delete(); // Remove the grid message after the delay
       } catch (err) {
         console.log(`Something went wrong: ${err}`);

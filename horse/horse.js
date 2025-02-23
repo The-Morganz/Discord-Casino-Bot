@@ -3,6 +3,8 @@ const wallet = require(`../wallet`);
 const xpSystem = require(`../xp/xp`);
 const shopAndItems = require(`../shop/shop`);
 const { randomNumber } = require("../blackjack/makeDeck");
+const dailyChallenges = require(`../daily/daily`);
+const UserStats = require(`../models/UserStats`);
 let horseAmount = 6;
 let finishLine = 30;
 let guildsAndInfo = [];
@@ -41,7 +43,9 @@ function addNewGuild(message) {
 async function addHorseBet(userId, amount, horseNumber, message) {
   const didTheyBetSomewhereElse = await horseRacing.findOne({ userId: userId });
   // const horseNumber = didTheyBetSomewhereElse.horseNumber;
-
+  let betBefore = await horseRacing.findOne({ userId: userId });
+  betBefore = betBefore.betAmount;
+  await wallet.addCoins(userId, betBefore, true, true, true);
   addNewGuild(message);
   await horseRacing.findOneAndUpdate(
     { userId: userId },
@@ -52,6 +56,8 @@ async function addHorseBet(userId, amount, horseNumber, message) {
     },
     { upsert: true }
   );
+
+  // await wallet.addCoins(userId,)
   await wallet.removeCoins(userId, amount, false);
   const formattedAmount = wallet.formatNumber(amount);
   message.reply(
@@ -160,7 +166,6 @@ function generateHorses(howMany, message, finishLine = 30) {
   thatRoom.horses = [];
   thatRoom.splitDecision = false;
   const horseChancesArray = getHorseChances();
-  console.log(horseChancesArray);
   for (let i = 0; i < howMany; i++) {
     thatRoom.horses.push({
       horseNumber: i + 1,
@@ -273,10 +278,32 @@ async function givePayouts(winner, message) {
           coinMessage === `` ? `` : coinMessage
         }🐎`
       );
+      await dailyChallenges.incrementChallenge(allUsers[i].userId, `playHorse`);
+      await UserStats.findOneAndUpdate(
+        { userId: allUsers[i].userId },
+        {
+          $inc: {
+            "games.horse.gamesPlayed": 1,
+            "games.horse.gamesWon": 1,
+            "games.horse.coinsWon": allUsers[i].betAmount,
+          },
+        }
+      );
     } else {
       const formattedLoss = wallet.formatNumber(allUsers[i].betAmount);
       await message.channel.send(
         `🐎<@${allUsers[i].userId}>'s horse lost, and they lost -${formattedLoss} coins!🐎`
+      );
+      await dailyChallenges.incrementChallenge(allUsers[i].userId, `playHorse`);
+      await UserStats.findOneAndUpdate(
+        { userId: allUsers[i].userId },
+        {
+          $inc: {
+            "games.horse.gamesPlayed": 1,
+            "games.horse.gamesLost": 1,
+            "games.horse.coinsLost": allUsers[i].betAmount,
+          },
+        }
       );
       await xpSystem.addXp(allUsers[i].userId, 10, false);
     }

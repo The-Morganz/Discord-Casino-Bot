@@ -3,6 +3,7 @@ const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
 const dailies = require(`./checkIfCompletedAll`);
+const UserStats = require(`../models/UserStats`);
 let gainFromChallenge = 500;
 let gainXpFromChallenge = 100;
 function generateRandomTimeRequirement() {
@@ -29,6 +30,11 @@ async function incrementMinutes(userChallenge, userId, challengeNumber) {
       userChallenge.challenges[challengeNumber].challengeData.requiredTime
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
+      await UserStats.findOneAndUpdate(
+        { userId },
+        { $inc: { dailiesDone: 1 } },
+        { upsert: true }
+      );
       const theirXP = await xpSystem.getXpData(userId);
       let gain = gainFromChallenge * theirXP.multiplier;
       const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
