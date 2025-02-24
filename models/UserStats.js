@@ -49,6 +49,8 @@ const usetStatsSchema = new mongoose.Schema({
   coinsGiven: { type: Number, default: 0 },
   leaderboardSpot: { type: Number, default: 0 },
   highestStreak: { type: Number, default: 0 },
+  minutesInVoice: { type: Number, default: 0 },
+  coinsGainedInVoice: { type: Number, default: 0 },
 });
 
 const UserStats = mongoose.model("UserStats", usetStatsSchema);

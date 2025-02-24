@@ -370,6 +370,7 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
           $inc: {
             "games.blackjack.gamesBlackjack": 1,
             "games.blackjack.coinsWon": player.betAmount * 2,
+            "games.blackjack.gamesWon": 1,
           },
         },
         { upsert: true }

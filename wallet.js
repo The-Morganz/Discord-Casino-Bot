@@ -242,7 +242,21 @@ async function useFreeSpin(userId) {
   }
   return null;
 }
+async function updateLeaderboardPositionStats() {
+  const allUsers = await User.find().sort({ coins: -1 });
 
+  const bulkOps = allUsers.map((user, index) => ({
+    updateOne: {
+      filter: { userId: user.userId }, // Make sure the userId matches in UserStats
+      update: { $set: { leaderboardSpot: index + 1 } }, // Set leaderboard spot
+      upsert: true,
+    },
+  }));
+
+  if (bulkOps.length > 0) {
+    await UserStats.bulkWrite(bulkOps); // Perform all updates in UserStats schema
+  }
+}
 // Get the top 5 users by coin balance
 async function getTopUsers(message) {
   try {
@@ -250,17 +264,6 @@ async function getTopUsers(message) {
     const allUsers = await User.find().sort({ coins: -1 });
     // // const topUsersAfterHidingSome = [];
     // const topUsers = await User.find().sort({ coins: -1 }).limit(5);
-    const bulkOps = allUsers.map((user, index) => ({
-      updateOne: {
-        filter: { userId: user.userId }, // Make sure the userId matches in UserStats
-        update: { $set: { leaderboardSpot: index + 1 } }, // Set leaderboard spot
-        upsert: true,
-      },
-    }));
-
-    if (bulkOps.length > 0) {
-      await UserStats.bulkWrite(bulkOps); // Perform all updates in UserStats schema
-    }
     let mysteriousMessage = ``;
     let topUsers = [];
     for (let i = 0; i < allUsers.length; i++) {
@@ -364,4 +367,5 @@ module.exports = {
   getFreeSpins,
   getFreeSpinBetAmount,
   formatNumber,
+  updateLeaderboardPositionStats,
 };

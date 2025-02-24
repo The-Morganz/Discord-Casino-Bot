@@ -499,6 +499,7 @@ function startBot() {
       }
 
       const targetUserId = mentionedUser.id;
+      await wallet.updateLeaderboardPositionStats();
       const playerInfoString = await playerInfo.getPlayerInfoString(
         mentionedUser,
         targetUserId,

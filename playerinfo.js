@@ -47,15 +47,18 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
 
   // SHOP
 
-  const itemsBought = playerUserStats.shop.itemsBought;
+  const itemsBought = wallet.formatNumber(playerUserStats.shop.itemsBought);
   const itemsCoinsLost = playerUserStats.shop.coinsLost;
 
   // MISC
 
-  const dailiesDone = playerUserStats.dailiesDone;
-  const highestStreak = playerUserStats.highestStreak;
-  const coinsGiven = playerUserStats.coinsGiven;
-  const leaderboardSpot = playerUserStats.leaderboardSpot;
+  const dailiesDone = wallet.formatNumber(playerUserStats.dailiesDone);
+  const highestStreak = wallet.formatNumber(playerUserStats.highestStreak);
+  const coinsGiven = wallet.formatNumber(playerUserStats.coinsGiven);
+  const leaderboardSpot = wallet.formatNumber(playerUserStats.leaderboardSpot);
+  const coinsGainedInVoice = wallet.formatNumber(
+    playerUserStats.coinsGainedInVoice
+  );
 
   if (targetUserId === `1292934767511212042`) {
     playerInfo += `🎲 Player username: ${mentionedUser.displayName}.. Wait... That's me!\n`;
@@ -105,7 +108,10 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
     playerInfo += `📅 Daily challenges done: ${dailiesDone} challenges\n`;
     playerInfo += `🔥 Highest daily challenge streak: ${highestStreak} days in a row\n`;
     playerInfo += `💱 Coins given to others: ${coinsGiven} coins\n`;
-    playerInfo += `🏆 #${leaderboardSpot} on the leaderboard\n`;
+    playerInfo += `🏆 ${addOrdinalSuffix(
+      Number(leaderboardSpot)
+    )} on the leaderboard\n`;
+    playerInfo += `🕑 Coins by voice reward: ${coinsGainedInVoice} coins\n`;
     playerInfo += `${
       playerUser.customName !== mentionedUser.displayName
         ? `🎭Custom Name: ${playerUser.customName}\n`
@@ -123,10 +129,33 @@ function getGameStats(gameStats) {
     gamesLost: wallet.formatNumber(gameStats.gamesLost),
     winRate:
       gameStats.gamesPlayed > 0
-        ? ((gameStats.gamesWon / gameStats.gamesPlayed) * 100).toFixed(1) + "%"
-        : "0%", // Prevents NaN if gamesPlayed is 0
+        ? ((gameStats.gamesWon / gameStats.gamesPlayed) * 100).toFixed(1)
+        : "0", // Prevents NaN if gamesPlayed is 0
     coinsWon: wallet.formatNumber(gameStats.coinsWon),
     coinsLost: wallet.formatNumber(gameStats.coinsLost),
   };
+}
+
+function addOrdinalSuffix(num) {
+  if (typeof num !== "number" || isNaN(num)) {
+    throw new Error("Input must be a valid number");
+  }
+
+  let suffix = "th";
+  if (num % 100 < 11 || num % 100 > 13) {
+    switch (num % 10) {
+      case 1:
+        suffix = "st";
+        break;
+      case 2:
+        suffix = "nd";
+        break;
+      case 3:
+        suffix = "rd";
+        break;
+    }
+  }
+
+  return num + suffix;
 }
 module.exports = { getPlayerInfoString };
