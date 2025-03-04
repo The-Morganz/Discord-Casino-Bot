@@ -43,10 +43,10 @@ function addNewGuild(message) {
 async function addHorseBet(userId, amount, horseNumber, message) {
   const didTheyBetSomewhereElse = await horseRacing.findOne({ userId: userId });
   // const horseNumber = didTheyBetSomewhereElse.horseNumber;
-  let betBefore = await horseRacing.findOne(
+  let betBefore = await horseRacing.findOneAndUpdate(
     { userId: userId },
     {},
-    { upsert: true }
+    { upsert: true, new: true }
   );
   if (!betBefore.betAmount) {
     betBefore = 0;
