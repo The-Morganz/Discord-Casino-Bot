@@ -147,7 +147,9 @@ async function addCoins(
     await user.save();
     return message;
   } else {
-    console.error(`Invalid coin amount: ${amount}`);
+    if (amount !== 0) {
+      console.error(`Invalid coin amount: ${amount}`);
+    }
   }
 }
 

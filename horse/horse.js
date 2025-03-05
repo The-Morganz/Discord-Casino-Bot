@@ -7,11 +7,17 @@ const dailyChallenges = require(`../daily/daily`);
 const UserStats = require(`../models/UserStats`);
 let horseAmount = 6;
 let finishLine = 30;
+let minutesToStart = 2;
 let guildsAndInfo = [];
 
-function adminChangeRules(horseAmountIPut = 6, finishLineIPut = 30) {
+function adminChangeRules(
+  horseAmountIPut = 6,
+  finishLineIPut = 30,
+  minutesIPut = 2
+) {
   horseAmount = horseAmountIPut;
   finishLine = finishLineIPut;
+  minutesToStart = minutesIPut;
 }
 
 function addNewGuild(message) {
@@ -32,7 +38,7 @@ function addNewGuild(message) {
     countdown: undefined,
     amountOfTimeToWaitInMs: 0,
     timeOfStartCountdown: 0,
-    minutesToStart: 2,
+    minutesToStart: minutesToStart,
     finishLine: finishLine,
     someoneFinished: false,
     whoFinishedAtSameTime: [],
@@ -50,8 +56,9 @@ async function addHorseBet(userId, amount, horseNumber, message) {
   );
   if (!betBefore.betAmount) {
     betBefore = 0;
+  } else {
+    betBefore = betBefore.betAmount;
   }
-  betBefore = betBefore.betAmount;
   await wallet.addCoins(userId, betBefore, true, true, true);
   addNewGuild(message);
   await horseRacing.findOneAndUpdate(

@@ -27,6 +27,9 @@ function resetDeckCounter(channeId) {
 async function startDealing(eventEmitter, channelId, channelToSendTo) {
   // Example function that triggers a message
   const thePlayingRoom = rooms.findRoom(channelId);
+  if (!thePlayingRoom.players.length) {
+    return;
+  }
   rooms.changeGameState(channelId, "betting", false);
   rooms.changeGameState(channelId, "playing", true);
   if (!thePlayingRoom.resetDeck) {

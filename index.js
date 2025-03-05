@@ -301,7 +301,8 @@ function startBot() {
       let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
-      horse2.adminChangeRules(amount, horseNumber);
+      let minutesToStart = parseInt(args[3]);
+      horse2.adminChangeRules(amount, horseNumber, minutesToStart);
       message.reply(`Yes sir!`);
       return;
     }
@@ -1189,9 +1190,12 @@ function startBot() {
         return;
       }
       message.reply(`Removing you from the room...`);
+      // const thatRoom = blackjackRooms.findRoom(channelId);
+      await blackjackRooms.removePersonFromRoom(userId, channelId);
       const thatRoom = blackjackRooms.findRoom(channelId);
-      blackjackRooms.removePersonFromRoom(userId, channelId);
-      if (thatRoom.players.length === 0) {
+      console.log(thatRoom);
+      if (!thatRoom || thatRoom.players.length === 0) {
+        message.reply(`Deleting the room...`);
         blackjackRooms.deleteRoom(channelId);
         return;
       }
@@ -2480,12 +2484,14 @@ function startBot() {
           });
           return;
         }
+        await blackjackRooms.removePersonFromRoom(userId, channelId);
         const thatRoom = blackjackRooms.findRoom(channelId);
-        blackjackRooms.removePersonFromRoom(userId, channelId);
 
-        if (thatRoom.players.length === 0) {
-          await interaction.reply(`Removing <@${userId}> from the room...`);
-
+        if (!thatRoom || thatRoom.players.length === 0) {
+          await interaction.reply(
+            `Removing <@${userId}> from the room, and deleting the room...`
+          );
+          console.log(`im here`);
           blackjackRooms.deleteRoom(channelId);
           return;
         }

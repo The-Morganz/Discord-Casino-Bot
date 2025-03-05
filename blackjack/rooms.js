@@ -139,20 +139,34 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   eventEmitter.emit(`startBettingPhase`, channelToSendTo);
   // thatRoom.deckOfCards = makeDeck();
 }
-function removePersonFromRoom(userId, channelId) {
+async function removePersonFromRoom(userId, channelId) {
   const thatRoom = findRoom(channelId);
   if (!thatRoom) {
     return;
   }
-  thatRoom.players.forEach((e, i, arr) => {
-    if (e.userId === userId) {
-      arr.splice(e.index, 1);
+  for (let i = 0; i < thatRoom.players.length; i++) {
+    if (thatRoom.players[i].userId === userId) {
+      await wallet.addCoins(
+        thatRoom.players[i].userId,
+        thatRoom.players[i].betAmount,
+        true,
+        true,
+        true
+      );
+      thatRoom.players.splice(thatRoom.players[i].index, 1);
       updatePlayerIndexes(channelId);
     }
-  });
+  }
+  // thatRoom.players.forEach((e, i, arr) => {
+  //   if (e.userId === userId) {
+  //     arr.splice(e.index, 1);
+  //     updatePlayerIndexes(channelId);
+  //   }
+  // });
   if (thatRoom.players.length === 0) {
     deleteRoom(channelId);
   }
+  return thatRoom;
 }
 function updatePlayerIndexes(channelId) {
   const thatRoom = findRoom(channelId);
