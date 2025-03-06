@@ -275,6 +275,9 @@ let raceInProgress = false; // Track whether the race animation has started
 function startBot() {
   client.once("ready", () => {
     console.log("Bot is ready!");
+    setInterval(() => {
+      console.log("Keep-alive ping...");
+    }, 1.5 * 60 * 1000); // Every 5 minutes
   });
 
   client.on("messageCreate", async (message) => {
