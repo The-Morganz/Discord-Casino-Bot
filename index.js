@@ -277,7 +277,7 @@ function startBot() {
     console.log("Bot is ready!");
     setInterval(() => {
       console.log("Keep-alive ping...");
-    }, 1.5 * 60 * 1000); // Every 5 minutes
+    }, 5 * 60 * 1000); // Every 5 minutes
   });
 
   client.on("messageCreate", async (message) => {

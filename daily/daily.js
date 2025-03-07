@@ -174,7 +174,9 @@ async function initializeDailyChallenge(userId) {
 async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
   const userChallenge = await initializeDailyChallenge(userId);
   let completed = false;
-
+  if (!userChallenge.challenges[0]) {
+    return console.log(`Something wrong has happened in daily.js`);
+  }
   for (let i = 0; i < numberOfChallenges; i++) {
     // holy yandere dev
     if (

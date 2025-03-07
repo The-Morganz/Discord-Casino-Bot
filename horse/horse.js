@@ -204,7 +204,7 @@ function getHorseStats(message) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-async function sendUpdate(message, finishLine) {
+async function sendUpdate(message, finishLine, rawMessage) {
   const thatRoom = findHorseRoom(message);
   let theMessageToSend = ``;
   for (let i = 0; i < thatRoom.horses.length; i++) {
@@ -215,11 +215,17 @@ async function sendUpdate(message, finishLine) {
       "-".repeat(repeatBullshit) +
       `🏇\n`;
   }
-  await message.edit(theMessageToSend);
+  try {
+    await message.edit(theMessageToSend);
+    return false;
+  } catch (error) {
+    const theNewMessage = await rawMessage.channel.send(theMessageToSend);
+    return theNewMessage;
+  }
 }
 async function startGame(message) {
   const thatRoom = findHorseRoom(message);
-  const theRaceAnimationMessage = await message.channel.send(
+  let theRaceAnimationMessage = await message.channel.send(
     `🐎**Horse race is starting...**🐎`
   );
   await sleep(1500);
@@ -252,7 +258,14 @@ async function startGame(message) {
       }
     }
     await sleep(1500);
-    await sendUpdate(theRaceAnimationMessage, thatRoom.finishLine);
+    const status = await sendUpdate(
+      theRaceAnimationMessage,
+      thatRoom.finishLine,
+      message
+    );
+    if (status) {
+      theRaceAnimationMessage = status;
+    }
   }
   const winner = decideWinner(thatRoom.whoFinishedAtSameTime, message);
   thatRoom.whoFinishedAtSameTime = [];

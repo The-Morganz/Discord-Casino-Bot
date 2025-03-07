@@ -245,7 +245,9 @@ async function useFreeSpin(userId) {
   return null;
 }
 async function updateLeaderboardPositionStats() {
-  const allUsers = await User.find().sort({ coins: -1 });
+  const allUsers = await User.find({
+    userId: { $ne: `1292934767511212042` },
+  }).sort({ coins: -1 });
 
   const bulkOps = allUsers.map((user, index) => ({
     updateOne: {

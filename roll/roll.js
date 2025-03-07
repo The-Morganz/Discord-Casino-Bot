@@ -250,7 +250,12 @@ async function roll(userId, betAmount, message, button = false) {
 
   // Send the initial message with the first frame
   if (!skipAnim) {
-    sentMessage = await message.reply("🎰 Rolling...");
+    try {
+      sentMessage = await message.reply("🎰 Rolling...");
+    } catch (error) {
+      console.log(`There has been an error`);
+      return;
+    }
 
     for (let i = 0; i < frames; i++) {
       interimResult = [
@@ -264,8 +269,11 @@ async function roll(userId, betAmount, message, button = false) {
         .join("\n");
 
       // Edit the message with the interim result
-
-      await sentMessage.edit(`🎰 Rolling...\n${interimDisplay}`);
+      try {
+        await sentMessage.edit(`🎰 Rolling...\n${interimDisplay}`);
+      } catch (error) {
+        console.log(`Roll error ${error}`);
+      }
 
       // Wait for 0.5 seconds before showing the next frame
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -348,7 +356,11 @@ async function roll(userId, betAmount, message, button = false) {
   // Edit the same message to show the final result
   if (!skipAnim || button) {
     if (!button) {
-      await sentMessage.edit(finalMessage);
+      try {
+        await sentMessage.edit(finalMessage);
+      } catch (error) {
+        console.log(`rerrrorr`);
+      }
     } else {
       await message.update({ content: finalMessage, components: [] });
     }
