@@ -12,6 +12,15 @@ function generateRandomGameRequirement() {
   const gamesToPlay = [1, 2, 3];
   return gamesToPlay[Math.floor(Math.random() * gamesToPlay.length)];
 }
+function hasThatMomentPassed(isoTime) {
+  if (!isoTime) {
+    return true;
+  }
+  const givenDate = new Date(isoTime);
+  const now = new Date();
+
+  return now >= givenDate;
+}
 async function areThereGamesSoon() {
   const NBADatabase = await NBAStats.findOne().sort({ _id: -1 });
   if (hasThatMomentPassed(NBADatabase.commence_time)) {
