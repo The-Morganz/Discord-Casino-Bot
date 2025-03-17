@@ -7,13 +7,13 @@ const UserStats = require(`../models/UserStats`);
 let pendingChallenges = [];
 function generateRandomGame() {
   const gamesToPlay = [
-    // `quickSum`,
+    `quickSum`,
     `quickSubtract`,
-    // `fastSpelling`,
-    // `reverseTyping`,
-    // `missingLetter`,
-    // `typingSpeed`,
-    // `unscrambleWord`,
+    `fastSpelling`,
+    `reverseTyping`,
+    `missingLetter`,
+    `typingSpeed`,
+    `unscrambleWord`,
   ];
   return gamesToPlay[Math.floor(Math.random() * gamesToPlay.length)];
 }
