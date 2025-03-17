@@ -10,6 +10,8 @@ const playGridChallenge = require(`./daily_playGrid`);
 const playHorseChallenge = require(`./daily_horse`);
 const santaGiveChallenge = require(`./daily_give`);
 const winFlipChallenge = require(`./daily_winFlip`);
+const skillChallenge = require(`./daily_skillChallenge`);
+const nbaChallenge = require(`./daily_nba`);
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 
@@ -49,8 +51,18 @@ function getTodayDate() {
 }
 
 // Randomly assign a challenge type
-function assignRandomChallenge(array = getChallengeTypes()) {
+async function assignRandomChallenge(array = getChallengeTypes()) {
   const challengeTypes = array;
+  if (
+    challengeTypes[Math.floor(Math.random() * challengeTypes.length)] ===
+    `playNBA`
+  ) {
+    const canYouGetDailyNBA = await nbaChallenge.canYouGetDaily();
+    if (!canYouGetDailyNBA) {
+      await assignRandomChallenge(challengeTypes);
+      return;
+    }
+  }
   return challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
 }
 function getChallengeTypes() {
@@ -64,6 +76,8 @@ function getChallengeTypes() {
     `playHorse`,
     `santaGive`,
     `winFlip`,
+    `playNBA`,
+    `skillChallenge`,
   ];
 }
 
@@ -84,7 +98,7 @@ async function initializeDailyChallenge(userId) {
   }
   if (!userChallenge) {
     for (let i = 0; i < numberOfChallenges; i++) {
-      const challengeType = assignRandomChallenge(challengeTypes);
+      const challengeType = await assignRandomChallenge(challengeTypes);
       let challengeData = {
         userId: userId,
         date: today,
@@ -146,6 +160,18 @@ async function initializeDailyChallenge(userId) {
           challengeData = {
             ...challengeData,
             ...winFlipChallenge.initializeWinFlipChallenge(userId),
+          };
+          break;
+        case `playNBA`:
+          challengeData = {
+            ...challengeData,
+            ...nbaChallenge.initializePlayNBAChallenge(userId),
+          };
+          break;
+        case `skillChallenge`:
+          challengeData = {
+            ...challengeData,
+            ...skillChallenge.initializeSkillChallengeChallenge(userId),
           };
           break;
         default:
@@ -256,6 +282,21 @@ async function incrementChallenge(userId, typeOfChallenge, amountGiven = 0) {
         i
       );
     if (
+      userChallenge.challenges[i].challengeData.challengeType === `playNBA` &&
+      typeOfChallenge === `playNBA`
+    )
+      completed = await nbaChallenge.incrementGames(userChallenge, userId, i);
+    if (
+      userChallenge.challenges[i].challengeData.challengeType ===
+        `skillChallenge` &&
+      typeOfChallenge === `skillChallenge`
+    )
+      completed = await skillChallenge.incrementSkillGames(
+        userChallenge,
+        userId,
+        i
+      );
+    if (
       userChallenge.challenges[i].challengeData.challengeType === `playSlots` &&
       typeOfChallenge === `playSlots`
     )
@@ -323,6 +364,18 @@ async function getDailyStatus(userId) {
         break;
       case `winFlip`:
         statusMessage += await winFlipChallenge.getWinFlipStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `playNBA`:
+        statusMessage += await nbaChallenge.getGameStatus(
+          userChallenge.challenges[i].challengeData,
+          userId
+        );
+        break;
+      case `skillChallenge`:
+        statusMessage += await skillChallenge.getSkillChallengeStatus(
           userChallenge.challenges[i].challengeData,
           userId
         );

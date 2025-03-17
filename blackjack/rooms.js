@@ -78,6 +78,7 @@ function makeRoom(userId, channelId) {
       profits: 0,
       checkFailed: false,
       natBlackjack: false,
+      turnedOver: false,
     },
   });
   return `You have made a room, and joined it.`;
@@ -119,8 +120,17 @@ setInterval(checkAllRooms, 10000);
 
 function restartRoom(channelId, eventEmitter, channelToSendTo) {
   const thatRoom = findRoom(channelId);
+  const players = thatRoom.players;
 
-  thatRoom.players.forEach((e) => {
+  const seen = new Set();
+  const uniquePlayers = players.filter((player) => {
+    const duplicate = seen.has(player.userId);
+    seen.add(player.userId);
+    return !duplicate;
+  });
+
+  console.log(uniquePlayers);
+  uniquePlayers.forEach((e) => {
     e.betAmount = 0;
     e.sum = 0;
     e.cards = [];
@@ -134,6 +144,9 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   thatRoom.dealer.cards = [];
   thatRoom.dealer.checkFailed = false;
   thatRoom.dealer.natBlackjack = false;
+  thatRoom.dealer.turnedOver = false;
+  thatRoom.players = uniquePlayers;
+
   changeGameState(channelId, "playing", false);
 
   eventEmitter.emit(`startBettingPhase`, channelToSendTo);
@@ -325,4 +338,5 @@ module.exports = {
   restartRoom,
   jusGivMeMyMooony,
   checkAllRooms,
+  updatePlayerIndexes,
 };

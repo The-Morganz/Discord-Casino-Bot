@@ -43,10 +43,13 @@ const { generateShop } = require(`./shop/generateShop`);
 const playerInfo = require(`./playerinfo`);
 const horse2 = require(`./horse/horse`);
 const horseBetting = require(`./horse/horsebetting`);
+const NBABetting = require(`./nba/nba`);
+const skillChallenge = require(`./skillChallenge/skillChallenge`);
 const {
   generateRollThemeButtons,
   generateChooseThemeButtons,
 } = require("./roll/generateRollThemeButtons");
+const { setInterval } = require("timers");
 const app = express();
 let toggleAnimState = false;
 let gridXpGainHuge = 20;
@@ -60,7 +63,7 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,
   ],
 });
-
+const hoursToUpdateNBA = 3;
 const ownerId = "237903516234940416";
 const ownerId2 = "294522326182002710";
 client.once("ready", () => {
@@ -278,6 +281,9 @@ function startBot() {
     setInterval(() => {
       console.log("Keep-alive ping...");
     }, 5 * 60 * 1000); // Every 5 minutes
+    setInterval(() => {
+      NBABetting.addToDatabase();
+    }, hoursToUpdateNBA * 60 * 60 * 1000);
   });
 
   client.on("messageCreate", async (message) => {
@@ -292,10 +298,103 @@ function startBot() {
     //
     if (message.content.toLowerCase() === "$help") {
       const theHelpMessagePt1 = `Hello! I'm a gambling bot. To start using my services, use one of my commands:\n\n💰**"$wallet", or "$w"**- Check your wallet.💰\n\n📅**"$daily"**- Get assigned daily challenges for some quick coins.📅\n:information:Doing all of the challenges increases your daily streak! Your daily streak increases the bonus you get when completing all challenges.:information:\n\n📞You can gain coins by being in a voice chat, each minute is equal to 10 coins (at level 1).📞\n\n🎰**"$roll [amount of coins]"** to use a slot machine.🎰\n 🎁**"$fs"**- See how many free spins you have, and with what amount!🎁\n\n :spades: **"$bj"**- Play Blackjack. :spades: \n :information: **You can do everything with buttons, but if they don't work, you can use these commands instead.**:information:\n:spades:**"$joinbj"**- Join a Blackjack room. You can also join a room if the room is in the betting phase.:spades:\n:spades:**"$startbj"**- Used to start a game of Blackjack.:spades:\n:spades:**"$betbj [amount of coins]"**- Place a bet in a Blackjack game.:spades:\n\n:coin:**"$flip [amount of coins] [@PersonYouWantToChallenge]"**- Challenge a player to a coinflip. Heads or tails?:coin:\n\n💣**"$grid [amount of coins] [mine amount]"**- Start a game of grid slots!💣\n\n🏆**"$leaderboard", or "$lb"**- To show the top 5 most wealthy people in the world.🏆\n\n:currency_exchange:**"$give [amount of coins] [@PersonYouWantToGiveTo]"**- Give your hard earned coins to someone else.:currency_exchange:\n\n:arrow_up:**"$level"**- Shows your level, how much xp you have,and need for the next level.:arrow_up:\n:information:When you level up, you gain an increased amount of coins when doing challenges or by being in a voice chat.:information:\n:information:You can gain xp by playing our various games!:information:\n\n🏇**"$horsebet [bet amount] [horse number]"**- Place a bet in a horse race. This also starts the horse race.🏇\n🏇**"$horsestats"**- Shows you the odds of each horse winning, the lower the odds, the higher the chance to win.🏇\n`;
-      const theHelpMessagePt2 = `🏇**"$horserace"**- See when the horse race is starting.🏇\n🏇**"$horsenotify"**-Get notified via direct message a few moments before the race starts.🏇\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:\n\n:information:**"$playerinfo [@User]" or $stats [@User]**- Display information about tagged player. You can also view your stats by not tagging anybody.:information:\n\n🛒**"$shop"**- Go to the shop.🛒\n🛒**"$shophelp"**- Get details about items in the shop.🛒`;
+      const theHelpMessagePt2 = `🏇**"$horserace"**- See when the horse race is starting.🏇\n🏇**"$horsenotify"**-Get notified via direct message a few moments before the race starts.🏇\n\n🏀**"$nba"**- See all upcoming NBA games. Updates every 3 hours.🏀\n🏀**"$nt [ticket number]"**- Select, and see your NBA ticket.🏀\n:information: Every other command used in NBA betting will be displayed inside these two commands.:information:\n\n:crossed_swords:**"$challenge [bet amount] [@PersonYouWantToChallenge]"**- Invite a user to a skill challenge! Get the same challenge at the same time, and the first person to complete the challenge wins the other person's coins! :crossed_swords:\n\n:bank:**"$loan"**- Go to the bank and ask for a loan! Your limit depends on your level, and you can start requesting loans at level 3.Every 2 levels after level 3, your limit grows.:bank:\n:information:**"$loan [amount of coins]"**- If your discord buttons don't work, try this command.:information:\n:bank:**"$paydebt"**- Pay off all of your debt, if you have the coins for it.:bank:\n\n:information:**"$playerinfo [@User]" or $stats [@User]**- Display information about tagged player. You can also view your stats by not tagging anybody.:information:\n\n🛒**"$shop"**- Go to the shop.🛒\n🛒**"$shophelp"**- Get details about items in the shop.🛒`;
       message.author.send(theHelpMessagePt1);
       message.author.send(theHelpMessagePt2);
     }
+
+    if (message.content.startsWith(`$nba`)) {
+      // NBA
+      const thisMessage = await message.channel.send(
+        `**Fetching... Please wait...**`
+      );
+      try {
+        let args = message.content.split(" ");
+        const page = parseInt(args[1]) || 1;
+
+        const messageToSend = await NBABetting.getNBAUpcoming(page);
+        return await thisMessage.edit(messageToSend);
+      } catch (error) {
+        const errorMessage = `There has been an error trying to find NBA games. Pozovi Ogija (#tomazdravkovic)`;
+
+        console.log(error);
+        return await thisMessage.edit(errorMessage);
+      }
+    }
+    if (message.content.startsWith(`$nadd`)) {
+      let args = message.content.split(" ");
+      const gameIndex = parseInt(args[1]);
+
+      const whichTeam = args[2];
+
+      const returnMessage = await NBABetting.addToTicket(
+        gameIndex,
+        whichTeam,
+        userId
+      );
+      return await message.reply(returnMessage);
+    }
+    if (message.content.startsWith(`$nbet`)) {
+      let args = message.content.split(" ");
+      const betAmount = parseInt(args[1]);
+      const doTheyHaveHighRollerPass = await shop.checkIfHaveInInventory(
+        `High Roller Pass`,
+        userId
+      );
+      const returnMessage = await NBABetting.placeBet(
+        userId,
+        betAmount,
+        doTheyHaveHighRollerPass
+      );
+      return await message.channel.send(returnMessage);
+    }
+    if (message.content === `$nyes`) {
+      const returnMessage = await NBABetting.confirmBet(userId);
+      return await message.reply(returnMessage);
+    }
+    if (message.content === `$nno`) {
+      const returnMessage = await NBABetting.declineBet(userId);
+      return await message.reply(returnMessage);
+    }
+    if (message.content.startsWith(`$npay`)) {
+      await message.reply(`Checking payouts...`);
+      return await NBABetting.givePayouts(userId);
+    }
+    if (message.content === "$ntdel") {
+      const returnMessage = await NBABetting.startToDeleteTicket(userId);
+      return await message.reply(returnMessage);
+    }
+    if (message.content === `$ntdelyes`) {
+      const returnMessage = await NBABetting.deleteTicket(userId);
+      return await message.reply(returnMessage);
+    }
+    if (message.content === `$ntdelno`) {
+      return await message.reply(`Cancelled ticket deletion.`);
+    }
+    if (message.content.startsWith(`$ntdel`)) {
+      let args = message.content.split(" ");
+      const ticketNumber = parseInt(args[1]);
+      const returnMessage = await NBABetting.deleteTicketGame(
+        userId,
+        ticketNumber
+      );
+      return await message.reply(returnMessage);
+    }
+    if (
+      message.content.startsWith(`$nt`) ||
+      message.content.startsWith(`$nticket`)
+    ) {
+      let args = message.content.split(" ");
+      const ticketIndex = parseInt(args[1]);
+      const ticketPage = parseInt(args[2]) || 1;
+      const returnMessage = await NBABetting.changeSelectedTicket(
+        userId,
+        ticketIndex,
+        ticketPage
+      );
+      return await message.reply(returnMessage);
+    }
+
     // HOOORSE IM HORSING AROUND
     if (message.content.startsWith(`$horseracechange`)) {
       if (message.author.id !== ownerId && message.author.id !== ownerId2) {
@@ -659,6 +758,54 @@ function startBot() {
         fromButton: false,
       };
     }
+    if (
+      message.content.toLowerCase().startsWith("$challenge") ||
+      message.content.toLowerCase().startsWith("$chal")
+    ) {
+      const args = message.content.split(" ");
+      const amount = parseInt(args[1]);
+
+      if (isNaN(amount) || amount <= 0) {
+        return message.reply("Please provide a valid bet amount.");
+      }
+
+      const mentionedUser = message.mentions.users.first();
+      if (!mentionedUser) {
+        return message.reply("Please mention a user to challenge.");
+      }
+
+      if (mentionedUser.id === userId) {
+        return message.reply("You can't challenge yourself!");
+      }
+      const challengerWallet = await wallet.getCoins(userId);
+      const targetWallet = await wallet.getCoins(mentionedUser.id);
+      if (amount > challengerWallet || amount > targetWallet) {
+        return message.reply(
+          "One of the players involved do not have enough coins to participate."
+        );
+      }
+
+      const challengeMessage = skillChallenge.startSkillChallenge(
+        userId,
+        mentionedUser.id,
+        amount,
+        message
+      );
+      if (
+        challengeMessage === `The tagged user already has a pending challenge.`
+      ) {
+        return await message.reply(
+          `The tagged user already has a pending challenge.`
+        );
+      }
+      generateSkillChallengeButtons(
+        message.channel,
+        mentionedUser.id,
+        challengeMessage
+      );
+      return;
+      // return message.reply(challengeMessage);
+    }
 
     // Command to start a coinflip challenge
     if (message.content.toLowerCase().startsWith("$flip")) {
@@ -735,7 +882,7 @@ function startBot() {
     }
 
     // Command to check wallet balance
-    if (message.content === "$w" || message.content === "$wallet") {
+    if (message.content.startsWith(`$w`) || message.content === "$wallet") {
       const userId = message.author.id;
       try {
         // Make sure to await the database query
@@ -918,22 +1065,30 @@ function startBot() {
       // }
 
       const args = message.content.split(" ");
-      const amount = parseInt(args[1]);
+      let amount = parseInt(args[1]);
 
-      // Check if the amount is valid
-      if (isNaN(amount) || amount <= 0) {
-        return message.reply("Please provide a valid amount of coins to add.");
-      }
-
-      // Get the tagged user from the message (the second argument)
       const mentionedUser = message.mentions.users.first();
-
       // Check if a user is tagged
       if (!mentionedUser) {
         return message.reply(
           "Please mention a valid user to add coins to their wallet."
         );
       }
+
+      // Check if the amount is valid
+      if (isNaN(amount) || amount <= 0) {
+        amount = parseInt(args[2]);
+        if (isNaN(amount) || amount <= 0) {
+          return message.reply(
+            "Please provide a valid amount of coins to add."
+          );
+        }
+      }
+      const theirWallet = await wallet.getCoins(userId);
+      if (amount > theirWallet) {
+        return message.reply(`You don't have enough coins for this.`);
+      }
+      // Get the tagged user from the message (the second argument)
 
       // Extract the user ID of the mentioned user
       const targetUserId = mentionedUser.id;
@@ -1403,7 +1558,7 @@ function startBot() {
     const thatRoom = blackjackRooms.findRoom(channelToSendTo.id);
     let theirSum;
     thatRoom.players.forEach((e) => {
-      if (e.userId === messageThatWasSent) {
+      if (e.userId === messageThatWasSent && e.turn) {
         theirSum = e.sum;
       }
     });
@@ -1415,6 +1570,11 @@ function startBot() {
 
   eventEmitter.on("dealerTurn", (messageThatWasSent, channelToSendTo) => {
     const dealer = blackjackRooms.findRoom(channelToSendTo.id).dealer;
+    if (messageThatWasSent === `turnOver`) {
+      channelToSendTo.send(
+        `:bust_in_silhouette: The DEALER turns over their second card, revealing a **${dealer.cards[1]}**. Their sum is **${dealer.sum}** :bust_in_silhouette:`
+      );
+    }
     if (messageThatWasSent === "stand") {
       channelToSendTo.send(
         `:bust_in_silhouette: The DEALER **stands**, with a sum of **${dealer.sum}** :bust_in_silhouette:`
@@ -1499,17 +1659,25 @@ function startBot() {
     let buttonCounter;
     let turn;
     let canDD = false;
+    let canSplit = false;
+    let howManyHands = 1;
     const usersCoins = await wallet.getCoins(userId);
     thatRoom.players.forEach((e) => {
       if (e.userId === userId) {
+        howManyHands++;
         buttonCounter = e.buttonCounter;
         turn = e.turn;
         if (usersCoins >= e.betAmount * 2) {
           canDD = true;
         }
+        if (e.cards[0] === e.cards[1]) {
+          canSplit = true;
+        }
       }
     });
-
+    if (howManyHands >= 4) {
+      canSplit = false;
+    }
     const hitButton = new ButtonBuilder()
       .setCustomId(`bj_hit_${userId}_${buttonCounter}`) // unique custom ID with player ID
       .setLabel("Hit")
@@ -1523,19 +1691,28 @@ function startBot() {
       .setCustomId(`bj_dd_${userId}_${buttonCounter}`) // unique custom ID with player ID
       .setLabel("Double Down")
       .setStyle(ButtonStyle.Success);
-    if (canDD) {
-      const row = new ActionRowBuilder().addComponents(
-        hitButton,
-        standButton,
-        doubleDownButton
-      );
-      channel.send({
-        content: `<@${userId}>, it's your turn! Your sum is ${theirSum}`,
-        components: [row],
-      });
-      return;
-    }
-    const row = new ActionRowBuilder().addComponents(hitButton, standButton);
+    const doubleDownDisabledButton = new ButtonBuilder()
+      .setCustomId(`bj_dd_${userId}_${buttonCounter}`) // unique custom ID with player ID
+      .setLabel("Double Down")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true);
+    const splitButton = new ButtonBuilder()
+      .setCustomId(`bj_split_${userId}_${buttonCounter}`) // unique custom ID with player ID
+      .setLabel("Split")
+      .setStyle(ButtonStyle.Success);
+    const splitDisabledButton = new ButtonBuilder()
+      .setCustomId(`bj_split_${userId}_${buttonCounter}`) // unique custom ID with player ID
+      .setLabel("Split")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true);
+
+    const row = new ActionRowBuilder().addComponents(
+      hitButton,
+      standButton,
+      canDD ? doubleDownButton : doubleDownDisabledButton,
+      canSplit && canDD ? splitButton : splitDisabledButton
+      // splitButton
+    );
 
     channel.send({
       content: `<@${userId}>, it's your turn! Your sum is ${theirSum}`,
@@ -1710,6 +1887,34 @@ function startBot() {
       components: [row],
     });
   }
+  function generateSkillChallengeButtons(channel, targetId, messageToSend) {
+    const acceptChallenge = new ButtonBuilder()
+      .setCustomId(`sc_accept_${targetId}`)
+      .setLabel("Accept")
+      .setStyle(ButtonStyle.Success);
+    const rejectChallenge = new ButtonBuilder()
+      .setCustomId(`sc_reject_${targetId}`)
+      .setLabel("Deny")
+      .setStyle(ButtonStyle.Danger);
+    const row = new ActionRowBuilder().addComponents(
+      acceptChallenge,
+      rejectChallenge
+    );
+    channel.send({
+      content: messageToSend,
+      components: [row],
+    });
+  }
+  function generateInputSkillButton(targetId, disabled = false) {
+    const startChallengeButton = new ButtonBuilder()
+      .setCustomId(`sc_start_${targetId}`)
+      .setLabel("PRESS TO GET CHALLENGE")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled);
+
+    const row = new ActionRowBuilder().addComponents(startChallengeButton);
+    return row;
+  }
   function generateRollPreviousButton(channel, betAmount, userId) {
     const formattedPrevBet = wallet.formatNumber(betAmount);
     const rollPrev = new ButtonBuilder()
@@ -1861,6 +2066,36 @@ function startBot() {
         return;
 
         // Add custom logic to handle bet (e.g., store bet amount, etc.)
+      }
+      if (interaction.customId === `sc_inputModal`) {
+        const userId = interaction.user.id;
+        const channelId = interaction.channel.id;
+        const inputAmount = interaction.fields.getTextInputValue(
+          `sc_input_${userId}`
+        );
+        const information = skillChallenge.giveInformation(userId);
+        const isItCorrect = await skillChallenge.checkInput(
+          userId,
+          inputAmount.toLowerCase()
+        );
+        if (!isItCorrect) {
+          await interaction.message.delete();
+          const coinMessage = await wallet.addCoins(
+            userId,
+            information.betAmount * 2
+          );
+          return await interaction.reply({
+            content: `<@${userId}> won this skill challenge! They gained +${wallet.formatNumber(
+              information.betAmount * 2
+            )} coins.\n${coinMessage}`,
+            components: [],
+          });
+        } else {
+          return await interaction.reply({
+            content: `${isItCorrect}`,
+            ephemeral: true,
+          });
+        }
       }
       if (interaction.customId === "custom_loan") {
         const inputAmount =
@@ -2530,7 +2765,6 @@ function startBot() {
 
       if (action === "hit") {
         // ovde sam picko
-        // Handle hit logic here
         if (
           !blackjackRooms.areWePlaying(channelId) ||
           !blackjackRooms.checkIfAlreadyInRoom(userId)
@@ -2597,7 +2831,7 @@ function startBot() {
             infoAboutPlayer.theirSum
           );
         }
-      } else if (action === "stand") {
+      } else if (action === `stand`) {
         // Handle stand logic here
         if (
           !blackjackRooms.areWePlaying(channelId) ||
@@ -2659,14 +2893,14 @@ function startBot() {
             interaction.channel
           );
           await interaction.update({
-            content: `:fireworks: <@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`,
+            content: `:fireworks: <@${userId}> **DOUBLED DOWN** and got a **${infoAboutPlayer.cardTheyGot}**, their sum is.... no... it can't be..... **${infoAboutPlayer.theirSum}**!!!! :fireworks:`,
             components: [],
           });
           return;
         }
         if (infoAboutPlayer.bust) {
           await interaction.update({
-            content: `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`,
+            content: `<@${userId}> **DOUBLED DOWN** and got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**, and so they have **BUST**!`,
             components: [],
           });
           blackjackRooms.playerLose(userId, channelId);
@@ -2678,7 +2912,7 @@ function startBot() {
           );
         } else {
           await interaction.update({
-            content: `<@${userId}> got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**.`,
+            content: `<@${userId}> **DOUBLED DOWN** and got a **${infoAboutPlayer.cardTheyGot}**, their sum is **${infoAboutPlayer.theirSum}**.`,
             components: [],
           });
           blackjackGame.stand(
@@ -2688,6 +2922,43 @@ function startBot() {
             interaction.channel
           );
         }
+      } else if (action === `split`) {
+        if (
+          !blackjackRooms.areWePlaying(channelId) ||
+          !blackjackRooms.checkIfAlreadyInRoom(userId)
+        ) {
+          interaction.reply({
+            content: `:question: It's not your turn to act in the blackjack game. :question:`,
+            ephemeral: true,
+          });
+          return;
+        }
+        if (!blackjackRooms.isItYoTurn(userId, channelId)) {
+          interaction.reply({
+            content: `:question: It's not your turn to act in the blackjack game. :question:`,
+            ephemeral: true,
+          });
+          return;
+        }
+        const messageszzz = await blackjackGame.split(
+          userId,
+          channelId,
+          eventEmitter,
+          interaction.channel
+        );
+        await interaction.update({
+          content: `<@${userId}> chose to split!`,
+          components: [],
+        });
+        sendPlayerTurnButtons(
+          userId,
+          interaction.channel,
+          messageszzz.theirSum
+        );
+
+        return;
+
+        // split here
       }
 
       // Ensure the interaction is acknowledged
@@ -2696,6 +2967,90 @@ function startBot() {
       }
 
       return; // Exit since the blackjack logic is done
+    }
+    if (interaction.customId.startsWith("sc_")) {
+      let [action, targetId] = interaction.customId.split("_").slice(1);
+      const userId = interaction.user.id;
+
+      if (action === `accept`) {
+        if (userId !== targetId) {
+          return await interaction.reply({
+            content: `You're not the right person for this...`,
+            ephemeral: true,
+          });
+        }
+        await interaction.reply({
+          content: `You accepted the challenge, get ready!`,
+          ephemeral: true,
+        });
+        let countdown = 4; // ovo je 3 sekunde
+        for (let i = 0; i < countdown; i++) {
+          const row = generateInputSkillButton(targetId, true);
+          await interaction.message.edit({
+            content: `GETTING CHALLENGE IN: ${countdown - 1 - i}`,
+            components: [row],
+          });
+          await sleep(1000);
+        }
+        const information = skillChallenge.giveInformation(targetId);
+        await wallet.removeCoins(
+          information.challengerId,
+          information.betAmount
+        );
+        await wallet.removeCoins(information.targetId, information.betAmount);
+
+        const row = generateInputSkillButton(targetId, false);
+        await skillChallenge.startAfkTimer(userId, interaction);
+        return await interaction.message.edit({
+          content: `PRESS THE CHALLENGE BUTTON AND COMPLETE IT FASTER THEN YOUR OPPONENT`,
+          components: [row],
+        });
+      }
+      if (action === `reject`) {
+        if (userId !== targetId) {
+          return await interaction.reply({
+            content: `You're not the right person for this...`,
+            ephemeral: true,
+          });
+        }
+        await interaction.reply({
+          content: `You declined the challenge invite.`,
+          ephemeral: true,
+        });
+
+        skillChallenge.declineChallenge(userId);
+
+        return await interaction.message.edit({
+          content: `<@${targetId}> declined the skill challenge invitation.`,
+          components: [],
+        });
+      }
+      if (action === `start`) {
+        const information = skillChallenge.giveInformation(targetId);
+        if (userId !== targetId && userId !== information.challengerId) {
+          return await interaction.reply({
+            content: `You're not the right person for this...`,
+            ephemeral: true,
+          });
+        }
+
+        const modal = new ModalBuilder()
+          .setCustomId(`sc_inputModal`)
+          .setTitle(`${information.title}`);
+
+        const challengeInput = new TextInputBuilder()
+          .setCustomId(`sc_input_${userId}`)
+          .setLabel(`${information.labelText}`)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setValue(``)
+          .setPlaceholder(`${information.labelText}`);
+        const actionRow = new ActionRowBuilder().addComponents(challengeInput);
+        modal.addComponents(actionRow);
+        // Show the modal to the user
+        await interaction.showModal(modal);
+        return;
+      }
     }
     if (interaction.customId.startsWith("loan_")) {
       let [action] = interaction.customId.split("_").slice(1);
@@ -2968,7 +3323,7 @@ function startBot() {
           $inc: {
             "games.grid.gamesPlayed": 1,
             "games.grid.gamesWon": 1,
-            "games.grid.coinsWon": gridData.betAmount,
+            "games.grid.coinsWon": Number(payout) - gridData.betAmount,
           },
         }
       );
@@ -2998,7 +3353,7 @@ function startBot() {
     if (multiplier === 0) {
       gridData.isComplete = true;
       gridData.revealedMultipliers = []; // Reset multipliers
-
+      const formatterAmount = wallet.formatNumber(gridData.betAmount);
       // Update the clicked button to show "X" and change its style to red
       const updatedButton = ButtonBuilder.from(interaction.component)
         .setLabel("X")
@@ -3019,7 +3374,7 @@ function startBot() {
           `grid_play_${gridData.betAmount}_${gridData.mineCount}_${gridData.userId}`
         ) // Custom ID for button interaction
         .setLabel(
-          `Bet Previous (${gridData.betAmount} bet with ${gridData.mineCount} mines)`
+          `Bet Previous (${formatterAmount} bet with ${gridData.mineCount} mines)`
         ) // The text on the button
         .setStyle(ButtonStyle.Success);
       const walletButton = generateWalletButton();
@@ -3089,5 +3444,7 @@ async function initializeBot() {
   //await migrateData();       // Run migration after connecting
   startBot(); // Start bot after migration completes
 }
-
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 initializeBot();

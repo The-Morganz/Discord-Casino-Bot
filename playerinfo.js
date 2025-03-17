@@ -37,7 +37,10 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
   const coinflipStats = getGameStats(playerUserStats.games.coinflip);
   const gridStats = getGameStats(playerUserStats.games.grid);
   const horseStats = getGameStats(playerUserStats.games.horse);
-
+  const nbaStats = getGameStats(playerUserStats.games.nba);
+  const skillChallengeStats = getGameStats(
+    playerUserStats.games.skillChallenge
+  );
   const playerBjGamesBlackjack = wallet.formatNumber(
     playerUserStats.games.blackjack.gamesBlackjack
   );
@@ -70,7 +73,6 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
     playerInfo += `🎲 Inventory: "Devil's Blessing"\n\n`;
 
     playerInfo += `🎲 Blackjack games played: ${blackjackStats.gamesPlayed} games\n\n`;
-    playerInfo += `🎲 #${leaderboardSpot} on the leaderboard\n`;
   } else {
     playerInfo += `:information: Player username: ${mentionedUser.displayName}\n`;
     playerInfo += `:arrow_up: Level: ${playerLevel.level}\n`;
@@ -99,12 +101,16 @@ async function getPlayerInfoString(mentionedUser, targetUserId, userId) {
     playerInfo += `🃏 Blackjack earnings: Won: ${blackjackStats.coinsWon} coins, Lost: ${blackjackStats.coinsLost} coins\n`;
     playerInfo += `🎰 Rolls played: ${rollsStats.gamesPlayed} rolls. Winrate: ${rollsStats.winRate}% (W:${rollsStats.gamesWon}), (L:${rollsStats.gamesLost})\n`;
     playerInfo += `🎰 Roll earnings: Won: ${rollsStats.coinsWon} coins, Lost: ${rollsStats.coinsLost} coins\n`;
-    playerInfo += `:coin: Coinflips played: ${coinflipStats.gamesPlayed} times. Winrate: Winrate: ${coinflipStats.winRate}%(W:${coinflipStats.gamesWon}), (L:${coinflipStats.gamesLost})\n`;
+    playerInfo += `:coin: Coinflips played: ${coinflipStats.gamesPlayed} times. Winrate: ${coinflipStats.winRate}%(W:${coinflipStats.gamesWon}), (L:${coinflipStats.gamesLost})\n`;
     playerInfo += `:coin: Coinflip earnings: Won: ${coinflipStats.coinsWon} coins, Lost: ${coinflipStats.coinsLost} coins\n`;
     playerInfo += `💣 Grid games played: ${gridStats.gamesPlayed} games. Winrate: ${gridStats.winRate}% (W:${gridStats.gamesWon}), (L:${gridStats.gamesLost})\n`;
     playerInfo += `💣 Grid earnings: Won: ${gridStats.coinsWon} coins, Lost: ${gridStats.coinsLost} coins\n`;
     playerInfo += `🏇 Horse races played: ${horseStats.gamesPlayed} races. Winrate: ${horseStats.winRate}% (W:${horseStats.gamesWon}), (L:${horseStats.gamesLost})\n`;
-    playerInfo += `🏇 Horse race earnings: Won: ${horseStats.coinsWon} coins, Lost: ${horseStats.coinsLost} coins \n\n`;
+    playerInfo += `🏇 Horse race earnings: Won: ${horseStats.coinsWon} coins, Lost: ${horseStats.coinsLost} coins \n`;
+    playerInfo += `🏀 NBA tickets played: ${nbaStats.gamesPlayed} tickets. Winrate: ${nbaStats.winRate}% (W:${nbaStats.gamesWon}), (L:${nbaStats.gamesLost})\n`;
+    playerInfo += `🏀 NBA ticket earnings: ${nbaStats.coinsWon} coins, LOST: ${nbaStats.coinsLost} coins \n`;
+    playerInfo += `:crossed_swords: Skill challenges played: ${skillChallengeStats.gamesPlayed} games. Winrate: ${skillChallengeStats.winRate}% (W:${skillChallengeStats.gamesWon}), (L:${skillChallengeStats.gamesLost})\n`;
+    playerInfo += `:crossed_swords: Skill challenge earnings: ${skillChallengeStats.coinsWon} coins, LOST: ${skillChallengeStats.coinsLost} coins \n\n`;
     playerInfo += `📅 Daily challenges done: ${dailiesDone} challenges\n`;
     playerInfo += `🔥 Highest daily challenge streak: ${highestStreak} days in a row\n`;
     playerInfo += `💱 Coins given to others: ${coinsGiven} coins\n`;

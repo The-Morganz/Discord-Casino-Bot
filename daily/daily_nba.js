@@ -2,33 +2,47 @@ const wallet = require("../wallet");
 const xpSystem = require("../xp/xp");
 const shopAndItems = require(`../shop/shop`);
 const DailyChallenge = require("../models/DailyChallenge");
-const dailies = require(`./checkIfCompletedAll`);
 const UserStats = require(`../models/UserStats`);
+const dailies = require(`./checkIfCompletedAll`);
+const NBAStats = require(`../models/NBA`);
 
 let gainFromChallenge = 500;
 let gainXpFromChallenge = 150;
 function generateRandomGameRequirement() {
-  const gamesToPlay = [1, 2];
+  const gamesToPlay = [1, 2, 3];
   return gamesToPlay[Math.floor(Math.random() * gamesToPlay.length)];
 }
-
+async function areThereGamesSoon() {
+  const NBADatabase = await NBAStats.findOne().sort({ _id: -1 });
+  if (hasThatMomentPassed(NBADatabase.commence_time)) {
+    return false;
+  }
+  return true;
+}
+async function canYouGetDaily() {
+  const isItPlayable = await areThereGamesSoon();
+  if (!isItPlayable) {
+    return false;
+  }
+  return true;
+}
 // Initialize a message challenge
-function initializeWinFlipChallenge(userId) {
+function initializePlayNBAChallenge(userId) {
   return {
-    challengeType: "winFlip",
-    flipsWon: 0,
-    requiredFlipWins: generateRandomGameRequirement(),
+    challengeType: "playNBA",
+    nbaGamesPlayed: 0,
+    requiredNBAGames: generateRandomGameRequirement(),
     completed: false,
     gainedXpReward: false,
   };
 }
 
-async function incrementFlipWins(userChallenge, userId, challengeNumber) {
+async function incrementGames(userChallenge, userId, challengeNumber) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.challenges[challengeNumber].challengeData.flipsWon += 1;
+    userChallenge.challenges[challengeNumber].challengeData.nbaGamesPlayed += 1;
     if (
-      userChallenge.challenges[challengeNumber].challengeData.flipsWon >=
-      userChallenge.challenges[challengeNumber].challengeData.requiredFlipWins
+      userChallenge.challenges[challengeNumber].challengeData.nbaGamesPlayed >=
+      userChallenge.challenges[challengeNumber].challengeData.requiredNBAGames
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       await UserStats.findOneAndUpdate(
@@ -47,7 +61,7 @@ async function incrementFlipWins(userChallenge, userId, challengeNumber) {
       }
       await wallet.addCoins(userId, gain, false, false, true);
       // console.log(
-      //   `User ${userId} has completed the flip challenge and earned ${gain} coins.`
+      //   `User ${userId} has completed the horse challenge and earned ${gain} coins.`
       // );
     }
   }
@@ -81,8 +95,8 @@ async function incrementFlipWins(userChallenge, userId, challengeNumber) {
 }
 
 // Get the message challenge status
-async function getWinFlipStatus(userChallenge, userId) {
-  const { flipsWon, requiredFlipWins, completed } = userChallenge;
+async function getGameStatus(userChallenge, userId) {
+  const { nbaGamesPlayed, requiredNBAGames, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
   let gain = gainFromChallenge * theirXP.multiplier;
   const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
@@ -93,15 +107,17 @@ async function getWinFlipStatus(userChallenge, userId) {
     gain = gain * 2;
   }
   const formattedGain = wallet.formatNumber(gain);
+
   if (completed) {
-    return `🎉 You have played enough coinflip games,finishing the challenge and earning ${formattedGain} coins!`;
+    return `🎉 You have added enough NBA games,finishing the challenge and earning ${formattedGain} coins!`;
   } else {
-    return `🎁 Play ${requiredFlipWins} games of coinflip. Progress: ${flipsWon}/${requiredFlipWins} flips played.`;
+    return `🎁 Add ${requiredNBAGames} NBA game to a ticket. Progress: ${nbaGamesPlayed}/${requiredNBAGames} games added.`;
   }
 }
 
 module.exports = {
-  initializeWinFlipChallenge,
-  incrementFlipWins,
-  getWinFlipStatus,
+  initializePlayNBAChallenge,
+  incrementGames,
+  getGameStatus,
+  canYouGetDaily,
 };

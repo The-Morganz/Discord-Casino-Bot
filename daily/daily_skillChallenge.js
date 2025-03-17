@@ -13,22 +13,22 @@ function generateRandomGameRequirement() {
 }
 
 // Initialize a message challenge
-function initializeWinFlipChallenge(userId) {
+function initializeSkillChallengeChallenge(userId) {
   return {
-    challengeType: "winFlip",
-    flipsWon: 0,
-    requiredFlipWins: generateRandomGameRequirement(),
+    challengeType: "skillChallenge",
+    gamesPlayed: 0,
+    requiredGames: generateRandomGameRequirement(),
     completed: false,
     gainedXpReward: false,
   };
 }
 
-async function incrementFlipWins(userChallenge, userId, challengeNumber) {
+async function incrementSkillGames(userChallenge, userId, challengeNumber) {
   if (!userChallenge.challenges[challengeNumber].challengeData.completed) {
-    userChallenge.challenges[challengeNumber].challengeData.flipsWon += 1;
+    userChallenge.challenges[challengeNumber].challengeData.gamesPlayed += 1;
     if (
-      userChallenge.challenges[challengeNumber].challengeData.flipsWon >=
-      userChallenge.challenges[challengeNumber].challengeData.requiredFlipWins
+      userChallenge.challenges[challengeNumber].challengeData.gamesPlayed >=
+      userChallenge.challenges[challengeNumber].challengeData.requiredGames
     ) {
       userChallenge.challenges[challengeNumber].challengeData.completed = true;
       await UserStats.findOneAndUpdate(
@@ -46,9 +46,6 @@ async function incrementFlipWins(userChallenge, userId, challengeNumber) {
         gain = gain * 2;
       }
       await wallet.addCoins(userId, gain, false, false, true);
-      // console.log(
-      //   `User ${userId} has completed the flip challenge and earned ${gain} coins.`
-      // );
     }
   }
   if (
@@ -81,8 +78,8 @@ async function incrementFlipWins(userChallenge, userId, challengeNumber) {
 }
 
 // Get the message challenge status
-async function getWinFlipStatus(userChallenge, userId) {
-  const { flipsWon, requiredFlipWins, completed } = userChallenge;
+async function getSkillChallengeStatus(userChallenge, userId) {
+  const { gamesPlayed, requiredGames, completed } = userChallenge;
   const theirXP = await xpSystem.getXpData(userId);
   let gain = gainFromChallenge * theirXP.multiplier;
   const doTheyHaveBooster = await shopAndItems.checkIfHaveInInventory(
@@ -94,14 +91,14 @@ async function getWinFlipStatus(userChallenge, userId) {
   }
   const formattedGain = wallet.formatNumber(gain);
   if (completed) {
-    return `🎉 You have played enough coinflip games,finishing the challenge and earning ${formattedGain} coins!`;
+    return `🎉 You have played enough skill challenges,finishing the challenge and earning ${formattedGain} coins!`;
   } else {
-    return `🎁 Play ${requiredFlipWins} games of coinflip. Progress: ${flipsWon}/${requiredFlipWins} flips played.`;
+    return `🎁 Play ${requiredGames} skill challenges. Progress: ${gamesPlayed}/${requiredGames} games played.`;
   }
 }
 
 module.exports = {
-  initializeWinFlipChallenge,
-  incrementFlipWins,
-  getWinFlipStatus,
+  initializeSkillChallengeChallenge,
+  incrementSkillGames,
+  getSkillChallengeStatus,
 };

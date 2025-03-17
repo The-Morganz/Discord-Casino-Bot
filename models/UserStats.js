@@ -40,6 +40,20 @@ const usetStatsSchema = new mongoose.Schema({
       coinsWon: { type: Number, default: 0 },
       coinsLost: { type: Number, default: 0 },
     },
+    nba: {
+      gamesPlayed: { type: Number, default: 0 },
+      gamesWon: { type: Number, default: 0 },
+      gamesLost: { type: Number, default: 0 },
+      coinsWon: { type: Number, default: 0 },
+      coinsLost: { type: Number, default: 0 },
+    },
+    skillChallenge: {
+      gamesPlayed: { type: Number, default: 0 },
+      gamesWon: { type: Number, default: 0 },
+      gamesLost: { type: Number, default: 0 },
+      coinsWon: { type: Number, default: 0 },
+      coinsLost: { type: Number, default: 0 },
+    },
   },
   shop: {
     itemsBought: { type: Number, default: 0 },

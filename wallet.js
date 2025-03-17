@@ -118,7 +118,9 @@ async function addCoins(
       const tenPercentOffWinnings = Math.round(amount * 0.1);
       await payDebt(userId, tenPercentOffWinnings);
       amount = Math.round(amount * 0.9);
-      message = `*The bank has taken their fair share... (-${tenPercentOffWinnings} coins)*`;
+      message = `*The bank has taken their fair share... (-${formatNumber(
+        tenPercentOffWinnings
+      )} coins)*`;
       if (userId.debt <= 0) {
         message += `\n*You're debt free!*`;
       }
@@ -128,7 +130,9 @@ async function addCoins(
     if (doTheyHaveWealthMultiplier && !ignoreWealthMultiplier) {
       message += `${
         message === `` ? `` : `\n`
-      }*More coins come your way. You earn ${amount * 0.2} extra coins.*`;
+      }*More coins come your way. You earn ${formatNumber(
+        amount * 0.2
+      )} extra coins.*`;
       amount = amount * 1.2;
     }
     const doTheyHaveXPConverter = await shopAndItems.checkIfHaveInInventory(

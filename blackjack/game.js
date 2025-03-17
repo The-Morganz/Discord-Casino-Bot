@@ -50,9 +50,9 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     player.cards.push(unoRandomNumero);
     if (player.sum === 22) {
       player.sum -= 10;
-      const aceIndex = player.cards.indexOf(11);
-      player.cards.splice(aceIndex, 1);
-      player.cards.push(1);
+      // const aceIndex = player.cards.indexOf(11);
+      // player.cards.splice(aceIndex, 1);
+      // player.cards.push(1);
     }
     let message = `:mag: <@${player.userId}> got a ${unoRandomNumero}, their sum is ${player.sum} :mag:`;
     if (player.sum === 21) {
@@ -70,34 +70,61 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
   if (dealer.cards.length === 1) {
     const message = whoIsUpNext(channelId);
     rooms.changeGameState(channelId, "dealing", false);
-    const unoRandomNumero = dealer.cards[0];
-    if (unoRandomNumero === 10 || unoRandomNumero === 11) {
+    const dealerFirstCard = dealer.cards[0];
+    const randomNumberFromDeck = randomNumber(
+      0,
+      thePlayingRoom.deckOfCards.length - 1
+    );
+    const randomCard = thePlayingRoom.deckOfCards[randomNumberFromDeck];
+    const dealerSecondCard = Number(randomCard.replace(/\D/g, ""));
+    thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
+    dealer.sum += dealerSecondCard;
+    dealer.cards.push(dealerSecondCard);
+
+    if (dealerFirstCard === 10 || dealerFirstCard === 11) {
       const checkMessage = `:bust_in_silhouette: THE DEALER is checking their other card. :bust_in_silhouette:`;
       eventEmitter.emit("beginningBJ", checkMessage, channelToSendTo);
       await sleep(2500);
-      const randomNumberFromDeck = randomNumber(
-        0,
-        thePlayingRoom.deckOfCards.length - 1
-      );
-      const randomCard2 = thePlayingRoom.deckOfCards[randomNumberFromDeck];
-      const unoRandomNumero2 = Number(randomCard2.replace(/\D/g, ""));
-      const sumOfCards = unoRandomNumero + unoRandomNumero2;
+
+      const sumOfCards = dealerFirstCard + dealerSecondCard;
       if (sumOfCards === 21) {
-        const dealerNatBjMessage = `:bust_in_silhouette: THE DEALER GOT A **${unoRandomNumero2}**, NATURAL BLACKJACK :bust_in_silhouette:`;
+        const dealerNatBjMessage = `:bust_in_silhouette: THE DEALER TURNS OVER THEIR CARD, AND IT'S A **${dealerSecondCard}**, NATURAL BLACKJACK :bust_in_silhouette:`;
         eventEmitter.emit("beginningBJ", dealerNatBjMessage, channelToSendTo);
         // thePlayingRoom.deckOfCards.splice(randomNumberFromDeck, 1);
-        dealer.sum += unoRandomNumero2;
-        dealer.cards.push(unoRandomNumero2);
         dealer.natBlackjack = true;
         endGame(channelId, channelToSendTo, eventEmitter);
         return;
       }
       dealer.checkFailed = true;
+      const disappointedMessages = [
+        `THE DEALER has a disappointed look on their face.`,
+        `THE DEALER is saddened by the value of their card.`,
+        `THE DEALER's happiness is completely wiped from their face.`,
+        `THE DEALER sighs in disappointment.`,
+        `THE DEALER shakes their head subtly.`,
+        `THE DEALER's smirk quickly fades.`,
+        `THE DEALER mutters something under their breath.`,
+        `THE DEALER was hopeful for a moment, but it's gone now.`,
+        `THE DEALER takes a deep breath, regaining their composure.`,
+        `THE DEALER looks unimpressed with their luck.`,
+        `THE DEALER exhales sharply, clearly annoyed by their misfortune.`,
+        `THE DEALER grips the edge of the table, suppressing their anger.`,
+        `THE DEALER exhales through their nose, their patience wearing thin.`,
+        `THE DEALER glares at their cards as if willing them to change.`,
+      ];
+      const disappointedMessage =
+        disappointedMessages[
+          Math.floor(Math.random() * disappointedMessages.length)
+        ];
       eventEmitter.emit(
         "beginningBJ",
-        `:bust_in_silhouette: THE DEALER has a disappointed look on their face. :bust_in_silhouette:`,
+        `:bust_in_silhouette: ${disappointedMessage} :bust_in_silhouette:`,
         channelToSendTo
       );
+      await sleep(1000);
+    } else {
+      const takenCard = `:bust_in_silhouette: THE DEALER takes another card, and puts it face down. :bust_in_silhouette: `;
+      eventEmitter.emit("beginningBJ", takenCard, channelToSendTo);
       await sleep(1000);
     }
     if (thePlayingRoom.players.every((player) => player.played === true)) {
@@ -129,6 +156,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
 function whoIsUpNext(channelId) {
   const thatRoom = rooms.findRoom(channelId);
   let whoIsNext;
+  let whoIsNextIndex;
   try {
     thatRoom.players.forEach((e, i, arr) => {
       if (e.played && arr.length === 1) {
@@ -140,6 +168,7 @@ function whoIsUpNext(channelId) {
         return;
       }
       whoIsNext = e.userId;
+
       e.turn = true;
       throw whoIsNext;
     });
@@ -164,7 +193,7 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
   let thePlayer;
   try {
     thatRoom.players.forEach((e) => {
-      if (e.userId === userId) {
+      if (e.userId === userId && e.turn) {
         thePlayer = e;
         throw error;
       }
@@ -186,8 +215,8 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
       if (aceSave(thePlayer.cards, thePlayer.sum)) {
         thePlayer.sum -= 10;
         const aceIndex = thePlayer.cards.indexOf(11);
-        thePlayer.cards.splice(aceIndex, 1);
-        thePlayer.cards.push(1);
+        // thePlayer.cards.splice(aceIndex, 1);
+        // thePlayer.cards.push(1);
         return {
           bust: false,
           cardTheyGot: unoRandomNumero,
@@ -216,7 +245,7 @@ async function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
   let thePlayer;
   try {
     thatRoom.players.forEach((e) => {
-      if (e.userId === userId) {
+      if (e.userId === userId && e.turn) {
         thePlayer = e;
         throw error;
       }
@@ -240,9 +269,9 @@ async function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
     if (thePlayer.sum > 21) {
       if (aceSave(thePlayer.cards, thePlayer.sum)) {
         thePlayer.sum -= 10;
-        const aceIndex = thePlayer.cards.indexOf(11);
-        thePlayer.cards.splice(aceIndex, 1);
-        thePlayer.cards.push(1);
+        // const aceIndex = thePlayer.cards.indexOf(11);
+        // thePlayer.cards.splice(aceIndex, 1);
+        // thePlayer.cards.push(1);
         return {
           bust: false,
           cardTheyGot: unoRandomNumero,
@@ -271,7 +300,8 @@ async function stand(userId, channelId, eventEmitter, channelToSendTo) {
   let aPersonIsPlaying = false;
   try {
     thatRoom.players.forEach((e) => {
-      if (e.userId === userId) {
+      if (e.userId === userId && e.turn) {
+        console.log(thatRoom);
         e.played = true;
         const whoNextString = whoIsUpNext(channelId);
         throw whoNextString;
@@ -283,14 +313,71 @@ async function stand(userId, channelId, eventEmitter, channelToSendTo) {
       eventEmitter.emit("upNext", whoNextString, channelToSendTo, "dealer");
       return;
     }
+    console.log(whoNextString);
     await sleep(2000);
     eventEmitter.emit("upNext", whoNextString, channelToSendTo);
   }
 }
-async function dealerTurn(channelId, eventEmitter, channelToSendTo) {
+
+async function split(userId, channelId, eventEmitter, channelToSendTo) {
+  const thatRoom = rooms.findRoom(channelId);
+  let thePlayer;
+  // remove coins
+  // can dd
+  thatRoom.players.forEach((e) => {
+    if (e.userId === userId && e.turn) {
+      thePlayer = e;
+    }
+  });
+  // if (thePlayer.cards[0] !== thePlayer.cards[1]) {
+  //   console.log(`can't split`);
+  //   return `You can't split.`;
+  // }
+  let theIndexOfPlayer = thePlayer.index;
+  const newPlayerToInsert = {
+    userId: thePlayer.userId,
+    betAmount: thePlayer.betAmount,
+    prevBetAmount: thePlayer.prevBetAmount,
+    index: theIndexOfPlayer + 1,
+    sum: thePlayer.cards[0],
+    cards: [thePlayer.cards[0]],
+    played: false,
+    turn: false,
+    lost: false,
+    buttonCounter: thePlayer.buttonCounter,
+    natBlackjack: false,
+  };
+  thatRoom.players = thatRoom.players.toSpliced(
+    theIndexOfPlayer + 1,
+    0,
+    newPlayerToInsert
+  );
+  thePlayer.cards.shift();
+  thePlayer.sum = thePlayer.cards[0];
+  await wallet.removeCoins(userId, thePlayer.betAmount);
+  rooms.updatePlayerIndexes(channelId);
+  return {
+    bust: false,
+    cardTheyGot: thePlayer.cards[0],
+    theirSum: thePlayer.sum,
+    aceSave: false,
+  };
+}
+async function dealerTurn(
+  channelId,
+  eventEmitter,
+  channelToSendTo,
+  waitTimeIncrease = 0
+) {
   const thatRoom = rooms.findRoom(channelId);
   const dealer = rooms.findRoom(channelId).dealer;
-  await sleep(1000);
+  await sleep(1000 + waitTimeIncrease * 250);
+  if (!dealer.turnedOver) {
+    eventEmitter.emit("dealerTurn", `turnOver`, channelToSendTo);
+    dealer.turnedOver = true;
+    dealerTurn(channelId, eventEmitter, channelToSendTo, waitTimeIncrease + 1);
+    return;
+  }
 
   if (dealer.sum >= 17 && dealer.sum <= 21) {
     // Dealer stand
@@ -317,8 +404,9 @@ async function dealerTurn(channelId, eventEmitter, channelToSendTo) {
     dealer.sum += unoRandomNumero;
     dealer.cards.push(unoRandomNumero);
     eventEmitter.emit("dealerTurn", `hit`, channelToSendTo);
-    await sleep(1000);
-    dealerTurn(channelId, eventEmitter, channelToSendTo);
+    await sleep(1000 + waitTimeIncrease * 250);
+
+    dealerTurn(channelId, eventEmitter, channelToSendTo, waitTimeIncrease + 1);
     return;
   }
   if (dealer.sum > 21) {
@@ -362,9 +450,24 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 3
       );
       const formattedGain = wallet.formatNumber(player.betAmount * 3);
+      const blackjackMessages = [
+        `has gotten a **NATURAL BLACKJACK** and has won`,
+        `hit a **BLACKJACK** and instantly gained`,
+        `landed a **perfect 21** and secured`,
+        `started strong with a **BLACKJACK** and took`,
+        `pulled a **BLACKJACK** and walked away with`,
+        `got an **unbeatable hand** and earned`,
+        `was dealt **perfection** and pocketed`,
+        `achieved a **BLACKJACK** and claimed`,
+        `hit **21** right away and received`,
+        `dominated with a **natural BLACKJACK** and collected`,
+        `secured a flawless win with a **BLACKJACK** and took home`,
+      ];
+      const winMessage =
+        blackjackMessages[Math.floor(Math.random() * blackjackMessages.length)];
       message = `:fireworks: <@${
         player.userId
-      }> has gotten a NATURAL BLACKJACK and has won +${formattedGain} :fireworks:${
+      }> ${winMessage} +${formattedGain} :fireworks:${
         coinMessage !== `` ? `\n${coinMessage}` : ``
       }`;
       await UserStats.findOneAndUpdate(
@@ -388,7 +491,25 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 2
       );
       const formattedGain = wallet.formatNumber(player.betAmount * 2);
-      message = `:gem: <@${player.userId}> has won +${formattedGain} :gem:${
+      const winMessages = [
+        `has won and gained`,
+        `gained`,
+        `secured a victory and earned`,
+        `triumphed and took home`,
+        `dominated the table and collected`,
+        `claimed a well-earned win and received`,
+        `outplayed the dealer and walked away with`,
+        `crushed the odds and secured`,
+        `celebrated a triumphant win and pocketed`,
+        `walked away a winner with`,
+        `showed expert skill and earned`,
+        `proved their mastery and took`,
+      ];
+      const winMessage =
+        winMessages[Math.floor(Math.random() * winMessages.length)];
+      message = `:gem: <@${
+        player.userId
+      }> ${winMessage} +${formattedGain} :gem:${
         coinMessage !== `` ? `\n${coinMessage}` : ``
       }`;
       await UserStats.findOneAndUpdate(
@@ -407,7 +528,21 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     }
     if (player.sum > 21) {
       const formattedLoss = wallet.formatNumber(player.betAmount);
-      message = `:boom: <@${player.userId}> has BUST! They have lost -${formattedLoss} :boom:`;
+      const bustMessages = [
+        `pushed their luck too far and busted, losing`,
+        `went over 21 and lost everything, dropping`,
+        `took one risk too many and paid the price, losing`,
+        `got greedy and busted, throwing away`,
+        `lost control and watched their hand crumble, losing`,
+        `made one bet too many and exceeded 21, forfeiting`,
+        `tried to defy fate but fate had other plans, losing`,
+        `saw their dreams vanish with a busted hand, losing`,
+        `let ambition take over and went over 21, losing`,
+        `felt the pain of going bust and had to let go of`,
+      ];
+      const bustMessage =
+        bustMessages[Math.floor(Math.random() * bustMessages.length)];
+      message = `:boom: <@${player.userId}> ${bustMessage} -${formattedLoss} :boom:`;
       if (thatRoom.dealer.sum <= 21) {
         dealerBeatAmount++;
       }
@@ -428,7 +563,21 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
     }
     if (thatRoom.dealer.sum > player.sum && thatRoom.dealer.sum <= 21) {
       const formattedLoss = wallet.formatNumber(player.betAmount);
-      message = `:performing_arts: <@${player.userId}> has ${player.sum} while the DEALER has ${thatRoom.dealer.sum}. They have lost -${formattedLoss} :performing_arts:`;
+      const loseMessages = [
+        `was defeated by the dealer and lost`,
+        `watched as the dealer's hand reigned supreme and gave up`,
+        `came up short against the dealer's total and lost`,
+        `faced the dealer's stronger hand and walked away with nothing`,
+        `couldn't overcome the dealer's luck and dropped`,
+        `saw their hopes crushed by the dealer and lost`,
+        `stood no chance against the dealer's superior hand and lost`,
+        `got outmatched by the dealer and had to part with`,
+        `felt the sting of defeat as the dealer prevailed and lost`,
+        `watched the dealer flip a better hand and had to forfeit`,
+      ];
+      const loseMessage =
+        loseMessages[Math.floor(Math.random() * loseMessages.length)];
+      message = `:performing_arts: <@${player.userId}> ${loseMessage} -${formattedLoss} :performing_arts:`;
       dealerBeatAmount++;
       await UserStats.findOneAndUpdate(
         { userId: player.userId },
@@ -451,7 +600,23 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
         player.betAmount * 2
       );
       const formattedGain = wallet.formatNumber(player.betAmount * 2);
-      message = `:gem: <@${player.userId}> has won +${formattedGain} :gem:${
+      const winMessages = [
+        `watched the dealer bust and took home`,
+        `saw the dealer go over 21 and collected`,
+        `stood strong as the dealer busted, earning`,
+        `savored the dealer's failure to stay under 21 and gained`,
+        `watched the dealer crumble under pressure and walked away with`,
+        `watched the dealer bust and claimed`,
+        `saw the dealer lose control and pocketed`,
+        `waited as the dealer went over 21 and secured`,
+        `enjoyed the dealer's misfortune and earned`,
+        `smiled as the dealer busted and took home`,
+      ];
+      const winMessage =
+        winMessages[Math.floor(Math.random() * winMessages.length)];
+      message = `:gem: <@${
+        player.userId
+      }> ${winMessage} +${formattedGain} :gem:${
         coinMessage !== `` ? `\n${coinMessage}` : ``
       }`;
       await UserStats.findOneAndUpdate(
@@ -469,7 +634,20 @@ async function endGame(channelId, channelToSendTo, eventEmitter) {
       continue;
     }
     if (thatRoom.dealer.sum === player.sum && player.sum <= 21) {
-      message = `:rightwards_pushing_hand: <@${player.userId}> has the same sum as the DEALER, resulting in a push. They haven't gained or lost anything. :rightwards_pushing_hand:`;
+      const pushMessages = [
+        `tied with the dealer and got their bet back`,
+        `matched the dealer's total and pushed, keeping their bet`,
+        `ended in a stalemate with the dealer and reclaimed back their bet`,
+        `saw an even match and took back their bet`,
+        `had the same hand as the dealer and kept coins for themselves`,
+        `avoided loss with a tie, regaining their coins back`,
+        `stood equal to the dealer and reclaimed their rightful coins`,
+        `ended in a draw and recovered back their bet`,
+        `fought to a standstill and took back what they put down`,
+      ];
+      const pushMessage =
+        pushMessages[Math.floor(Math.random() * pushMessages.length)];
+      message = `:rightwards_pushing_hand: <@${player.userId}> ${pushMessage}. :rightwards_pushing_hand:`;
       await wallet.addCoins(player.userId, player.betAmount, true);
       await UserStats.findOneAndUpdate(
         { userId: player.userId },
@@ -541,6 +719,7 @@ module.exports = {
   hit,
   stand,
   doubleDown,
+  split,
   dealerTurn,
   endGame,
   resetDeckCounter,

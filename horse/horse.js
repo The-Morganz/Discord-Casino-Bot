@@ -312,7 +312,7 @@ async function givePayouts(winner, message) {
           $inc: {
             "games.horse.gamesPlayed": 1,
             "games.horse.gamesWon": 1,
-            "games.horse.coinsWon": allUsers[i].betAmount,
+            "games.horse.coinsWon": gain - allUsers[i].betAmount,
           },
         }
       );
@@ -399,11 +399,14 @@ function whenDoesRaceStart(message, noMessage = false) {
   let minutesPassed = Math.floor(
     (currentTime - thatRoom.timeOfStartCountdown) / (1000 * 60)
   );
-  if (!noMessage)
-    message.reply(
-      `🐎${thatRoom.minutesToStart - minutesPassed} minutes until race start.🐎`
-    );
-  return thatRoom.minutesToStart - minutesPassed;
+  const raceStartTime = thatRoom.timeOfStartCountdown + 2 * 60 * 1000; // 2 minutes added
+  let secondsLeft = Math.max(
+    0,
+    Math.floor((raceStartTime - currentTime) / 1000)
+  );
+  // const secondsTilRace = Math.floor(currentTime)
+  if (!noMessage) message.reply(`🐎${secondsLeft} seconds until race start.🐎`);
+  return secondsLeft;
 }
 async function notify(user, message) {
   const thatRoom = findHorseRoom(message);
@@ -418,11 +421,11 @@ async function notify(user, message) {
   }
   await horseRacing.findOneAndUpdate({ userId: user.id }, { notify: true });
 
-  let timeToNotify = (whenDoesRaceStart(message, true) - 1) * (1000 * 60);
+  let timeToNotify = (whenDoesRaceStart(message, true) - 10) * 1000;
   if (timeToNotify <= 0) timeToNotify = 1;
   setTimeout(() => {
     user.send(
-      `🐎The horse race will start soon... You bet on horse ${areTheyBeingNotified.horseNumber}🐎`
+      `🐎The horse race will start in the next 10 seconds... You bet on horse ${areTheyBeingNotified.horseNumber}🐎`
     );
     // removeNotifyFromMongo(user);
   }, timeToNotify);
@@ -430,7 +433,17 @@ async function notify(user, message) {
 }
 async function horseOneLiner(winner, message) {
   const thatRoom = findHorseRoom(message);
-
+  console.log(winner.kvota);
+  if (winner.kvota === 20) {
+    const oneLiners = [
+      `Holy crap! I actually won? No way! I can't believe this! A 20 quota? Were the others asleep?`,
+      `Did you bet against me? "Oh a 20 quota won't ever win.", how's that wallet feeling? Lighter?`,
+      `Luck? Just pure skill. Don't ever doubt me again. Tsch, a 20 quota...`,
+      `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`,
+    ];
+    const oneLiner = oneLiners[Math.floor(Math.random() * oneLiners.length)];
+    return oneLiner;
+  }
   const oneLiners = [
     `After months of training, a lot of support from my rider, and him sorting something out with the managers of this race, i can finally say that it was worth it.`,
     `I told my rider it's not just about winning, but now that I have, it actually feels pretty great!`,
