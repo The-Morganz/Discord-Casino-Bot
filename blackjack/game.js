@@ -179,11 +179,22 @@ function whoIsUpNext(channelId) {
     return whoIsNext;
   }
 }
-function aceSave(cards, sum) {
+function aceSave(cards, sum, aceSaves, thePlayer) {
   let saved = false;
+  let howManyAcesTheyHave = 0;
   if (cards.includes(11)) {
+    cards.forEach((e) => {
+      if (e === 11) {
+        howManyAcesTheyHave++;
+      }
+    });
     if (sum - 10 <= 21) {
+      thePlayer.acesUsed += 1;
       saved = true;
+    }
+    if (howManyAcesTheyHave === aceSaves) {
+      howManyAcesTheyHave = 0;
+      saved = false;
     }
   }
   return saved;
@@ -212,7 +223,9 @@ function hit(userId, channelId, eventEmitter, channelToSendTo) {
       thatRoom.deckOfCards = makeDeck();
     }
     if (thePlayer.sum > 21) {
-      if (aceSave(thePlayer.cards, thePlayer.sum)) {
+      if (
+        aceSave(thePlayer.cards, thePlayer.sum, thePlayer.acesUsed, thePlayer)
+      ) {
         thePlayer.sum -= 10;
         const aceIndex = thePlayer.cards.indexOf(11);
         // thePlayer.cards.splice(aceIndex, 1);
@@ -267,7 +280,9 @@ async function doubleDown(userId, channelId, eventEmitter, channelToSendTo) {
     await wallet.removeCoins(thePlayer.userId, thePlayer.betAmount);
     thePlayer.betAmount *= 2;
     if (thePlayer.sum > 21) {
-      if (aceSave(thePlayer.cards, thePlayer.sum)) {
+      if (
+        aceSave(thePlayer.cards, thePlayer.sum, thePlayer.acesUsed, thePlayer)
+      ) {
         thePlayer.sum -= 10;
         // const aceIndex = thePlayer.cards.indexOf(11);
         // thePlayer.cards.splice(aceIndex, 1);
@@ -347,11 +362,10 @@ async function split(userId, channelId, eventEmitter, channelToSendTo) {
     buttonCounter: thePlayer.buttonCounter,
     natBlackjack: false,
   };
-  thatRoom.players = thatRoom.players.toSpliced(
-    theIndexOfPlayer + 1,
-    0,
-    newPlayerToInsert
-  );
+  console.log(thatRoom);
+  const newPlayers = [...thatRoom.players];
+  newPlayers.splice(theIndexOfPlayer + 1, 0, newPlayerToInsert);
+  thatRoom.players = newPlayers;
   thePlayer.cards.shift();
   thePlayer.sum = thePlayer.cards[0];
   await wallet.removeCoins(userId, thePlayer.betAmount);
@@ -410,7 +424,7 @@ async function dealerTurn(
     return;
   }
   if (dealer.sum > 21) {
-    if (aceSave(dealer.cards, dealer.sum)) {
+    if (aceSave(dealer.cards, dealer.sum, dealer.acesUsed, dealer)) {
       dealer.sum -= 10;
       const aceIndex = dealer.cards.indexOf(11);
       dealer.cards.splice(aceIndex, 1);

@@ -1675,7 +1675,7 @@ function startBot() {
         }
       }
     });
-    if (howManyHands >= 4) {
+    if (howManyHands >= 5) {
       canSplit = false;
     }
     const hitButton = new ButtonBuilder()

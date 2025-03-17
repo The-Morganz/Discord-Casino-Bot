@@ -63,6 +63,7 @@ function makeRoom(userId, channelId) {
         lost: false,
         buttonCounter: 0,
         natBlackjack: false,
+        acesUsed: 0,
       },
     ],
     playing: false,
@@ -79,6 +80,7 @@ function makeRoom(userId, channelId) {
       checkFailed: false,
       natBlackjack: false,
       turnedOver: false,
+      acesUsed: 0,
     },
   });
   return `You have made a room, and joined it.`;
