@@ -50,6 +50,7 @@ async function startDealing(eventEmitter, channelId, channelToSendTo) {
     player.cards.push(unoRandomNumero);
     if (player.sum === 22) {
       player.sum -= 10;
+      player.acesUsed += 1;
       // const aceIndex = player.cards.indexOf(11);
       // player.cards.splice(aceIndex, 1);
       // player.cards.push(1);

@@ -2979,6 +2979,12 @@ function startBot() {
             ephemeral: true,
           });
         }
+        if (!skillChallenge.isItStillOn(userId)) {
+          return await interaction.reply({
+            content: `This challenge has expired.`,
+            ephemeral: true,
+          });
+        }
         await interaction.reply({
           content: `You accepted the challenge, get ready!`,
           ephemeral: true,

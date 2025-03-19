@@ -100,6 +100,7 @@ function generateHiddenWord() {
   }
   return { oneWord: oneWord, theWord: theWord };
 }
+
 function generateRandomSentence() {
   const sentences = [
     `hello how are you today`,
@@ -155,6 +156,14 @@ function findGame(userId) {
     return false;
   }
   return gameToReturn;
+}
+function isItStillOn(userId) {
+  let thatGame = findGame(userId);
+  if (!thatGame) {
+    return false;
+  }
+  clearTimeout(thatGame.timeout);
+  return true;
 }
 function startSkillChallenge(challengerId, targetId, amount, message) {
   let thatGame = findGame(targetId);
@@ -439,4 +448,5 @@ module.exports = {
   acceptChallenge,
   declineChallenge,
   startAfkTimer,
+  isItStillOn,
 };

@@ -140,6 +140,7 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
     e.turn = false;
     e.lost = false;
     e.natBlackjack = false;
+    e.acesUsed = 0;
   });
   thatRoom.games++;
   thatRoom.dealer.sum = 0;
@@ -147,6 +148,7 @@ function restartRoom(channelId, eventEmitter, channelToSendTo) {
   thatRoom.dealer.checkFailed = false;
   thatRoom.dealer.natBlackjack = false;
   thatRoom.dealer.turnedOver = false;
+  thatRoom.dealer.acesUsed = 0;
   thatRoom.players = uniquePlayers;
 
   changeGameState(channelId, "playing", false);
