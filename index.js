@@ -63,7 +63,7 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,
   ],
 });
-const hoursToUpdateNBA = 3;
+const hoursToUpdateNBA = 4;
 const ownerId = "237903516234940416";
 const ownerId2 = "294522326182002710";
 client.once("ready", () => {
