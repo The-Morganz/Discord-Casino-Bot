@@ -69,7 +69,7 @@ function isItUpdateTime(isoTime) {
   const givenDate = new Date(isoTime);
   const now = new Date();
 
-  const hoursLater = new Date(givenDate.getTime() + 3 * 60 * 60 * 1000);
+  const hoursLater = new Date(givenDate.getTime() + 4 * 60 * 60 * 1000);
 
   return now >= hoursLater;
 }
