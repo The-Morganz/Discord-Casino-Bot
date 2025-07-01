@@ -412,11 +412,6 @@ function startBot() {
       message.content.startsWith(`$horsebet`) ||
       message.content.startsWith(`$hb`)
     ) {
-      // const row = generateHorseBetButtons();
-      // message.channel.send({
-      //   content: `Welcome to the world of horse betting! To get started, do you want to place a bet on a single horse, or a connected bet on multiple horses?`,
-      //   components: [row],
-      // });
       let args = message.content.split(" ");
       let amount = parseInt(args[1]);
       let horseNumber = parseInt(args[2]);
@@ -792,11 +787,11 @@ function startBot() {
         message
       );
       if (
-        challengeMessage === `The tagged user already has a pending challenge.`
+        challengeMessage ===
+          `The tagged user already has a pending challenge.` ||
+        challengeMessage === `You already have a pending challenge.`
       ) {
-        return await message.reply(
-          `The tagged user already has a pending challenge.`
-        );
+        return await message.reply(`${challengeMessage}`);
       }
       generateSkillChallengeButtons(
         message.channel,
@@ -825,6 +820,16 @@ function startBot() {
         return message.reply("You can't challenge yourself!");
       }
 
+      const userWallet = await wallet.getCoins(userId);
+      const mentionedUserWallet = await wallet.getCoins(mentionedUser.id);
+      if (userWallet < amount) {
+        return message.reply("You don't have enough coins for this.");
+      }
+      if (mentionedUserWallet < amount) {
+        return message.reply(
+          "This person doesn't have the coins for this challenge."
+        );
+      }
       const challengeMessage = coinflip.startFlipChallenge(
         userId,
         mentionedUser.id,

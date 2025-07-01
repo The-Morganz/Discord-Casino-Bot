@@ -18,7 +18,6 @@ function startFlipChallenge(challengerId, targetId, amount, message) {
   if (pendingChallenges[targetId]) {
     return "The tagged user already has a pending challenge.";
   }
-
   // Create the challenge
   pendingChallenges[targetId] = {
     challengerId,

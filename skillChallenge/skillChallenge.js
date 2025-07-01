@@ -167,10 +167,13 @@ function isItStillOn(userId) {
 }
 function startSkillChallenge(challengerId, targetId, amount, message) {
   let thatGame = findGame(targetId);
+  let challengerGame = findGame(challengerId);
   if (thatGame) {
     return "The tagged user already has a pending challenge.";
   }
-
+  if (challengerGame) {
+    return `You already have a pending challenge.`;
+  }
   // Create the challenge
   pendingChallenges.push({
     targetId,
